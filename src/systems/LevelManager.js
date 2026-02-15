@@ -11,7 +11,7 @@ export class LevelManager {
 
     createLevels() {
         return [
-            // Level 1: Tutorial - Just one fox
+            // Level 1: Tutorial - Just one fox (slow pace for learning)
             {
                 level: 1,
                 name: 'First Light',
@@ -20,7 +20,8 @@ export class LevelManager {
                 foxCount: 1,
                 catCount: 0,
                 harrierCount: 0,
-                waterSpeed: 6,
+                waterSpeed: 3,
+                railSpeedMultiplier: 0.5,
                 seedRegen: 0.6,
                 maxSeeds: 12,
                 marshFact: 'Ridgway\'s Rails are secretive marsh birds that depend on dense vegetation for protection from predators.',

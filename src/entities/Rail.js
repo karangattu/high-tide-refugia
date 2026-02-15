@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 export class Rail extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y) {
+    constructor(scene, x, y, speedMultiplier = 1) {
         // Start with running pose 1
         super(scene, x, y, 'rail_running_1');
 
@@ -25,8 +25,8 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.touchedDirt = false;   // For continuous cover tracking
         this.speedBoostTimer = 0;
 
-        // Base movement
-        this.baseSpeed = Phaser.Math.Between(80, 120);
+        // Base movement (scaled by level multiplier)
+        this.baseSpeed = Phaser.Math.Between(80, 120) * speedMultiplier;
         this.currentSpeed = this.baseSpeed;
         this.erraticTimer = 0;
         this.erraticDirection = 0;

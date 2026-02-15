@@ -24,6 +24,11 @@ export class GameScene extends Phaser.Scene {
         this.isGameOver = false;
         this.safeZoneX = width - 100;
 
+        // Tutorial state
+        this.tutorialActive = false;
+        this.tutorialComplete = localStorage.getItem('htRefugiaTutorialDone') === 'true';
+        this.tutorialElements = [];
+
         // Initialize systems
         this.particleManager = new ParticleManager(this);
         this.scoreManager = new ScoreManager(this);
@@ -202,6 +207,11 @@ export class GameScene extends Phaser.Scene {
         const plant = new Plant(this, x, y, plantType);
         this.plants.add(plant);
 
+        // If tutorial is active, first plant was placed — advance tutorial
+        if (this.tutorialActive) {
+            this.completeTutorial();
+        }
+
         // Sound effect would go here
     }
 
@@ -238,8 +248,16 @@ export class GameScene extends Phaser.Scene {
         // Show level start
         this.showLevelStart(config);
 
-        // Start first wave
-        this.levelManager.startNextWave();
+        // For Level 1, show interactive tutorial before starting waves
+        if (levelNumber === 1 && !this.tutorialComplete) {
+            // Tutorial will call startNextWave() when done
+            this.time.delayedCall(2800, () => {
+                this.startTutorial();
+            });
+        } else {
+            // Start first wave immediately after level announcement
+            this.levelManager.startNextWave();
+        }
     }
 
     spawnPredators(config) {
@@ -334,12 +352,150 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
+    // ── Interactive first-play tutorial ──────────────────────────
+    startTutorial() {
+        this.tutorialActive = true;
+        const { width, height } = this.scale;
+
+        // Spawn one slow tutorial rail
+        this.spawnRail();
+
+        // Hint panel background
+        const panelX = width / 2;
+        const panelY = height / 2 - 30;
+        const panel = this.add.graphics().setDepth(90);
+        panel.fillStyle(0x000000, 0.7);
+        panel.fillRoundedRect(panelX - 180, panelY - 50, 360, 100, 16);
+
+        // Arrow character bouncing
+        const arrow = this.add.text(panelX, panelY + 60, '▼', {
+            fontFamily: 'Outfit',
+            fontSize: '36px',
+            color: '#f1c40f',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(91);
+
+        // Hint text
+        const hint = this.add.text(panelX, panelY - 10, 'TAP here to plant cover!', {
+            fontFamily: 'Outfit',
+            fontSize: '24px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(91);
+
+        const subHint = this.add.text(panelX, panelY + 22, 'Rails need vegetation to hide from predators', {
+            fontFamily: 'Outfit',
+            fontSize: '14px',
+            color: '#aaaaaa',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(91);
+
+        // Pulse the panel
+        this.tweens.add({
+            targets: [hint],
+            scale: { from: 1, to: 1.06 },
+            duration: 600,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+
+        // Bounce the arrow
+        this.tweens.add({
+            targets: arrow,
+            y: arrow.y + 14,
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+        });
+
+        this.tutorialElements = [panel, arrow, hint, subHint];
+    }
+
+    completeTutorial() {
+        // Remove hint elements
+        this.tutorialElements.forEach(el => el.destroy());
+        this.tutorialElements = [];
+
+        const { width, height } = this.scale;
+
+        // Step 2 — success message
+        const msg1 = this.add.text(width / 2, height / 2 - 30, 'Nice! Rails hide in plants to stay safe.', {
+            fontFamily: 'Outfit',
+            fontSize: '22px',
+            fontStyle: 'bold',
+            color: '#2ecc71',
+            stroke: '#000000',
+            strokeThickness: 4,
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(91).setAlpha(0);
+
+        this.tweens.add({
+            targets: msg1,
+            alpha: 1,
+            duration: 400,
+            onComplete: () => {
+                this.tweens.add({
+                    targets: msg1,
+                    alpha: 0,
+                    delay: 2000,
+                    duration: 400,
+                    onComplete: () => {
+                        msg1.destroy();
+
+                        // Step 3 — corridor hint
+                        const msg2 = this.add.text(width / 2, height / 2 - 30,
+                            'Plant more to create a corridor to the safe zone  →', {
+                            fontFamily: 'Outfit',
+                            fontSize: '20px',
+                            fontStyle: 'bold',
+                            color: '#f1c40f',
+                            stroke: '#000000',
+                            strokeThickness: 4,
+                            resolution: TEXT_RES,
+                        }).setOrigin(0.5).setDepth(91).setAlpha(0);
+
+                        this.tweens.add({
+                            targets: msg2,
+                            alpha: 1,
+                            duration: 400,
+                            onComplete: () => {
+                                this.tweens.add({
+                                    targets: msg2,
+                                    alpha: 0,
+                                    delay: 2000,
+                                    duration: 400,
+                                    onComplete: () => {
+                                        msg2.destroy();
+                                        this.finishTutorial();
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    finishTutorial() {
+        this.tutorialActive = false;
+        this.tutorialComplete = true;
+        localStorage.setItem('htRefugiaTutorialDone', 'true');
+
+        // Begin normal wave spawning
+        this.levelManager.startNextWave();
+    }
+
     spawnRail() {
         const { height } = this.scale;
         const y = Phaser.Math.Between(80, height - 80);
         const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
+        const speedMul = this.levelManager.getCurrentConfig().railSpeedMultiplier || 1;
 
-        const rail = new Rail(this, waterX + 40, y);
+        const rail = new Rail(this, waterX + 40, y, speedMul);
         this.rails.add(rail);
 
         return rail;
@@ -421,6 +577,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     updateSpawning(delta) {
+        // Don't spawn additional rails during tutorial
+        if (this.tutorialActive) return;
+
         if (this.levelManager.isWaveComplete()) {
             // Check if all rails from wave are done
             const activeRails = this.rails.children.entries.filter(r => r.isAlive && !r.hasReachedSafety);
@@ -449,6 +608,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     checkGameState() {
+        // Don't end game during tutorial
+        if (this.tutorialActive) return;
+
         const waterX = this.waterSystem.getWaterX();
         const { width } = this.scale;
 
