@@ -1,0 +1,20 @@
+{
+  "name": "rail-refuge",
+  "version": "1.0.0",
+  "description": "Rail Refuge: High Tide Rising - A tower defense game about saving endangered Ridgway's Rails during king tides",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": ["phaser", "game", "conservation", "rails", "tower-defense"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "phaser": "^3.70.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
