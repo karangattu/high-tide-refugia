@@ -11,7 +11,7 @@ export class WaterSystem {
 
         const { width, height } = scene.scale;
 
-        // Water visual (tiled sprite for wave animation effect)
+        // ── Deep water body ─────────────────────────────
         this.waterSprite = scene.add.tileSprite(
             startX / 2,
             height / 2,
@@ -22,26 +22,38 @@ export class WaterSystem {
         this.waterSprite.setOrigin(0.5, 0.5);
         this.waterSprite.setDepth(5);
 
-        // Water edge highlight
+        // ── Shoreline / foam edge using the new 'water_edge' texture ──
+        this.shoreEdge = scene.add.tileSprite(
+            startX + 8,
+            height / 2,
+            16,
+            height,
+            'water_edge'
+        );
+        this.shoreEdge.setOrigin(0.5, 0.5);
+        this.shoreEdge.setDepth(6);
+
+        // ── Thin bright water-edge glow line ──
         this.waterEdge = scene.add.rectangle(
             startX,
             height / 2,
-            8,
+            4,
             height,
-            0x3498db,
-            0.8
+            0x5bbee8,
+            0.5
         );
-        this.waterEdge.setDepth(6);
+        this.waterEdge.setDepth(7);
 
-        // Foam particles at the edge
+        // ── Foam particles at the edge ──
         this.foamEmitter = scene.add.particles(startX, 0, 'seed', {
             y: { min: 0, max: height },
-            speedX: { min: 10, max: 30 },
-            lifespan: 1500,
+            speedX: { min: 6, max: 20 },
+            speedY: { min: -8, max: 8 },
+            lifespan: 2000,
             quantity: 1,
-            frequency: 200,
-            scale: { start: 0.3, end: 0 },
-            alpha: { start: 0.6, end: 0 },
+            frequency: 180,
+            scale: { start: 0.35, end: 0 },
+            alpha: { start: 0.5, end: 0 },
             tint: 0xffffff,
         });
     }
@@ -55,15 +67,19 @@ export class WaterSystem {
         this.waterSprite.setPosition(this.currentX / 2, this.scene.scale.height / 2);
         this.waterSprite.width = this.currentX;
 
-        // Update edge position
+        // Update shore edge
+        this.shoreEdge.setPosition(this.currentX + 8, this.scene.scale.height / 2);
+        this.shoreEdge.tilePositionY += 0.15; // slow downward drift for organic feel
+
+        // Update glow-edge position
         this.waterEdge.setPosition(this.currentX, this.scene.scale.height / 2);
 
         // Update foam emitter position
         this.foamEmitter.setPosition(this.currentX, 0);
 
-        // Animate water tiles for wave effect
+        // Animate water tiles for wave effect (multi-axis drift)
         this.waterSprite.tilePositionX += 0.5;
-        this.waterSprite.tilePositionY += 0.2;
+        this.waterSprite.tilePositionY += 0.18;
 
         return this.currentX;
     }
@@ -105,6 +121,7 @@ export class WaterSystem {
                 color: '#ff6b6b',
                 stroke: '#000000',
                 strokeThickness: 6,
+                resolution: window.devicePixelRatio || 2,
             }
         ).setOrigin(0.5).setDepth(100);
 
@@ -124,6 +141,7 @@ export class WaterSystem {
 
         this.waterSprite.setPosition(this.startX / 2, this.scene.scale.height / 2);
         this.waterSprite.width = this.startX;
+        this.shoreEdge.setPosition(this.startX + 8, this.scene.scale.height / 2);
         this.waterEdge.setPosition(this.startX, this.scene.scale.height / 2);
     }
 }

@@ -12,11 +12,20 @@ const config = {
     width: 1280,
     height: 720,
     backgroundColor: '#0a3d62',
-    pixelArt: true,
+    // pixelArt is OFF so text renders with smooth (LINEAR) filtering.
+    // Sprite textures are set to NEAREST in BootScene after generation.
+    pixelArt: false,
     roundPixels: true,
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
+    input: {
+        activePointers: 2,  // support multi-touch (plant + scroll prevention)
+        touch: {
+            target: null,   // auto
+            capture: true,  // prevent default browser touch gestures on canvas
+        },
     },
     physics: {
         default: 'arcade',
@@ -38,6 +47,22 @@ window.addEventListener('blur', () => {
 
 window.addEventListener('focus', () => {
     game.sound.resumeAll();
+});
+
+// Prevent pinch-to-zoom and other unwanted gestures on the game container
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+
+// Re-fit game on orientation change (mobile)
+window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+        game.scale.refresh();
+    }, 200);
+});
+
+// Also listen for resize to handle split-screen / multi-window on tablets
+window.addEventListener('resize', () => {
+    game.scale.refresh();
 });
 
 export default game;

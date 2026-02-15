@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 
+const TEXT_RES = window.devicePixelRatio || 2;
+
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
@@ -64,6 +66,7 @@ export class MenuScene extends Phaser.Scene {
             fontSize: '72px',
             fontStyle: 'bold',
             color: '#f39c12',
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD);
 
         const title = this.add.text(width / 2, 120, 'RAIL REFUGE', {
@@ -71,6 +74,7 @@ export class MenuScene extends Phaser.Scene {
             fontSize: '72px',
             fontStyle: 'bold',
             color: '#f39c12',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Subtitle
@@ -78,6 +82,7 @@ export class MenuScene extends Phaser.Scene {
             fontFamily: 'Outfit',
             fontSize: '28px',
             color: '#3498db',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Animate title glow
@@ -158,11 +163,12 @@ export class MenuScene extends Phaser.Scene {
 
         // Educational tagline
         const tagline = this.add.text(width / 2, height - 60,
-            '🌿 Learn about endangered Ridgway\'s Rails and marsh conservation 🌿', {
+            'Learn about endangered Ridgway\'s Rails and marsh conservation', {
             fontFamily: 'Outfit',
             fontSize: '16px',
             color: '#ffffff',
             alpha: 0.6,
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
     }
 
@@ -175,6 +181,7 @@ export class MenuScene extends Phaser.Scene {
             fontSize: '24px',
             fontStyle: 'bold',
             color: '#ffffff',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Hover effects
@@ -227,29 +234,35 @@ export class MenuScene extends Phaser.Scene {
         panel.strokeRoundedRect(width / 2 - 350, height / 2 - 250, 700, 500, 20);
 
         // Title
-        this.add.text(width / 2, height / 2 - 200, 'HOW TO PLAY', {
+        const tutTitle = this.add.text(width / 2, height / 2 - 200, 'HOW TO PLAY', {
             fontFamily: 'Outfit',
             fontSize: '36px',
             fontStyle: 'bold',
             color: '#f39c12',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        // Instructions
+        // Instructions with icon keys
         const instructions = [
-            '🌊 The tide is rising! Rails flee from left to right.',
-            '🌿 CLICK to plant vegetation and create hiding spots.',
-            '🦊 Predators hunt exposed Rails - keep them hidden!',
-            '⚡ Rails in plants become invisible to predators.',
-            '🏆 Bonus points for "Continuous Cover" paths!',
-            '💚 Save as many Rails as you can before the tide rises!',
+            { icon: 'icon_wave',  text: 'The tide is rising! Rails flee from left to right.' },
+            { icon: 'icon_leaf',  text: 'CLICK or TAP to plant vegetation and create hiding spots.' },
+            { icon: 'icon_paw',   text: 'Predators hunt exposed Rails -- keep them hidden!' },
+            { icon: 'icon_bolt',  text: 'Rails in plants become invisible to predators.' },
+            { icon: 'icon_trophy',text: 'Bonus points for "Continuous Cover" paths!' },
+            { icon: 'icon_heart_green', text: 'Save as many Rails as you can before the tide rises!' },
         ];
 
-        instructions.forEach((text, i) => {
-            this.add.text(width / 2, height / 2 - 120 + i * 45, text, {
+        const tutorialItems = [tutTitle];
+        instructions.forEach((item, i) => {
+            const y = height / 2 - 120 + i * 45;
+            const ico = this.add.image(width / 2 - 270, y, item.icon).setScale(1.1);
+            const txt = this.add.text(width / 2 - 248, y, item.text, {
                 fontFamily: 'Outfit',
-                fontSize: '20px',
+                fontSize: '18px',
                 color: '#ffffff',
-            }).setOrigin(0.5);
+                resolution: TEXT_RES,
+            }).setOrigin(0, 0.5);
+            tutorialItems.push(ico, txt);
         });
 
         // Close button
@@ -260,6 +273,7 @@ export class MenuScene extends Phaser.Scene {
             color: '#27ae60',
             backgroundColor: '#000000',
             padding: { x: 30, y: 15 },
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
         closeBtn.on('pointerover', () => closeBtn.setColor('#2ecc71'));
@@ -268,9 +282,7 @@ export class MenuScene extends Phaser.Scene {
             overlay.destroy();
             panel.destroy();
             closeBtn.destroy();
-            this.scene.scene.children.list
-                .filter(c => c.type === 'Text' && instructions.some(i => c.text === i))
-                .forEach(c => c.destroy());
+            tutorialItems.forEach(item => item.destroy());
         });
     }
 
@@ -284,13 +296,14 @@ export class MenuScene extends Phaser.Scene {
             'RAIL REFUGE: High Tide Rising\n\n' +
             'A game about conservation and\n' +
             'protecting endangered species.\n\n' +
-            'Learn more about Ridgway\'s Rails at:\n' +
-            'sfbayrestore.org\n\n' +
+            'Learn more at:\n' +
+            'sfbbo.org\n\n' +
             'Click anywhere to close', {
             fontFamily: 'Outfit',
             fontSize: '24px',
             color: '#ffffff',
             align: 'center',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         overlay.on('pointerdown', () => {

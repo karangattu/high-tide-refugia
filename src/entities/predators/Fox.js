@@ -254,45 +254,97 @@ export class Cat extends Fox {
     constructor(scene, x, y, patrolMinX, patrolMaxX) {
         super(scene, x, y, patrolMinX, patrolMaxX);
 
-        // Cat still uses placeholder for now (no cat sprites yet)
-        this.setTexture('cat');
-        this.setScale(2.5); // Increase scale for placeholder
-        this.body.setSize(20, 15);
-        this.body.setOffset(14, 8);
+        // Use detailed cat sprites
+        this.setTexture('cat_walking_1');
+        this.setScale(1.8);
+        this.body.setSize(28, 18);
+        this.body.setOffset(14, 10);
+
+        // Cat-specific walking frames
+        this.walkingFrames = ['cat_walking_1', 'cat_walking_2', 'cat_walking_3', 'cat_walking_4'];
+        this.currentFrame = 0;
 
         // Cat is faster but smaller vision
         this.patrolSpeed = 80;
         this.chaseSpeed = 250;
         this.visionRange = 120;
-
-        // Disable sprite animation for cat (uses placeholder)
-        this.usePlaceholder = true;
+        this.animationSpeed = 120; // slightly faster animation
 
         this.body.setVelocityX(this.patrolSpeed);
     }
 
-    update(time, delta, rails) {
-        // Skip animation for placeholder cat
-        if (!this.usePlaceholder) {
-            super.update(time, delta, rails);
-            return;
+    startChase(rail) {
+        this.state = 'chase';
+        this.target = rail;
+
+        // Use cat-specific pouncing sprite
+        this.setTexture('cat_pouncing');
+
+        // Trigger panic on the Rail
+        if (rail.panic) {
+            rail.panic();
         }
 
-        // Just run the state machine without animation
-        switch (this.state) {
-            case 'patrol':
-                this.patrol(delta);
-                this.searchForPrey(rails);
-                break;
-            case 'chase':
-                this.chase(delta);
-                break;
-            case 'attack':
-                this.attack(delta);
-                break;
-            case 'cooldown':
-                this.cooldown(delta);
-                break;
+        // Alert animation on predator
+        this.scene.tweens.add({
+            targets: this,
+            scaleX: 2.0,
+            scaleY: 2.0,
+            duration: 100,
+            yoyo: true,
+            onComplete: () => {
+                this.setScale(1.8);
+            }
+        });
+
+        // Exclamation effect
+        const exclaim = this.scene.add.text(this.x, this.y - 30, '!', {
+            fontFamily: 'Outfit',
+            fontSize: '24px',
+            fontStyle: 'bold',
+            color: '#ff0000',
+        }).setOrigin(0.5);
+
+        this.scene.tweens.add({
+            targets: exclaim,
+            y: exclaim.y - 20,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => exclaim.destroy(),
+        });
+    }
+
+    catchPrey() {
+        this.state = 'attack';
+        this.body.setVelocity(0, 0);
+
+        // Use cat-specific kill sprite
+        this.setTexture('cat_with_kill');
+
+        if (this.target && this.target.isAlive) {
+            this.target.die('predator');
+            this.scene.events.emit('railCaught', this.target);
         }
+
+        // Attack animation
+        this.scene.tweens.add({
+            targets: this,
+            scaleX: 2.0,
+            scaleY: 1.6,
+            duration: 200,
+            yoyo: true,
+            onComplete: () => {
+                this.setScale(1.8);
+                this.startCooldown();
+            }
+        });
+    }
+
+    endChase() {
+        this.state = 'patrol';
+        this.target = null;
+        this.setTexture('cat_walking_1');
+        this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
+        this.body.setVelocityY(0);
     }
 }

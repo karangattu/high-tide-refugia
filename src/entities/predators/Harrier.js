@@ -100,16 +100,19 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.target = rail;
         this.diveTimer = 0;
 
+        // Switch to diving silhouette
+        this.shadow.setTexture('harrier_dive');
+
         // Trigger panic on the Rail - shows surprised sprite with exclamation
         if (rail.panic) {
             rail.panic();
         }
 
-        // Alert - shadow grows larger
+        // Alert - shadow grows larger and darker
         this.scene.tweens.add({
             targets: this.shadow,
-            scaleX: 1.5,
-            scaleY: 1.5,
+            scaleX: 1.8,
+            scaleY: 1.8,
             alpha: 0.9,
             duration: 200,
         });
@@ -183,7 +186,8 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.cooldownTimer = 3000;
         this.target = null;
 
-        // Shadow shrinks and fades as harrier gains altitude
+        // Switch back to glide silhouette and shrink as harrier gains altitude
+        this.shadow.setTexture('harrier');
         this.scene.tweens.add({
             targets: this.shadow,
             scaleX: 0.6,

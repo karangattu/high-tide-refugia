@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
+
+const TEXT_RES = window.devicePixelRatio || 2;
 import { Rail } from '../entities/Rail.js';
-import { Plant, PlantPreview } from '../entities/Plant.js';
+import { Plant, PlantPreview, PLANT_TYPES } from '../entities/Plant.js';
 import { Fox, Cat } from '../entities/predators/Fox.js';
 import { Harrier } from '../entities/predators/Harrier.js';
 import { ParticleManager } from '../effects/ParticleManager.js';
@@ -83,10 +85,11 @@ export class GameScene extends Phaser.Scene {
         safeZoneGlow.setDepth(1);
 
         // Zone labels
-        const safeLabel = this.add.text(width - 75, 30, '🏠 SAFE ZONE', {
+        const safeLabel = this.add.text(width - 75, 30, 'SAFE ZONE', {
             fontFamily: 'Outfit',
             fontSize: '14px',
             color: '#27ae60',
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(10);
 
         // Floating seed particles
@@ -107,8 +110,12 @@ export class GameScene extends Phaser.Scene {
         this.foxes = this.add.group();
         this.harriers = this.add.group();
 
+        // Plant variety rotation index
+        this.nextPlantIndex = 0;
+
         // Plant preview
         this.plantPreview = new PlantPreview(this, 0, 0);
+        this.plantPreview.setPlantType(PLANT_TYPES[0].key);
     }
 
     setupInput(width, height) {
@@ -186,8 +193,13 @@ export class GameScene extends Phaser.Scene {
         // Spend seeds
         if (!this.seedBank.spendSeeds()) return;
 
+        // Pick current plant species and advance to next
+        const plantType = PLANT_TYPES[this.nextPlantIndex % PLANT_TYPES.length].key;
+        this.nextPlantIndex++;
+        this.plantPreview.setPlantType(PLANT_TYPES[this.nextPlantIndex % PLANT_TYPES.length].key);
+
         // Create plant
-        const plant = new Plant(this, x, y);
+        const plant = new Plant(this, x, y, plantType);
         this.plants.add(plant);
 
         // Sound effect would go here
@@ -287,6 +299,7 @@ export class GameScene extends Phaser.Scene {
             color: '#f39c12',
             stroke: '#000000',
             strokeThickness: 8,
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
         const nameText = this.add.text(width / 2, height / 2 + 20,
@@ -296,6 +309,7 @@ export class GameScene extends Phaser.Scene {
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 4,
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
         // Animate and remove
@@ -475,13 +489,16 @@ export class GameScene extends Phaser.Scene {
         panel.lineStyle(2, 0x27ae60);
         panel.strokeRoundedRect(width / 2 - 300, height / 2 - 120, 600, 240, 20);
 
-        // Title
-        const title = this.add.text(width / 2, height / 2 - 80, '🌿 MARSH FACT 🌿', {
+        // Title with leaf icons
+        const leafL = this.add.image(width / 2 - 100, height / 2 - 80, 'icon_leaf').setScale(1.2).setDepth(102);
+        const title = this.add.text(width / 2, height / 2 - 80, 'MARSH FACT', {
             fontFamily: 'Outfit',
             fontSize: '28px',
             fontStyle: 'bold',
             color: '#27ae60',
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
+        const leafR = this.add.image(width / 2 + 100, height / 2 - 80, 'icon_leaf').setScale(1.2).setDepth(102);
 
         // Fact text
         const factText = this.add.text(width / 2, height / 2, fact, {
@@ -490,13 +507,15 @@ export class GameScene extends Phaser.Scene {
             color: '#ffffff',
             wordWrap: { width: 540 },
             align: 'center',
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
 
         // Continue button
-        const continueText = this.add.text(width / 2, height / 2 + 80, 'Click to continue...', {
+        const continueText = this.add.text(width / 2, height / 2 + 80, 'Tap to continue...', {
             fontFamily: 'Outfit',
             fontSize: '16px',
             color: '#888888',
+            resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
 
         // Click to continue
@@ -506,6 +525,8 @@ export class GameScene extends Phaser.Scene {
                 overlay.destroy();
                 panel.destroy();
                 title.destroy();
+                leafL.destroy();
+                leafR.destroy();
                 factText.destroy();
                 continueText.destroy();
                 this.isPaused = false;

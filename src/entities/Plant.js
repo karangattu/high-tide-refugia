@@ -1,8 +1,19 @@
 import Phaser from 'phaser';
 
+// All available marsh-plant species
+export const PLANT_TYPES = [
+    { key: 'gumplant',   label: 'Gumplant',   desc: 'Grindelia stricta – bushy with yellow flowers' },
+    { key: 'saltgrass',  label: 'Saltgrass',  desc: 'Distichlis spicata – low blue-green tufts' },
+    { key: 'pickleweed', label: 'Pickleweed', desc: 'Salicornia pacifica – succulent red-green stems' },
+    { key: 'cordgrass',  label: 'Cordgrass',  desc: 'Spartina foliosa – tall arching blades' },
+    { key: 'jaumea',     label: 'Jaumea',     desc: 'Jaumea carnosa – fleshy mat with tiny flowers' },
+];
+
 export class Plant extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, type = 'gumplant') {
-        super(scene, x, y, 'plant');
+        // Use the matching texture key; fall back to legacy 'plant'
+        const textureKey = PLANT_TYPES.find(p => p.key === type) ? type : 'plant';
+        super(scene, x, y, textureKey);
 
         scene.add.existing(this);
         scene.physics.add.existing(this, true); // Static body
@@ -74,7 +85,7 @@ export class Plant extends Phaser.Physics.Arcade.Sprite {
     }
 }
 
-// Placement preview ghost
+// Placement preview ghost – shows the texture of the next plant type
 export class PlantPreview extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y) {
         super(scene, x, y, 'plant');
@@ -85,6 +96,12 @@ export class PlantPreview extends Phaser.GameObjects.Sprite {
         this.setTint(0x00ff00);
         this.setScale(0.8);
         this.setVisible(false);
+    }
+
+    /** Update which plant species the preview shows */
+    setPlantType(typeKey) {
+        const tex = PLANT_TYPES.find(p => p.key === typeKey) ? typeKey : 'plant';
+        this.setTexture(tex);
     }
 
     show(x, y, canPlace = true) {

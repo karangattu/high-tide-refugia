@@ -29,7 +29,7 @@ export class ScoreManager {
         if (rail.isPerfectRun && !rail.touchedDirt) {
             points += this.perfectBonus;
             this.perfectRuns++;
-            bonusText = '\n🌿 PERFECT COVER!';
+            bonusText = '\nPERFECT COVER!';
 
             // Increase combo
             this.currentCombo++;
@@ -70,7 +70,7 @@ export class ScoreManager {
 
         // Visual feedback
         if (this.scene.particleManager) {
-            const text = cause === 'water' ? '-50 💧' : '-50 💀';
+            const text = cause === 'water' ? '-50' : '-50';
             this.scene.particleManager.emitScorePopup(rail.x, rail.y, text, '#e74c3c');
         }
 

@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 
+const TEXT_RES = window.devicePixelRatio || 2;
+
 export class GameOverScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameOverScene' });
@@ -51,6 +53,7 @@ export class GameOverScene extends Phaser.Scene {
             fontSize: '42px',
             fontStyle: 'bold',
             color: titleColor,
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Level reached
@@ -58,6 +61,7 @@ export class GameOverScene extends Phaser.Scene {
             fontFamily: 'Outfit',
             fontSize: '20px',
             color: '#888888',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Score
@@ -65,6 +69,7 @@ export class GameOverScene extends Phaser.Scene {
             fontFamily: 'Outfit',
             fontSize: '16px',
             color: '#f39c12',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         const scoreText = this.add.text(width / 2, 295, this.stats.score?.toString() || '0', {
@@ -72,6 +77,7 @@ export class GameOverScene extends Phaser.Scene {
             fontSize: '64px',
             fontStyle: 'bold',
             color: '#ffffff',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Animate score counting up
@@ -88,23 +94,22 @@ export class GameOverScene extends Phaser.Scene {
         // Stats
         const statsY = 370;
         const statsData = [
-            { icon: '💚', label: 'Rails Saved', value: this.stats.railsSaved || 0, color: '#27ae60' },
-            { icon: '💔', label: 'Rails Lost', value: this.stats.railsLost || 0, color: '#e74c3c' },
-            { icon: '🌿', label: 'Perfect Runs', value: this.stats.perfectRuns || 0, color: '#f1c40f' },
-            { icon: '🔥', label: 'Max Combo', value: this.stats.maxCombo || 0, color: '#e67e22' },
+            { icon: 'icon_heart_green', label: 'Rails Saved', value: this.stats.railsSaved || 0, color: '#27ae60' },
+            { icon: 'icon_heart_broken', label: 'Rails Lost', value: this.stats.railsLost || 0, color: '#e74c3c' },
+            { icon: 'icon_leaf', label: 'Perfect Runs', value: this.stats.perfectRuns || 0, color: '#f1c40f' },
+            { icon: 'icon_flame', label: 'Max Combo', value: this.stats.maxCombo || 0, color: '#e67e22' },
         ];
 
         statsData.forEach((stat, i) => {
             const y = statsY + i * 40;
 
-            this.add.text(width / 2 - 100, y, stat.icon, {
-                fontSize: '20px',
-            }).setOrigin(0.5);
+            this.add.image(width / 2 - 100, y, stat.icon).setScale(0.9);
 
             this.add.text(width / 2 - 70, y, stat.label, {
                 fontFamily: 'Outfit',
                 fontSize: '16px',
                 color: '#aaaaaa',
+                resolution: TEXT_RES,
             }).setOrigin(0, 0.5);
 
             this.add.text(width / 2 + 100, y, stat.value.toString(), {
@@ -112,6 +117,7 @@ export class GameOverScene extends Phaser.Scene {
                 fontSize: '20px',
                 fontStyle: 'bold',
                 color: stat.color,
+                resolution: TEXT_RES,
             }).setOrigin(0.5);
         });
 
@@ -121,6 +127,7 @@ export class GameOverScene extends Phaser.Scene {
             fontFamily: 'Outfit',
             fontSize: '18px',
             color: survivalRate >= 50 ? '#27ae60' : '#e74c3c',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Buttons
@@ -158,6 +165,7 @@ export class GameOverScene extends Phaser.Scene {
             fontSize: '18px',
             fontStyle: 'bold',
             color: '#ffffff',
+            resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         // Interactive zone

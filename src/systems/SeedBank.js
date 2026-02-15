@@ -30,7 +30,7 @@ export class SeedBank {
 
     spendSeeds(amount = 1) {
         if (this.currentSeeds >= amount) {
-            this.currentSeeds -= amount;
+            this.currentSeeds = Math.round(this.currentSeeds - amount);
             this.notifyUpdate();
             return true;
         }
@@ -38,7 +38,7 @@ export class SeedBank {
     }
 
     addSeeds(amount) {
-        this.currentSeeds = Math.min(this.currentSeeds + amount, this.maxSeeds);
+        this.currentSeeds = Math.min(Math.round(this.currentSeeds + amount), this.maxSeeds);
         this.notifyUpdate();
     }
 
@@ -72,7 +72,7 @@ export class SeedBank {
     }
 
     reset() {
-        this.currentSeeds = this.maxSeeds * 0.8;
+        this.currentSeeds = Math.round(this.maxSeeds * 0.8);
         this.regenTimer = 0;
         this.notifyUpdate();
     }

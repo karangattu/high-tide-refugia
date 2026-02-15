@@ -87,6 +87,7 @@ export class ParticleManager {
             color: color,
             stroke: '#000000',
             strokeThickness: 4,
+            resolution: window.devicePixelRatio || 2,
         }).setOrigin(0.5);
 
         this.scene.tweens.add({
