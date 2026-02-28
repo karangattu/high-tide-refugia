@@ -45,6 +45,10 @@ export class BootScene extends Phaser.Scene {
         this.load.image('fox_pouncing', 'assets/sprites/fox_pouncing_1.png');
         this.load.image('fox_with_kill', 'assets/sprites/fox_standing_with_kill.png');
 
+        // Load Gumweed (Grindelia stricta) SVG for gumplant / legacy plant key
+        this.load.svg('gumplant', 'assets/grindelia_stricta.svg', { width: 48, height: 48 });
+        this.load.svg('plant', 'assets/grindelia_stricta.svg', { width: 48, height: 48 });
+
         // Create placeholder graphics for other assets
         this.createPlaceholderAssets();
     }
@@ -52,13 +56,11 @@ export class BootScene extends Phaser.Scene {
     createPlaceholderAssets() {
 
         // ── PLANT VARIETIES ──────────────────────────────────────
-        this.createGumplantTexture();
         this.createSaltgrassTexture();
         this.createPickleweedTexture();
         this.createCordgrassTexture();
         this.createJaumeaTexture();
-        // Legacy key kept as alias so existing code still works
-        // 'plant' is generated inside createGumplantTexture as well
+        // Gumplant / legacy 'plant' keys are loaded from SVG in preload()
 
         // Fox sprite (48x32)
         const foxGraphics = this.make.graphics({ x: 0, y: 0, add: false });
