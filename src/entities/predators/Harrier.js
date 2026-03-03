@@ -6,9 +6,14 @@ export class Harrier extends Phaser.GameObjects.Container {
 
         scene.add.existing(this);
 
+        this.baseScale = 0.15;
+
         // Shadow sprite (what we see on the ground)
-        this.shadow = scene.add.sprite(0, 0, 'harrier');
-        this.shadow.setAlpha(0.6);
+        this.shadow = scene.add.sprite(0, 0, 'harrier_sheet', 0);
+        this.shadow.setScale(this.baseScale);
+
+        // Slightly transparent so we can see what's under it but not fully like a shadow
+        this.shadow.setAlpha(0.9);
         this.add(this.shadow);
 
         // State
@@ -24,6 +29,12 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.verticalOffset = 0;
         this.glideTime = 0;
 
+        // Animation state
+        this.animationTimer = 0;
+        this.currentFrame = 0;
+        this.glidingFrames = [0, 1, 2, 4, 5, 6];
+        this.animationSpeed = 100;
+
         // Scene bounds
         this.minX = 200;
         this.maxX = scene.scale.width - 100;
@@ -32,6 +43,17 @@ export class Harrier extends Phaser.GameObjects.Container {
     }
 
     update(time, delta, rails, plants) {
+        // Animate based on state
+        this.animationTimer += delta;
+        if (this.animationTimer >= this.animationSpeed) {
+            this.animationTimer = 0;
+
+            if (this.state === 'glide' || this.state === 'recovery') {
+                this.currentFrame = (this.currentFrame + 1) % this.glidingFrames.length;
+                this.shadow.setFrame(this.glidingFrames[this.currentFrame]);
+            }
+        }
+
         switch (this.state) {
             case 'glide':
                 this.glide(delta);
@@ -63,9 +85,8 @@ export class Harrier extends Phaser.GameObjects.Container {
             this.shadow.setFlipX(false);
         }
 
-        // Subtle scale pulse to show altitude
-        const pulse = 0.9 + Math.sin(this.glideTime * 3) * 0.1;
-        this.shadow.setScale(pulse);
+        // Keep fixed scale
+        this.shadow.setScale(this.baseScale);
     }
 
     searchForPrey(rails, plants) {
@@ -76,7 +97,7 @@ export class Harrier extends Phaser.GameObjects.Container {
 
             // Check if rail is under our current position
             const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
-            if (distance > 80) return false;
+            if (distance > 100) return false;
 
             // Check if rail is protected by a plant (roof coverage)
             if (plants && plants.children) {
@@ -100,20 +121,26 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.target = rail;
         this.diveTimer = 0;
 
-        // Switch to diving silhouette
-        this.shadow.setTexture('harrier_dive');
+        // Switch to diving silhouette (frame 10 - attacking with claws out)
+        this.shadow.setFrame(10);
+
+        // Make it face the target during dive
+        if (this.target.x < this.x) {
+            this.shadow.setFlipX(true);
+        } else {
+            this.shadow.setFlipX(false);
+        }
 
         // Trigger panic on the Rail - shows surprised sprite with exclamation
         if (rail.panic) {
             rail.panic();
         }
 
-        // Alert - shadow grows larger and darker
+        // Alert - shadow grows larger as it comes closer to the ground
         this.scene.tweens.add({
             targets: this.shadow,
-            scaleX: 1.8,
-            scaleY: 1.8,
-            alpha: 0.9,
+            scaleX: this.baseScale * 1.5,
+            scaleY: this.baseScale * 1.5,
             duration: 200,
         });
 
@@ -141,6 +168,9 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.x += Math.cos(angle) * this.diveSpeed * (delta / 1000);
         this.y += Math.sin(angle) * this.diveSpeed * (delta / 1000);
 
+        // Face the target
+        this.shadow.setFlipX(this.target.x < this.x);
+
         // Check if caught
         const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
 
@@ -164,6 +194,9 @@ export class Harrier extends Phaser.GameObjects.Container {
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
             this.scene.events.emit('railCaught', this.target);
+
+            // Switch to standing with kill frame (frame 15 - catching rail on ground)
+            this.shadow.setFrame(15);
         }
 
         // Impact effect
@@ -186,13 +219,11 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.cooldownTimer = 3000;
         this.target = null;
 
-        // Switch back to glide silhouette and shrink as harrier gains altitude
-        this.shadow.setTexture('harrier');
+        // Shrink as harrier gains altitude
         this.scene.tweens.add({
             targets: this.shadow,
-            scaleX: 0.6,
-            scaleY: 0.6,
-            alpha: 0.3,
+            scaleX: this.baseScale * 0.7,
+            scaleY: this.baseScale * 0.7,
             duration: 500,
         });
     }
@@ -209,9 +240,8 @@ export class Harrier extends Phaser.GameObjects.Container {
             // Return to normal appearance
             this.scene.tweens.add({
                 targets: this.shadow,
-                scaleX: 1,
-                scaleY: 1,
-                alpha: 0.6,
+                scaleX: this.baseScale,
+                scaleY: this.baseScale,
                 duration: 300,
             });
         }

@@ -33,6 +33,9 @@ export class BootScene extends Phaser.Scene {
         // Load Fox sprite sheet
         this.load.spritesheet('fox_sheet', 'assets/sprites/gray_fox_sprite_sheet.png', { frameWidth: 688, frameHeight: 768 });
 
+        // Load Harrier sprite sheet (4x4 grid, 4000x2233 -> 1000x558 per frame)
+        this.load.spritesheet('harrier_sheet', 'assets/sprites/northern_harrier_sprite.png', { frameWidth: 1000, frameHeight: 558 });
+
         // Load Cat sprite sheet (7x2 grid, 3500x1014 -> 500x507 per frame)
         this.load.spritesheet('cat_sheet', 'assets/sprites/cat_with_padding.png', {
             frameWidth: 500,
@@ -246,7 +249,7 @@ export class BootScene extends Phaser.Scene {
     applyNearestFilter() {
         const spriteKeys = [
             'plant', 'gumplant', 'saltgrass', 'pickleweed', 'cordgrass', 'jaumea',
-            'fox', 'cat', 'harrier', 'harrier_dive',
+            'fox', 'cat',
             'cat_walking_1', 'cat_walking_2', 'cat_walking_3', 'cat_walking_4',
             'cat_pouncing', 'cat_with_kill',
             'water', 'water_edge', 'mud', 'grass',
