@@ -9,11 +9,11 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
 
         // Scale down the sprites (they're large images)
-        this.setScale(0.18);
+        this.setScale(0.10);
 
         // Physics properties - adjust for scaled sprite
-        this.body.setSize(220, 200);
-        this.body.setOffset(60, 100);
+        this.body.setSize(400, 300);
+        this.body.setOffset(144, 280);
         this.setBounce(0.3);
         this.setCollideWorldBounds(true);
 
@@ -55,10 +55,14 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
             // Switch texture based on state
             if (this.isSafe) {
-                this.setFrame(19);
-            } else {
+                this.setFrame(4);
+            } else if (!this.isPanicking) {
                 this.setFrame(this.runningFrames[this.currentFrame]);
             }
+        }
+
+        if (!this.isPanicking && !this.hasReachedSafety) {
+            this.body.setVelocityX(this.currentSpeed);
         }
 
         // Erratic movement - slight up/down wobble
@@ -82,7 +86,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         if (this.isSafe) {
             this.setAlpha(0.6);
             this.isDetectable = false;
-            this.setFrame(19);
+            this.setFrame(4);
         } else {
             this.setAlpha(1);
             this.isDetectable = true;
@@ -96,10 +100,10 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
             this.isDetectable = false;
 
             // Switch to hiding pose
-            this.setFrame(19);
+            this.setFrame(4);
 
             // Brief pause in plant
-            this.body.setVelocityX(this.baseSpeed * 0.3);
+            this.currentSpeed = this.baseSpeed * 0.3;
 
             // Schedule speed boost
             this.scene.time.delayedCall(300, () => {
@@ -124,17 +128,17 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.speedBoostTimer = 1000;
 
         // Use running frame for speed boost
-        this.setFrame(2);
+        this.setFrame(5);
 
         // Visual feedback
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.22,
-            scaleY: 0.22,
+            scaleX: 0.13,
+            scaleY: 0.13,
             duration: 100,
             yoyo: true,
             onComplete: () => {
-                this.setScale(0.18);
+                this.setScale(0.10);
             }
         });
     }
@@ -146,15 +150,15 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocity(0, 0);
 
         // Switch to calling/celebrating pose
-        this.setFrame(16);
+        this.setFrame(6);
 
         // Celebration animation
         this.scene.tweens.add({
             targets: this,
             y: this.y - 20,
             alpha: 0,
-            scaleX: 0.24,
-            scaleY: 0.24,
+            scaleX: 0.14,
+            scaleY: 0.14,
             duration: 500,
             ease: 'Power2',
             onComplete: () => {
@@ -178,7 +182,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.isPanicking = true;
 
         // Switch to surprised pose immediately
-        this.setFrame(18);
+        this.setFrame(5);
 
         // Stop moving briefly
         if (this.body) {
@@ -206,6 +210,9 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
             repeat: 1,
             onComplete: () => {
                 exclaim.destroy();
+                if (this.isAlive) {
+                    this.isPanicking = false;
+                }
             }
         });
 
@@ -229,7 +236,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Switch to surprised pose
-        this.setFrame(18);
+        this.setFrame(5);
 
         // Death animation
         if (cause === 'water') {
