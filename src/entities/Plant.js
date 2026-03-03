@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 // All available marsh-plant species
 export const PLANT_TYPES = [

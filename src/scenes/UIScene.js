@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 // Hi-DPI text resolution multiplier
 const TEXT_RES = window.devicePixelRatio || 2;

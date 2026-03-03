@@ -11,14 +11,14 @@ export class LevelManager {
 
     createLevels() {
         return [
-            // Level 1: Tutorial - Just one fox (slow pace for learning)
+            // Level 1: Tutorial - Just one cat (slow pace for learning)
             {
                 level: 1,
                 name: 'First Light',
-                waves: 3,
-                railsPerWave: 5,
-                foxCount: 1,
-                catCount: 0,
+                waves: 1,
+                railsPerWave: 4,
+                foxCount: 0,
+                catCount: 1,
                 harrierCount: 0,
                 waterSpeed: 3,
                 railSpeedMultiplier: 0.5,
@@ -26,12 +26,12 @@ export class LevelManager {
                 maxSeeds: 12,
                 marshFact: 'Ridgway\'s Rails are secretive marsh birds that depend on dense vegetation for protection from predators.',
             },
-            // Level 2: Add a cat
+            // Level 2: Introduce a fox
             {
                 level: 2,
                 name: 'Rising Concern',
-                waves: 4,
-                railsPerWave: 6,
+                waves: 2,
+                railsPerWave: 5,
                 foxCount: 1,
                 catCount: 1,
                 harrierCount: 0,
@@ -44,8 +44,8 @@ export class LevelManager {
             {
                 level: 3,
                 name: 'Eyes Above',
-                waves: 4,
-                railsPerWave: 7,
+                waves: 2,
+                railsPerWave: 6,
                 foxCount: 1,
                 catCount: 1,
                 harrierCount: 1,
@@ -58,10 +58,10 @@ export class LevelManager {
             {
                 level: 4,
                 name: 'Mounting Odds',
-                waves: 5,
-                railsPerWave: 8,
+                waves: 3,
+                railsPerWave: 6,
                 foxCount: 2,
-                catCount: 1,
+                catCount: 2,
                 harrierCount: 1,
                 waterSpeed: 12,
                 seedRegen: 0.6,
@@ -72,8 +72,8 @@ export class LevelManager {
             {
                 level: 5,
                 name: 'KING TIDE',
-                waves: 6,
-                railsPerWave: 10,
+                waves: 3,
+                railsPerWave: 8,
                 foxCount: 2,
                 catCount: 2,
                 harrierCount: 2,
@@ -88,7 +88,7 @@ export class LevelManager {
                 level: 6,
                 name: 'Survival',
                 waves: -1, // Endless
-                railsPerWave: 12,
+                railsPerWave: 8,
                 foxCount: 3,
                 catCount: 2,
                 harrierCount: 2,

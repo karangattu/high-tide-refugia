@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
@@ -15,7 +15,7 @@ const config = {
     // pixelArt is OFF so text renders with smooth (LINEAR) filtering.
     // Sprite textures are set to NEAREST in BootScene after generation.
     pixelArt: false,
-    roundPixels: true,
+    roundPixels: false, // Set to false to allow smooth sub-pixel movement without jitter
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,

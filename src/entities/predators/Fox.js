@@ -1,25 +1,25 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export class Fox extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, patrolMinX, patrolMaxX) {
-        // Start with walking pose 1
-        super(scene, x, y, 'fox_walking_1');
+        // Start with walking pose 1 (frame 0)
+        super(scene, x, y, 'fox_sheet', 0);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         // Scale down the sprites (they're large images)
-        this.setScale(0.25);
+        this.setScale(0.20); // slightly smaller to compensate for the padding in 860x960
 
         // Physics properties - adjust for scaled sprite
-        this.body.setSize(450, 200);
-        this.body.setOffset(75, 100);
+        this.body.setSize(500, 250);
+        this.body.setOffset(200, 450);
 
         // Patrol boundaries
         this.patrolMinX = patrolMinX;
         this.patrolMaxX = patrolMaxX;
-        this.patrolSpeed = 60;
-        this.chaseSpeed = 200;
+        this.patrolSpeed = 90;
+        this.chaseSpeed = 280;
 
         // State
         this.state = 'patrol'; // patrol, chase, attack, cooldown
@@ -31,8 +31,8 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         // Animation state
         this.animationTimer = 0;
         this.currentFrame = 0;
-        this.walkingFrames = ['fox_walking_1', 'fox_walking_2', 'fox_walking_3', 'fox_walking_4'];
-        this.animationSpeed = 150; // ms per frame
+        this.walkingFrames = [0, 1, 2, 3];
+        this.animationSpeed = 80; // ms per frame (faster for smoother look)
 
         // Start patrol
         this.body.setVelocityX(this.patrolSpeed);
@@ -48,7 +48,12 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
             // Update texture based on state
             if (this.state === 'patrol' || this.state === 'chase') {
-                this.setTexture(this.walkingFrames[this.currentFrame]);
+                const frameSrc = this.walkingFrames[this.currentFrame];
+                if (typeof frameSrc === 'number') {
+                    this.setFrame(frameSrc);
+                } else {
+                    this.setTexture(frameSrc);
+                }
             }
         }
 
@@ -117,7 +122,11 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.target = rail;
 
         // Switch to pouncing/running pose for chase
-        this.setTexture('fox_pouncing');
+        if (typeof this.walkingFrames[0] === 'number') {
+            this.setFrame(5);
+        } else {
+            this.setTexture('fox_pouncing');
+        }
 
         // Trigger panic on the Rail - shows surprised sprite with exclamation
         if (rail.panic) {
@@ -198,7 +207,11 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocity(0, 0);
 
         // Switch to standing with kill pose
-        this.setTexture('fox_with_kill');
+        if (typeof this.walkingFrames[0] === 'number') {
+            this.setFrame(7);
+        } else {
+            this.setTexture('fox_with_kill');
+        }
 
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
@@ -230,7 +243,11 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.state = 'patrol';
         this.target = null;
         // Return to walking animation
-        this.setTexture('fox_walking_1');
+        if (typeof this.walkingFrames[0] === 'number') {
+            this.setFrame(0);
+        } else {
+            this.setTexture('fox_walking_1');
+        }
         this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
         this.body.setVelocityY(0);
     }
@@ -254,21 +271,22 @@ export class Cat extends Fox {
     constructor(scene, x, y, patrolMinX, patrolMaxX) {
         super(scene, x, y, patrolMinX, patrolMaxX);
 
-        // Use detailed cat sprites
-        this.setTexture('cat_walking_1');
-        this.setScale(1.8);
-        this.body.setSize(28, 18);
-        this.body.setOffset(14, 10);
+        this.setTexture('cat_sheet');
+        this.setFrame(0);
 
-        // Cat-specific walking frames
-        this.walkingFrames = ['cat_walking_1', 'cat_walking_2', 'cat_walking_3', 'cat_walking_4'];
+        this.setScale(0.18); // Scaled down more since the 500x507 frames are large
+        this.body.setSize(200, 200);
+        // Center the body horizontally, push down vertically for the feet
+        this.body.setOffset(150, 200);
+
+        // Smooth jumping/bounding walk cycle (top row)
+        this.walkingFrames = [0, 1, 2, 3, 4, 5, 6];
         this.currentFrame = 0;
 
-        // Cat is faster but smaller vision
-        this.patrolSpeed = 80;
-        this.chaseSpeed = 250;
+        this.patrolSpeed = 120;
+        this.chaseSpeed = 320;
         this.visionRange = 120;
-        this.animationSpeed = 120; // slightly faster animation
+        this.animationSpeed = 80;
 
         this.body.setVelocityX(this.patrolSpeed);
     }
@@ -277,8 +295,8 @@ export class Cat extends Fox {
         this.state = 'chase';
         this.target = rail;
 
-        // Use cat-specific pouncing sprite
-        this.setTexture('cat_pouncing');
+        // Use pouncing/takeoff frame
+        this.setFrame(2);
 
         // Trigger panic on the Rail
         if (rail.panic) {
@@ -288,12 +306,12 @@ export class Cat extends Fox {
         // Alert animation on predator
         this.scene.tweens.add({
             targets: this,
-            scaleX: 2.0,
-            scaleY: 2.0,
+            scaleX: 0.22,
+            scaleY: 0.22,
             duration: 100,
             yoyo: true,
             onComplete: () => {
-                this.setScale(1.8);
+                this.setScale(0.18);
             }
         });
 
@@ -318,8 +336,8 @@ export class Cat extends Fox {
         this.state = 'attack';
         this.body.setVelocity(0, 0);
 
-        // Use cat-specific kill sprite
-        this.setTexture('cat_with_kill');
+        // Use standing with kill frame (frame 12)
+        this.setFrame(12);
 
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
@@ -329,12 +347,12 @@ export class Cat extends Fox {
         // Attack animation
         this.scene.tweens.add({
             targets: this,
-            scaleX: 2.0,
-            scaleY: 1.6,
+            scaleX: 0.22,
+            scaleY: 0.18,
             duration: 200,
             yoyo: true,
             onComplete: () => {
-                this.setScale(1.8);
+                this.setScale(0.18);
                 this.startCooldown();
             }
         });
@@ -343,7 +361,7 @@ export class Cat extends Fox {
     endChase() {
         this.state = 'patrol';
         this.target = null;
-        this.setTexture('cat_walking_1');
+        this.setFrame(0);
         this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
         this.body.setVelocityY(0);
     }

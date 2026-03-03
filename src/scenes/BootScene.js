@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -27,23 +27,17 @@ export class BootScene extends Phaser.Scene {
             }
         });
 
-        // Load real Rail sprite images
-        this.load.image('rail_running_1', 'assets/sprites/rail_running_1.png');
-        this.load.image('rail_running_2', 'assets/sprites/rail_running_2.png');
-        this.load.image('rail_running_3', 'assets/sprites/rail_running_3.png');
-        this.load.image('rail_running_4', 'assets/sprites/rail_running_4.png');
-        this.load.image('rail_hiding', 'assets/sprites/rail_hiding.png');
-        this.load.image('rail_standing', 'assets/sprites/rail_standing.png');
-        this.load.image('rail_surprised', 'assets/sprites/rail_surprised.png');
-        this.load.image('rail_calling', 'assets/sprites/rail_making_a_call.png');
+        // Load Ridgways Rail sprite sheet (8x4 grid, 2752x1536 -> 344x384 per frame)
+        this.load.spritesheet('rail_sheet', 'assets/sprites/ridgways_rail_sprite_sheet.png', { frameWidth: 344, frameHeight: 384 });
 
-        // Load real Fox sprite images
-        this.load.image('fox_walking_1', 'assets/sprites/fox_walking_1.png');
-        this.load.image('fox_walking_2', 'assets/sprites/fox_walking_2.png');
-        this.load.image('fox_walking_3', 'assets/sprites/fox_walking_3.png');
-        this.load.image('fox_walking_4', 'assets/sprites/fox_walking_4.png');
-        this.load.image('fox_pouncing', 'assets/sprites/fox_pouncing_1.png');
-        this.load.image('fox_with_kill', 'assets/sprites/fox_standing_with_kill.png');
+        // Load Fox sprite sheet
+        this.load.spritesheet('fox_sheet', 'assets/sprites/gray_fox_sprite_sheet.png', { frameWidth: 688, frameHeight: 768 });
+
+        // Load Cat sprite sheet (7x2 grid, 3500x1014 -> 500x507 per frame)
+        this.load.spritesheet('cat_sheet', 'assets/sprites/cat_with_padding.png', {
+            frameWidth: 500,
+            frameHeight: 507
+        });
 
         // Load Gumweed (Grindelia stricta) SVG for gumplant / legacy plant key
         this.load.svg('gumplant', 'assets/grindelia_stricta.svg', { width: 48, height: 48 });
@@ -285,11 +279,9 @@ export class BootScene extends Phaser.Scene {
             'icon_trophy', 'icon_heart_green', 'icon_heart_broken',
             'icon_leaf', 'icon_flame', 'icon_wave',
             'icon_paw', 'icon_bolt', 'icon_target', 'icon_star',
-            // Loaded sprite-sheet keys
-            'rail_running_1', 'rail_running_2', 'rail_running_3', 'rail_running_4',
-            'rail_hiding', 'rail_standing', 'rail_surprised', 'rail_calling',
-            'fox_walking_1', 'fox_walking_2', 'fox_walking_3', 'fox_walking_4',
-            'fox_pouncing', 'fox_with_kill',
+            'rail_sheet',
+            'fox_sheet',
+            'cat_sheet',
         ];
         spriteKeys.forEach(key => {
             const tex = this.textures.get(key);
