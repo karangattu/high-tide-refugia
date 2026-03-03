@@ -9,7 +9,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         scene.physics.add.existing(this);
 
         // Scale down the sprites (they're large images)
-        this.setScale(0.10);
+        this.setScale(0.07);
 
         // Physics properties - adjust for scaled sprite
         this.body.setSize(400, 300);
@@ -133,12 +133,12 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         // Visual feedback
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.13,
-            scaleY: 0.13,
+            scaleX: 0.09,
+            scaleY: 0.09,
             duration: 100,
             yoyo: true,
             onComplete: () => {
-                this.setScale(0.10);
+                this.setScale(0.07);
             }
         });
     }
@@ -157,8 +157,8 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
             targets: this,
             y: this.y - 20,
             alpha: 0,
-            scaleX: 0.14,
-            scaleY: 0.14,
+            scaleX: 0.10,
+            scaleY: 0.10,
             duration: 500,
             ease: 'Power2',
             onComplete: () => {

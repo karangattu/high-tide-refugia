@@ -27,8 +27,8 @@ export class BootScene extends Phaser.Scene {
             }
         });
 
-        // Load Ridgways Rail sprite sheet (4x2 grid, 2752x1536 -> 688x768 per frame)
-        this.load.spritesheet('rail_sheet', 'assets/sprites/rail_sprite_sheet.png', { frameWidth: 688, frameHeight: 768 });
+        // Load Ridgways Rail sprite sheet (4x2 grid, 4000x2233 -> 1000x1116 per frame)
+        this.load.spritesheet('rail_sheet', 'assets/sprites/rail_sprite_sheet.png', { frameWidth: 1000, frameHeight: 1116 });
 
         // Load Fox sprite sheet
         this.load.spritesheet('fox_sheet', 'assets/sprites/gray_fox_sprite_sheet.png', { frameWidth: 688, frameHeight: 768 });
