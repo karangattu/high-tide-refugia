@@ -46,6 +46,9 @@ export class BootScene extends Phaser.Scene {
         this.load.svg('gumplant', 'assets/grindelia_stricta.svg', { width: 48, height: 48 });
         this.load.svg('plant', 'assets/grindelia_stricta.svg', { width: 48, height: 48 });
 
+        // Load Intro Video
+        this.load.video('intro_video', 'assets/high_tide_refugia_intro.mp4');
+
         // Create placeholder graphics for other assets
         this.createPlaceholderAssets();
     }

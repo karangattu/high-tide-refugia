@@ -146,8 +146,7 @@ export class MenuScene extends Phaser.Scene {
         this.createButton(width / 2, buttonY, 'PLAY', () => {
             this.cameras.main.fadeOut(500);
             this.time.delayedCall(500, () => {
-                this.scene.start('GameScene');
-                this.scene.launch('UIScene');
+                this.scene.start('IntroScene');
             });
         });
 
@@ -244,11 +243,11 @@ export class MenuScene extends Phaser.Scene {
 
         // Instructions with icon keys
         const instructions = [
-            { icon: 'icon_wave',  text: 'The tide is rising! Rails flee from left to right.' },
-            { icon: 'icon_leaf',  text: 'CLICK or TAP to plant vegetation and create hiding spots.' },
-            { icon: 'icon_paw',   text: 'Predators hunt exposed Rails -- keep them hidden!' },
-            { icon: 'icon_bolt',  text: 'Rails in plants become invisible to predators.' },
-            { icon: 'icon_trophy',text: 'Bonus points for "Continuous Cover" paths!' },
+            { icon: 'icon_wave', text: 'The tide is rising! Rails flee from left to right.' },
+            { icon: 'icon_leaf', text: 'CLICK or TAP to plant vegetation and create hiding spots.' },
+            { icon: 'icon_paw', text: 'Predators hunt exposed Rails -- keep them hidden!' },
+            { icon: 'icon_bolt', text: 'Rails in plants become invisible to predators.' },
+            { icon: 'icon_trophy', text: 'Bonus points for "Continuous Cover" paths!' },
             { icon: 'icon_heart_green', text: 'Save as many Rails as you can before the tide rises!' },
         ];
 

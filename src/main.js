@@ -4,6 +4,7 @@ import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
+import { IntroScene } from './scenes/IntroScene.js';
 
 // Game configuration
 const config = {
@@ -34,7 +35,7 @@ const config = {
             debug: false,
         },
     },
-    scene: [BootScene, MenuScene, GameScene, UIScene, GameOverScene],
+    scene: [BootScene, MenuScene, IntroScene, GameScene, UIScene, GameOverScene],
 };
 
 // Create the game instance
