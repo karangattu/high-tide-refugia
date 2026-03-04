@@ -609,7 +609,14 @@ export class GameScene extends Phaser.Scene {
         if (this.tutorialActive) return;
 
         const waterX = this.waterSystem.getWaterX();
+        const stats = this.scoreManager.getStats();
         const { width } = this.scale;
+
+        // Game over if too many rails are lost
+        if (stats.railsLost > 5) {
+            this.gameOver('Too many rails lost!');
+            return;
+        }
 
         // Game over if water reaches safe zone
         if (waterX >= this.safeZoneX - 50) {
@@ -619,17 +626,35 @@ export class GameScene extends Phaser.Scene {
 
     completeLevel() {
         const config = this.levelManager.getCurrentConfig();
-        const stats = this.scoreManager.getStats();
 
         // Show marsh fact
         this.showMarshFact(config.marshFact, () => {
-            // Advance to next level
-            if (this.levelManager.currentLevel < 6) {
+            // Advance to next level or win
+            if (this.levelManager.currentLevel < 3) {
                 this.startLevel(this.levelManager.currentLevel + 1);
             } else {
-                // Endless mode continues
-                this.levelManager.startNextWave();
+                // Game Won
+                this.gameWon();
             }
+        });
+    }
+
+    gameWon() {
+        if (this.isGameOver) return;
+        this.isGameOver = true;
+
+        const stats = this.scoreManager.getStats();
+
+        // Transition to game over scene with victory reason
+        this.cameras.main.fadeOut(500);
+        this.time.delayedCall(500, () => {
+            this.scene.stop('UIScene');
+            this.scene.start('GameOverScene', {
+                stats,
+                reason: 'You saved the marsh!',
+                level: this.levelManager.currentLevel,
+                victory: true
+            });
         });
     }
 

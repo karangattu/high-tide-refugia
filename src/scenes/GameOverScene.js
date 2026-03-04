@@ -11,6 +11,7 @@ export class GameOverScene extends Phaser.Scene {
         this.stats = data.stats || {};
         this.reason = data.reason || 'Game Over';
         this.level = data.level || 1;
+        this.victory = data.victory || false;
     }
 
     create() {
@@ -42,8 +43,8 @@ export class GameOverScene extends Phaser.Scene {
         panel.lineStyle(3, 0x27ae60, 0.5);
         panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 24);
 
-        const titleText = this.stats.railsSaved > 0 ? 'TIDE SURVIVED!' : 'SWEPT AWAY';
-        const titleColor = this.stats.railsSaved > 0 ? '#27ae60' : '#e74c3c';
+        const titleText = this.victory ? 'MARSH SAVED!' : (this.stats.railsSaved > 0 ? 'TIDE SURVIVED!' : 'SWEPT AWAY');
+        const titleColor = this.victory ? '#2ecc71' : (this.stats.railsSaved > 0 ? '#27ae60' : '#e74c3c');
 
         this.add.text(width / 2, panelY + (compact ? 40 : 50), titleText, {
             fontFamily: 'Outfit',
@@ -53,7 +54,7 @@ export class GameOverScene extends Phaser.Scene {
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, panelY + (compact ? 75 : 100), `Level ${this.level} Reached`, {
+        this.add.text(width / 2, panelY + (compact ? 75 : 100), this.reason, {
             fontFamily: 'Outfit',
             fontSize: compact ? '16px' : '20px',
             color: '#888888',

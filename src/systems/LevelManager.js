@@ -54,50 +54,6 @@ export class LevelManager {
                 maxSeeds: 14,
                 marshFact: 'Northern Harriers are skilled predators that hunt by flying low over marshes, surprising their prey.',
             },
-            // Level 4: More pressure
-            {
-                level: 4,
-                name: 'Mounting Odds',
-                waves: 3,
-                railsPerWave: 6,
-                foxCount: 2,
-                catCount: 2,
-                harrierCount: 1,
-                waterSpeed: 12,
-                seedRegen: 0.6,
-                maxSeeds: 16,
-                marshFact: 'Planting native vegetation like Gumplant creates corridors that help wildlife move safely.',
-            },
-            // Level 5: King Tide!
-            {
-                level: 5,
-                name: 'KING TIDE',
-                waves: 3,
-                railsPerWave: 8,
-                foxCount: 2,
-                catCount: 2,
-                harrierCount: 2,
-                waterSpeed: 18,
-                seedRegen: 0.7,
-                maxSeeds: 18,
-                isKingTide: true,
-                marshFact: 'King Tides are extreme high tides that flood marshes completely, forcing wildlife into exposed upland areas.',
-            },
-            // Endless survival after level 5
-            {
-                level: 6,
-                name: 'Survival',
-                waves: -1, // Endless
-                railsPerWave: 8,
-                foxCount: 3,
-                catCount: 2,
-                harrierCount: 2,
-                waterSpeed: 20,
-                seedRegen: 0.8,
-                maxSeeds: 20,
-                isKingTide: true,
-                marshFact: 'Conservation efforts to restore marsh habitat help Ridgway\'s Rails survive in a changing climate.',
-            },
         ];
     }
 
