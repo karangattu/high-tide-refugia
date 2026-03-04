@@ -1,40 +1,24 @@
 import * as Phaser from 'phaser';
 
-// Hi-DPI text resolution multiplier
 const TEXT_RES = window.devicePixelRatio || 2;
 
-/**
- * Professional in-game HUD.
- * Top-left: Seed panel | Top-centre: Level | Top-right: Score + combo
- * Bottom-centre: Saved / Lost stats pill
- */
 export class UIScene extends Phaser.Scene {
     constructor() {
         super({ key: 'UIScene' });
     }
 
-    /* ─── Lifecycle ─────────────────────────────────────────── */
-
     create() {
         const { width, height } = this.scale;
         const gameScene = this.scene.get('GameScene');
+        const compact = width < 600;
 
-        const PAD = 12;          // edge padding
-        const BAR_H = 52;        // top-bar height
+        const PAD = compact ? 6 : 12;
 
-        // ── TOP-LEFT: Seed Bank ──────────────────────────────
-        this.createSeedPanel(PAD, PAD);
+        this.createSeedPanel(PAD, PAD, compact);
+        this.createLevelLabel(width / 2, PAD, compact);
+        this.createScorePanel(width - PAD, PAD, compact);
+        this.createStatsBar(width / 2, height - PAD, compact);
 
-        // ── TOP-CENTER: Level label ──────────────────────────
-        this.createLevelLabel(width / 2, PAD);
-
-        // ── TOP-RIGHT: Score + combo ─────────────────────────
-        this.createScorePanel(width - PAD, PAD);
-
-        // ── BOTTOM-CENTER: Saved / Lost stats ────────────────
-        this.createStatsBar(width / 2, height - PAD);
-
-        // ── Events ───────────────────────────────────────────
         gameScene.events.on('seedsUpdate', this.updateSeedBank, this);
         gameScene.events.on('scoreUpdate', this.updateScore, this);
         gameScene.events.on('statsUpdate', this.updateStats, this);
@@ -48,57 +32,52 @@ export class UIScene extends Phaser.Scene {
         });
     }
 
-    /* ─── Seed Bank (top-left) ──────────────────────────────── */
+    createSeedPanel(x, y, compact) {
+        const panelW = compact ? 160 : 260;
+        const panelH = compact ? 40 : 52;
+        const cx = x + panelW / 2;
+        const cy = y + panelH / 2;
 
-    createSeedPanel(x, y) {
-        // Panel bg
-        this.add.image(x + 130, y + 26, 'hud_panel_wide').setOrigin(0.5);
+        this.add.image(cx, cy, 'hud_panel_wide')
+            .setOrigin(0.5)
+            .setScale(panelW / 260, panelH / 52);
 
-        // Seed icon (small)
-        this.add.image(x + 18, y + 26, 'seed').setScale(1.2);
+        this.add.image(x + (compact ? 12 : 18), cy, 'seed').setScale(compact ? 0.8 : 1.2);
 
-        // Label
-        this.add.text(x + 34, y + 8, 'SEEDS', {
+        this.add.text(x + (compact ? 26 : 34), y + (compact ? 4 : 8), 'SEEDS', {
             fontFamily: 'Outfit',
-            fontSize: '10px',
+            fontSize: compact ? '8px' : '10px',
             fontStyle: 'bold',
             color: '#f39c12',
             resolution: TEXT_RES,
         });
 
-        // Numeric counter (compact)
-        this.seedsText = this.add.text(x + 34, y + 22, '8 / 10', {
+        this.seedsText = this.add.text(x + (compact ? 26 : 34), y + (compact ? 14 : 22), '8 / 10', {
             fontFamily: 'Outfit',
-            fontSize: '16px',
+            fontSize: compact ? '12px' : '16px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
         });
 
-        // Progress bar track
-        const barX = x + 100;
-        const barY = y + 26;
-        const barW = 140;
-        const barH = 8;
-        this.seedBarBg = this.add.rectangle(barX + barW / 2, barY, barW, barH, 0x1a1a1a)
+        const barX = x + (compact ? 70 : 100);
+        const barW = compact ? 80 : 140;
+        const barH = compact ? 6 : 8;
+        this.seedBarBg = this.add.rectangle(barX + barW / 2, cy, barW, barH, 0x1a1a1a)
             .setOrigin(0.5);
-        // Rounded cap illusion
-        this.add.rectangle(barX + barW / 2, barY, barW + 2, barH + 2, 0x333333)
+        this.add.rectangle(barX + barW / 2, cy, barW + 2, barH + 2, 0x333333)
             .setOrigin(0.5).setDepth(-1);
 
-        // Fill
-        this.seedBarFill = this.add.rectangle(barX, barY, barW, barH, 0xf39c12)
+        this.seedBarFill = this.add.rectangle(barX, cy, barW, barH, 0xf39c12)
             .setOrigin(0, 0.5);
         this._seedBarX = barX;
         this._seedBarW = barW;
     }
 
-    /* ─── Level label (top-centre) ──────────────────────────── */
-
-    createLevelLabel(cx, y) {
-        this.levelText = this.add.text(cx, y + 26, 'LEVEL 1', {
+    createLevelLabel(cx, y, compact) {
+        this.levelText = this.add.text(cx, y + (compact ? 20 : 26), 'LEVEL 1', {
             fontFamily: 'Outfit',
-            fontSize: '14px',
+            fontSize: compact ? '11px' : '14px',
             fontStyle: 'bold',
             color: '#ffffff',
             stroke: '#000000',
@@ -107,90 +86,83 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0.5);
     }
 
-    /* ─── Score + combo (top-right) ─────────────────────────── */
-
-    createScorePanel(right, y) {
-        const pw = 220;
+    createScorePanel(right, y, compact) {
+        const pw = compact ? 140 : 220;
+        const ph = compact ? 40 : 52;
         const cx = right - pw / 2;
-        this.add.image(cx, y + 26, 'hud_panel').setOrigin(0.5);
+        const cy = y + ph / 2;
+        this.add.image(cx, cy, 'hud_panel')
+            .setOrigin(0.5)
+            .setScale(pw / 220, ph / 52);
 
-        // Trophy icon
-        this.add.image(cx - 96, y + 26, 'icon_trophy').setScale(0.9);
+        this.add.image(cx - (compact ? 58 : 96), cy, 'icon_trophy').setScale(compact ? 0.7 : 0.9);
 
-        // Score value
-        this.scoreText = this.add.text(cx - 74, y + 26, '0', {
+        this.scoreText = this.add.text(cx - (compact ? 42 : 74), cy, '0', {
             fontFamily: 'Outfit',
-            fontSize: '20px',
+            fontSize: compact ? '14px' : '20px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
 
-        // Combo chip
-        this.comboText = this.add.text(cx + 50, y + 26, 'x1.0', {
+        this.comboText = this.add.text(cx + (compact ? 30 : 50), cy, 'x1.0', {
             fontFamily: 'Outfit',
-            fontSize: '13px',
+            fontSize: compact ? '10px' : '13px',
             fontStyle: 'bold',
             color: '#f1c40f',
             backgroundColor: '#1a1a1a80',
-            padding: { x: 6, y: 2 },
+            padding: { x: 4, y: 2 },
             resolution: TEXT_RES,
         }).setOrigin(0.5).setAlpha(0.4);
     }
 
-    /* ─── Bottom stats bar ──────────────────────────────────── */
+    createStatsBar(cx, bottom, compact) {
+        const BY = bottom - (compact ? 14 : 18);
+        const barScale = compact ? 0.7 : 1;
+        this.add.image(cx, BY, 'hud_panel_bottom')
+            .setOrigin(0.5)
+            .setScale(barScale);
 
-    createStatsBar(cx, bottom) {
-        const BY = bottom - 18;
-        this.add.image(cx, BY, 'hud_panel_bottom').setOrigin(0.5);
+        const spread = compact ? 80 : 120;
 
-        // Saved icon
-        this.add.image(cx - 120, BY, 'icon_heart_green').setScale(0.8);
-        this.savedText = this.add.text(cx - 102, BY, '0 saved', {
+        this.add.image(cx - spread, BY, 'icon_heart_green').setScale(compact ? 0.6 : 0.8);
+        this.savedText = this.add.text(cx - spread + 16, BY, '0 saved', {
             fontFamily: 'Outfit',
-            fontSize: '13px',
+            fontSize: compact ? '10px' : '13px',
             color: '#27ae60',
             resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
 
-        // Divider dot
-        this.add.text(cx - 20, BY, '·', {
+        this.add.text(cx - (compact ? 12 : 20), BY, '·', {
             fontFamily: 'Outfit',
-            fontSize: '16px',
+            fontSize: compact ? '12px' : '16px',
             color: '#555555',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        // Lost icon
-        this.add.image(cx + 10, BY, 'icon_heart_broken').setScale(0.8);
-        this.lostText = this.add.text(cx + 28, BY, '0 lost', {
+        this.add.image(cx + (compact ? 6 : 10), BY, 'icon_heart_broken').setScale(compact ? 0.6 : 0.8);
+        this.lostText = this.add.text(cx + (compact ? 22 : 28), BY, '0 lost', {
             fontFamily: 'Outfit',
-            fontSize: '13px',
+            fontSize: compact ? '10px' : '13px',
             color: '#e74c3c',
             resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
     }
 
-    /* ─── Update callbacks ──────────────────────────────────── */
-
     updateSeedBank(current, max) {
-        // Integer display — no decimals
         const c = Math.round(current);
         const m = Math.round(max);
         this.seedsText.setText(`${c} / ${m}`);
 
-        // Bar fill
         const pct = Math.max(0, Math.min(1, c / m));
         this.seedBarFill.width = this._seedBarW * pct;
 
-        // Colour coding
         if (pct > 0.5) {
-            this.seedBarFill.setFillStyle(0xf39c12);       // amber
+            this.seedBarFill.setFillStyle(0xf39c12);
         } else if (pct > 0.25) {
-            this.seedBarFill.setFillStyle(0xe67e22);       // orange
+            this.seedBarFill.setFillStyle(0xe67e22);
         } else {
-            this.seedBarFill.setFillStyle(0xe74c3c);       // red
-            // Gentle pulse when low
+            this.seedBarFill.setFillStyle(0xe74c3c);
             if (!this._lowPulsing) {
                 this._lowPulsing = true;
                 this.tweens.add({
@@ -238,8 +210,6 @@ export class UIScene extends Phaser.Scene {
             this.levelText.setText(`LEVEL ${progress.level} \u2013 ${progress.levelName}`);
         }
     }
-
-    /* ─── Pause overlay ─────────────────────────────────────── */
 
     togglePauseOverlay(isPaused) {
         if (isPaused) {

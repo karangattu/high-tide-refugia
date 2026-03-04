@@ -10,15 +10,13 @@ import { IntroScene } from './scenes/IntroScene.js';
 const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
-    width: 1280,
-    height: 720,
+    width: window.innerWidth,
+    height: window.innerHeight,
     backgroundColor: '#0a3d62',
-    // pixelArt is OFF so text renders with smooth (LINEAR) filtering.
-    // Sprite textures are set to NEAREST in BootScene after generation.
     pixelArt: false,
-    roundPixels: false, // Set to false to allow smooth sub-pixel movement without jitter
+    roundPixels: false,
     scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     input: {

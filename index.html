@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Rail Refuge: High Tide Rising - Save endangered Ridgway's Rails from rising tides and predators by planting protective vegetation">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description"
+    content="Rail Refuge: High Tide Rising - Save endangered Ridgway's Rails from rising tides and predators by planting protective vegetation">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="screen-orientation" content="landscape">
+
   <title>Rail Refuge: High Tide Rising</title>
   <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -39,7 +42,8 @@
       --color-safe: #27ae60;
     }
 
-    html, body {
+    html,
+    body {
       width: 100%;
       height: 100%;
       overflow: hidden;
@@ -74,60 +78,7 @@
       touch-action: none;
     }
 
-    /* ─── Portrait / Landscape orientation gate ─── */
-    #orientation-gate {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: linear-gradient(135deg, #0a3d62 0%, #0d1f2d 50%, #1a2a1a 100%);
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1.5rem;
-      color: #ffffff;
-      font-family: 'Outfit', sans-serif;
-      text-align: center;
-      padding: 2rem;
-    }
 
-    #orientation-gate .rotate-icon {
-      width: 64px;
-      height: 64px;
-      color: #f39c12;
-      animation: rotate-nudge 2s ease-in-out infinite;
-    }
-
-    #orientation-gate h2 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #f39c12;
-      margin: 0;
-    }
-
-    #orientation-gate p {
-      font-size: 1rem;
-      color: rgba(255,255,255,0.7);
-      max-width: 280px;
-      margin: 0;
-      line-height: 1.5;
-    }
-
-    @keyframes rotate-nudge {
-      0%, 100% { transform: rotate(0deg); }
-      25% { transform: rotate(-15deg); }
-      75% { transform: rotate(15deg); }
-    }
-
-    /* Show gate only on small portrait screens (phones) */
-    @media (max-width: 768px) and (orientation: portrait) {
-      #orientation-gate {
-        display: flex;
-      }
-      #game-container {
-        display: none;
-      }
-    }
 
     /* Tablet-specific tweaks */
     @media (min-width: 768px) and (max-width: 1024px) {
@@ -196,16 +147,9 @@
     }
   </style>
 </head>
+
 <body>
-  <!-- Orientation gate for portrait phones -->
-  <div id="orientation-gate">
-    <svg class="rotate-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
-      <line x1="12" y1="18" x2="12" y2="18.01"/>
-    </svg>
-    <h2>Rotate Your Device</h2>
-    <p>Rail Refuge plays best in landscape mode. Please rotate your phone to continue.</p>
-  </div>
+
 
   <div id="game-container">
     <div id="loading-screen">
@@ -218,4 +162,5 @@
   </div>
   <script type="module" src="/src/main.js"></script>
 </body>
+
 </html>

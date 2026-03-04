@@ -60,32 +60,34 @@ export class MenuScene extends Phaser.Scene {
     }
 
     createTitle(width) {
-        // Main title with glow effect
-        const titleGlow = this.add.text(width / 2, 120, 'RAIL REFUGE', {
+        const compact = width < 600;
+        const titleY = compact ? 80 : 120;
+        const titleSize = compact ? '44px' : '72px';
+        const subSize = compact ? '20px' : '28px';
+
+        const titleGlow = this.add.text(width / 2, titleY, 'RAIL REFUGE', {
             fontFamily: 'Outfit',
-            fontSize: '72px',
+            fontSize: titleSize,
             fontStyle: 'bold',
             color: '#f39c12',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setAlpha(0.3).setBlendMode(Phaser.BlendModes.ADD);
 
-        const title = this.add.text(width / 2, 120, 'RAIL REFUGE', {
+        const title = this.add.text(width / 2, titleY, 'RAIL REFUGE', {
             fontFamily: 'Outfit',
-            fontSize: '72px',
+            fontSize: titleSize,
             fontStyle: 'bold',
             color: '#f39c12',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        // Subtitle
-        const subtitle = this.add.text(width / 2, 180, 'High Tide Rising', {
+        const subtitle = this.add.text(width / 2, titleY + 60, 'High Tide Rising', {
             fontFamily: 'Outfit',
-            fontSize: '28px',
+            fontSize: subSize,
             color: '#3498db',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        // Animate title glow
         this.tweens.add({
             targets: titleGlow,
             scaleX: 1.05,
@@ -97,12 +99,11 @@ export class MenuScene extends Phaser.Scene {
             ease: 'Sine.easeInOut',
         });
 
-        // Subtitle fade in
         subtitle.setAlpha(0);
         this.tweens.add({
             targets: subtitle,
             alpha: 1,
-            y: 185,
+            y: titleY + 65,
             duration: 1000,
             delay: 300,
             ease: 'Power2',
@@ -139,10 +140,10 @@ export class MenuScene extends Phaser.Scene {
     }
 
     createButtons(width, height) {
-        const buttonY = height / 2 + 80;
-        const buttonSpacing = 80;
+        const compact = width < 600;
+        const buttonY = height / 2 + (compact ? 40 : 80);
+        const buttonSpacing = compact ? 65 : 80;
 
-        // Play button
         this.createButton(width / 2, buttonY, 'PLAY', () => {
             this.cameras.main.fadeOut(500);
             this.time.delayedCall(500, () => {
@@ -150,24 +151,23 @@ export class MenuScene extends Phaser.Scene {
             });
         });
 
-        // Tutorial button
         this.createButton(width / 2, buttonY + buttonSpacing, 'HOW TO PLAY', () => {
             this.showTutorial();
         });
 
-        // Credits placeholder
         this.createButton(width / 2, buttonY + buttonSpacing * 2, 'CREDITS', () => {
             this.showCredits();
         });
 
-        // Educational tagline
-        const tagline = this.add.text(width / 2, height - 60,
+        const tagline = this.add.text(width / 2, height - (compact ? 40 : 60),
             'Learn about endangered Ridgway\'s Rails and marsh conservation', {
             fontFamily: 'Outfit',
-            fontSize: '16px',
+            fontSize: compact ? '11px' : '16px',
             color: '#ffffff',
             alpha: 0.6,
             resolution: TEXT_RES,
+            wordWrap: { width: width - 40 },
+            align: 'center',
         }).setOrigin(0.5);
     }
 
@@ -220,28 +220,27 @@ export class MenuScene extends Phaser.Scene {
 
     showTutorial() {
         const { width, height } = this.scale;
+        const compact = width < 600;
 
-        // Overlay
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
             .setInteractive();
 
-        // Tutorial panel
+        const panelW = Math.min(700, width - 30);
+        const panelH = Math.min(500, height - 60);
         const panel = this.add.graphics();
         panel.fillStyle(0x1a2a1a, 0.95);
-        panel.fillRoundedRect(width / 2 - 350, height / 2 - 250, 700, 500, 20);
+        panel.fillRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
         panel.lineStyle(2, 0x27ae60);
-        panel.strokeRoundedRect(width / 2 - 350, height / 2 - 250, 700, 500, 20);
+        panel.strokeRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
 
-        // Title
-        const tutTitle = this.add.text(width / 2, height / 2 - 200, 'HOW TO PLAY', {
+        const tutTitle = this.add.text(width / 2, height / 2 - panelH / 2 + 40, 'HOW TO PLAY', {
             fontFamily: 'Outfit',
-            fontSize: '36px',
+            fontSize: compact ? '24px' : '36px',
             fontStyle: 'bold',
             color: '#f39c12',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        // Instructions with icon keys
         const instructions = [
             { icon: 'icon_wave', text: 'The tide is rising! Rails flee from left to right.' },
             { icon: 'icon_leaf', text: 'CLICK or TAP to plant vegetation and create hiding spots.' },
@@ -252,26 +251,31 @@ export class MenuScene extends Phaser.Scene {
         ];
 
         const tutorialItems = [tutTitle];
+        const itemSpacing = compact ? 35 : 45;
+        const startY = height / 2 - panelH / 2 + 80;
+        const iconX = width / 2 - panelW / 2 + (compact ? 24 : 40);
+        const textX = iconX + (compact ? 22 : 28);
+
         instructions.forEach((item, i) => {
-            const y = height / 2 - 120 + i * 45;
-            const ico = this.add.image(width / 2 - 270, y, item.icon).setScale(1.1);
-            const txt = this.add.text(width / 2 - 248, y, item.text, {
+            const y = startY + i * itemSpacing;
+            const ico = this.add.image(iconX, y, item.icon).setScale(compact ? 0.8 : 1.1);
+            const txt = this.add.text(textX, y, item.text, {
                 fontFamily: 'Outfit',
-                fontSize: '18px',
+                fontSize: compact ? '13px' : '18px',
                 color: '#ffffff',
                 resolution: TEXT_RES,
+                wordWrap: { width: panelW - (compact ? 80 : 120) },
             }).setOrigin(0, 0.5);
             tutorialItems.push(ico, txt);
         });
 
-        // Close button
-        const closeBtn = this.add.text(width / 2, height / 2 + 200, 'GOT IT!', {
+        const closeBtn = this.add.text(width / 2, height / 2 + panelH / 2 - 40, 'GOT IT!', {
             fontFamily: 'Outfit',
-            fontSize: '24px',
+            fontSize: compact ? '18px' : '24px',
             fontStyle: 'bold',
             color: '#27ae60',
             backgroundColor: '#000000',
-            padding: { x: 30, y: 15 },
+            padding: { x: 20, y: 10 },
             resolution: TEXT_RES,
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 

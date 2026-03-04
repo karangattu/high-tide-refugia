@@ -307,30 +307,29 @@ export class GameScene extends Phaser.Scene {
 
     showLevelStart(config) {
         const { width, height } = this.scale;
+        const compact = width < 600;
 
-        // Level announcement
         const levelText = this.add.text(width / 2, height / 2 - 50,
             `LEVEL ${config.level}`, {
             fontFamily: 'Outfit',
-            fontSize: '64px',
+            fontSize: compact ? '42px' : '64px',
             fontStyle: 'bold',
             color: '#f39c12',
             stroke: '#000000',
-            strokeThickness: 8,
+            strokeThickness: compact ? 5 : 8,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
         const nameText = this.add.text(width / 2, height / 2 + 20,
             config.name, {
             fontFamily: 'Outfit',
-            fontSize: '32px',
+            fontSize: compact ? '22px' : '32px',
             color: '#ffffff',
             stroke: '#000000',
             strokeThickness: 4,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
-        // Animate and remove
         this.tweens.add({
             targets: [levelText, nameText],
             alpha: { from: 0, to: 1 },
@@ -356,29 +355,27 @@ export class GameScene extends Phaser.Scene {
     startTutorial() {
         this.tutorialActive = true;
         const { width, height } = this.scale;
+        const compact = width < 600;
 
-        // Spawn one slow tutorial rail
         this.spawnRail();
 
-        // Hint panel background
         const panelX = width / 2;
         const panelY = height / 2 - 30;
+        const panelW = Math.min(360, width - 40);
         const panel = this.add.graphics().setDepth(90);
         panel.fillStyle(0x000000, 0.7);
-        panel.fillRoundedRect(panelX - 180, panelY - 50, 360, 100, 16);
+        panel.fillRoundedRect(panelX - panelW / 2, panelY - 50, panelW, 100, 16);
 
-        // Arrow character bouncing
-        const arrow = this.add.text(panelX, panelY + 60, '▼', {
+        const arrow = this.add.text(panelX, panelY + 60, '\u25bc', {
             fontFamily: 'Outfit',
-            fontSize: '36px',
+            fontSize: compact ? '28px' : '36px',
             color: '#f1c40f',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(91);
 
-        // Hint text
         const hint = this.add.text(panelX, panelY - 10, 'TAP here to plant cover!', {
             fontFamily: 'Outfit',
-            fontSize: '24px',
+            fontSize: compact ? '18px' : '24px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
@@ -386,12 +383,13 @@ export class GameScene extends Phaser.Scene {
 
         const subHint = this.add.text(panelX, panelY + 22, 'Rails need vegetation to hide from predators', {
             fontFamily: 'Outfit',
-            fontSize: '14px',
+            fontSize: compact ? '11px' : '14px',
             color: '#aaaaaa',
             resolution: TEXT_RES,
+            wordWrap: { width: panelW - 20 },
+            align: 'center',
         }).setOrigin(0.5).setDepth(91);
 
-        // Pulse the panel
         this.tweens.add({
             targets: [hint],
             scale: { from: 1, to: 1.06 },
@@ -401,7 +399,6 @@ export class GameScene extends Phaser.Scene {
             ease: 'Sine.easeInOut',
         });
 
-        // Bounce the arrow
         this.tweens.add({
             targets: arrow,
             y: arrow.y + 14,
@@ -638,49 +635,46 @@ export class GameScene extends Phaser.Scene {
 
     showMarshFact(fact, onComplete) {
         const { width, height } = this.scale;
+        const compact = width < 600;
         this.isPaused = true;
 
-        // Dim background
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
             .setDepth(100);
 
-        // Panel
+        const panelW = Math.min(600, width - 40);
+        const panelH = compact ? 200 : 240;
         const panel = this.add.graphics().setDepth(101);
         panel.fillStyle(0x1a2a1a, 0.95);
-        panel.fillRoundedRect(width / 2 - 300, height / 2 - 120, 600, 240, 20);
+        panel.fillRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
         panel.lineStyle(2, 0x27ae60);
-        panel.strokeRoundedRect(width / 2 - 300, height / 2 - 120, 600, 240, 20);
+        panel.strokeRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
 
-        // Title with leaf icons
-        const leafL = this.add.image(width / 2 - 100, height / 2 - 80, 'icon_leaf').setScale(1.2).setDepth(102);
-        const title = this.add.text(width / 2, height / 2 - 80, 'MARSH FACT', {
+        const leafL = this.add.image(width / 2 - (compact ? 70 : 100), height / 2 - panelH / 2 + 40, 'icon_leaf').setScale(1.2).setDepth(102);
+        const title = this.add.text(width / 2, height / 2 - panelH / 2 + 40, 'MARSH FACT', {
             fontFamily: 'Outfit',
-            fontSize: '28px',
+            fontSize: compact ? '22px' : '28px',
             fontStyle: 'bold',
             color: '#27ae60',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
-        const leafR = this.add.image(width / 2 + 100, height / 2 - 80, 'icon_leaf').setScale(1.2).setDepth(102);
+        const leafR = this.add.image(width / 2 + (compact ? 70 : 100), height / 2 - panelH / 2 + 40, 'icon_leaf').setScale(1.2).setDepth(102);
 
-        // Fact text
         const factText = this.add.text(width / 2, height / 2, fact, {
             fontFamily: 'Outfit',
-            fontSize: '18px',
+            fontSize: compact ? '14px' : '18px',
             color: '#ffffff',
-            wordWrap: { width: 540 },
+            wordWrap: { width: panelW - 60 },
             align: 'center',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
 
-        // Continue button
-        const continueText = this.add.text(width / 2, height / 2 + 80, 'Tap to continue...', {
+        const continueText = this.add.text(width / 2, height / 2 + panelH / 2 - 40, 'Tap to continue...', {
             fontFamily: 'Outfit',
-            fontSize: '16px',
+            fontSize: compact ? '13px' : '16px',
             color: '#888888',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
 
-        // Click to continue
         this.time.delayedCall(1000, () => {
             overlay.setInteractive();
             overlay.on('pointerdown', () => {
