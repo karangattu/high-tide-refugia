@@ -1,5 +1,17 @@
 import * as Phaser from 'phaser';
 
+const FOX_BASE_SCALE = 0.30;
+const FOX_CHASE_SCALE = 0.34;
+const FOX_ALERT_SCALE = 0.38;
+const FOX_ATTACK_SCALE_X = 0.38;
+const FOX_ATTACK_SCALE_Y = 0.32;
+
+const CAT_BASE_SCALE = 0.26;
+const CAT_CHASE_SCALE = 0.29;
+const CAT_ALERT_SCALE = 0.32;
+const CAT_ATTACK_SCALE_X = 0.32;
+const CAT_ATTACK_SCALE_Y = 0.27;
+
 export class Fox extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, patrolMinX, patrolMaxX) {
         // Start with walking pose 1 (frame 0)
@@ -8,8 +20,14 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        this.baseScale = FOX_BASE_SCALE;
+        this.chaseScale = FOX_CHASE_SCALE;
+        this.alertScale = FOX_ALERT_SCALE;
+        this.attackScaleX = FOX_ATTACK_SCALE_X;
+        this.attackScaleY = FOX_ATTACK_SCALE_Y;
+
         // Scale down the sprites (they're large images)
-        this.setScale(0.20); // slightly smaller to compensate for the padding in 860x960
+        this.setScale(this.baseScale); // slightly smaller to compensate for the padding in 860x960
 
         // Physics properties - adjust for scaled sprite
         this.body.setSize(500, 250);
@@ -136,12 +154,12 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         // Alert animation on predator
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.28,
-            scaleY: 0.28,
+            scaleX: this.alertScale,
+            scaleY: this.alertScale,
             duration: 100,
             yoyo: true,
             onComplete: () => {
-                this.setScale(0.25);
+                this.setScale(this.chaseScale);
             }
         });
 
@@ -223,12 +241,12 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         // Attack animation - brief pause then cooldown
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.28,
-            scaleY: 0.22,
+            scaleX: this.attackScaleX,
+            scaleY: this.attackScaleY,
             duration: 200,
             yoyo: true,
             onComplete: () => {
-                this.setScale(0.25);
+                this.setScale(this.baseScale);
                 this.startCooldown();
             }
         });
@@ -248,6 +266,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         } else {
             this.setTexture('fox_walking_1');
         }
+        this.setScale(this.baseScale);
         this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
         this.body.setVelocityY(0);
     }
@@ -274,7 +293,13 @@ export class Cat extends Fox {
         this.setTexture('cat_sheet');
         this.setFrame(0);
 
-        this.setScale(0.18); // Scaled down more since the 500x507 frames are large
+        this.baseScale = CAT_BASE_SCALE;
+        this.chaseScale = CAT_CHASE_SCALE;
+        this.alertScale = CAT_ALERT_SCALE;
+        this.attackScaleX = CAT_ATTACK_SCALE_X;
+        this.attackScaleY = CAT_ATTACK_SCALE_Y;
+
+        this.setScale(this.baseScale); // Scaled down more since the 500x507 frames are large
         this.body.setSize(200, 200);
         // Center the body horizontally, push down vertically for the feet
         this.body.setOffset(150, 200);
@@ -306,12 +331,12 @@ export class Cat extends Fox {
         // Alert animation on predator
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.22,
-            scaleY: 0.22,
+            scaleX: this.alertScale,
+            scaleY: this.alertScale,
             duration: 100,
             yoyo: true,
             onComplete: () => {
-                this.setScale(0.18);
+                this.setScale(this.chaseScale);
             }
         });
 
@@ -347,12 +372,12 @@ export class Cat extends Fox {
         // Attack animation
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.22,
-            scaleY: 0.18,
+            scaleX: this.attackScaleX,
+            scaleY: this.attackScaleY,
             duration: 200,
             yoyo: true,
             onComplete: () => {
-                this.setScale(0.18);
+                this.setScale(this.baseScale);
                 this.startCooldown();
             }
         });
@@ -362,6 +387,7 @@ export class Cat extends Fox {
         this.state = 'patrol';
         this.target = null;
         this.setFrame(0);
+        this.setScale(this.baseScale);
         this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
         this.body.setVelocityY(0);
     }

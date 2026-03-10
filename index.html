@@ -78,6 +78,71 @@
       touch-action: none;
     }
 
+    #rotate-device-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top, rgba(243, 156, 18, 0.22), transparent 35%),
+        linear-gradient(180deg, rgba(10, 61, 98, 0.92), rgba(13, 31, 45, 0.98));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 250;
+      text-align: center;
+    }
+
+    .rotate-card {
+      width: min(100%, 320px);
+      padding: 28px 24px;
+      border: 1px solid rgba(243, 156, 18, 0.35);
+      border-radius: 24px;
+      background: rgba(9, 25, 36, 0.84);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(14px);
+    }
+
+    .rotate-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      margin-bottom: 16px;
+      border-radius: 50%;
+      background: rgba(243, 156, 18, 0.18);
+      color: #f39c12;
+      font-size: 2rem;
+      font-weight: 900;
+    }
+
+    .rotate-card h2 {
+      color: #ffffff;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+    }
+
+    .rotate-card p {
+      margin-top: 12px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+
+    body.landscape-required #rotate-device-overlay {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    body.landscape-required #game-container canvas,
+    body.landscape-required #loading-screen {
+      visibility: hidden;
+    }
+
 
 
     /* Tablet-specific tweaks */
@@ -158,6 +223,13 @@
         <div class="loading-bar" id="loading-bar"></div>
       </div>
       <p class="loading-tip">Ridgway's Rails are endangered birds that depend on marshes for survival...</p>
+    </div>
+    <div id="rotate-device-overlay" aria-live="polite">
+      <div class="rotate-card">
+        <div class="rotate-icon">↻</div>
+        <h2>Rotate Your Device</h2>
+        <p>Rail Refuge is locked to landscape on phones so the marsh crossing has full play space.</p>
+      </div>
     </div>
   </div>
   <script type="module" src="/src/main.js"></script>

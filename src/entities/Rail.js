@@ -1,19 +1,25 @@
-import Phaser from 'phaser';
+import * as Phaser from 'phaser';
+
+const RAIL_BASE_SCALE = 0.18;
+const RAIL_BOOST_SCALE = 0.22;
+const RAIL_CELEBRATION_SCALE = 0.24;
 
 export class Rail extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, speedMultiplier = 1) {
-        // Start with running pose 1 (frame 0)
-        super(scene, x, y, 'rail_sheet', 0);
+        // Start with running pose 1
+        super(scene, x, y, 'rail_running_1');
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        this.baseScale = RAIL_BASE_SCALE;
+
         // Scale down the sprites (they're large images)
-        this.setScale(0.07);
+        this.setScale(this.baseScale);
 
         // Physics properties - adjust for scaled sprite
-        this.body.setSize(400, 300);
-        this.body.setOffset(144, 280);
+        this.body.setSize(300, 250);
+        this.body.setOffset(50, 100);
         this.setBounce(0.3);
         this.setCollideWorldBounds(true);
 
@@ -23,74 +29,60 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.isAlive = true;
         this.hasReachedSafety = false;
         this.touchedDirt = false;   // For continuous cover tracking
-        this.speedBoostTimer = 0;
 
         // Base movement (scaled by level multiplier)
         this.baseSpeed = Phaser.Math.Between(80, 120) * speedMultiplier;
-        this.currentSpeed = this.baseSpeed;
-        this.erraticTimer = 0;
-        this.erraticDirection = 0;
+        // _speedX is the tweened target — update() applies it each frame
+        this._speedX = this.baseSpeed;
+
+        // Smooth vertical bob via a per-rail sine wave
+        this.wobbleFreq = Phaser.Math.FloatBetween(0.0025, 0.004);
+        this.wobbleOffset = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        this.wobbleAmp = Phaser.Math.Between(20, 35);
 
         // Animation state
         this.animationTimer = 0;
         this.currentFrame = 0;
-        this.runningFrames = [0, 1, 2, 3];
-        this.animationSpeed = 80;
+        this.runningFrames = ['rail_running_1', 'rail_running_2', 'rail_running_3', 'rail_running_4'];
+        this.animationSpeed = 110; // ms per frame
 
         // Visual
         this.originalTint = 0xffffff;
 
         // Start moving right
-        this.body.setVelocityX(this.baseSpeed);
+        this.body.setVelocityX(this._speedX);
     }
 
     update(time, delta) {
         if (!this.isAlive) return;
 
-        // Animate running
+        // Apply tweened horizontal speed
+        this.body.setVelocityX(this._speedX);
+
+        // Smooth sine-wave vertical bob (replaces erratic random snaps)
+        const targetVY = Math.sin(time * this.wobbleFreq + this.wobbleOffset) * this.wobbleAmp;
+        this.body.setVelocityY(targetVY);
+
+        // Dynamic lean: tilt toward vertical velocity for a natural run feel
+        const maxLean = 0.13; // ~7.5 degrees
+        this.setRotation((targetVY / this.wobbleAmp) * maxLean);
+
+        // Animate running frames
         this.animationTimer += delta;
         if (this.animationTimer >= this.animationSpeed) {
             this.animationTimer = 0;
             this.currentFrame = (this.currentFrame + 1) % this.runningFrames.length;
-
-            // Switch texture based on state
-            if (this.isSafe) {
-                this.setFrame(4);
-            } else if (!this.isPanicking) {
-                this.setFrame(this.runningFrames[this.currentFrame]);
+            if (!this.isSafe) {
+                this.setTexture(this.runningFrames[this.currentFrame]);
             }
         }
 
-        if (!this.isPanicking && !this.hasReachedSafety) {
-            this.body.setVelocityX(this.currentSpeed);
-        }
-
-        // Erratic movement - slight up/down wobble
-        this.erraticTimer += delta;
-        if (this.erraticTimer > 500) {
-            this.erraticTimer = 0;
-            this.erraticDirection = Phaser.Math.Between(-1, 1) * 30;
-        }
-        this.body.setVelocityY(this.erraticDirection);
-
-        // Speed boost countdown
-        if (this.speedBoostTimer > 0) {
-            this.speedBoostTimer -= delta;
-            if (this.speedBoostTimer <= 0) {
-                this.currentSpeed = this.baseSpeed;
-                this.body.setVelocityX(this.currentSpeed);
-            }
-        }
-
-        // Visual feedback for safety state
+        // Visual feedback for safety state (alpha transitions handled in enterPlant/exitPlant)
         if (this.isSafe) {
-            this.setAlpha(0.6);
             this.isDetectable = false;
-            this.setFrame(4);
         } else {
-            this.setAlpha(1);
             this.isDetectable = true;
-            this.touchedDirt = true; // Touched bare ground
+            this.touchedDirt = true;
         }
     }
 
@@ -99,13 +91,21 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
             this.isSafe = true;
             this.isDetectable = false;
 
-            // Switch to hiding pose
-            this.setFrame(4);
+            // Fade to hiding texture
+            this.scene.tweens.add({
+                targets: this,
+                alpha: 0.55,
+                duration: 150,
+                ease: 'Sine.easeOut',
+                onComplete: () => {
+                    if (this.isSafe) this.setTexture('rail_hiding');
+                }
+            });
 
-            // Brief pause in plant
-            this.currentSpeed = this.baseSpeed * 0.3;
+            // Brief slowdown inside cover
+            this._tweenSpeed(this.baseSpeed * 0.3, 200);
 
-            // Schedule speed boost
+            // Schedule speed boost after brief pause
             this.scene.time.delayedCall(300, () => {
                 if (this.isAlive) {
                     this.giveSpeedBoost();
@@ -117,29 +117,54 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
     exitPlant() {
         this.isSafe = false;
         this.isDetectable = true;
-        this.setAlpha(1);
-        // Return to running animation
-        this.setFrame(0);
+
+        // Snap back to running texture immediately, then fade in
+        this.setTexture(this.runningFrames[this.currentFrame]);
+        this.scene.tweens.add({
+            targets: this,
+            alpha: 1,
+            duration: 150,
+            ease: 'Sine.easeOut',
+        });
+
+        // Return toward base speed smoothly
+        this._tweenSpeed(this.baseSpeed, 300);
     }
 
     giveSpeedBoost() {
-        this.currentSpeed = this.baseSpeed * 1.5;
-        this.body.setVelocityX(this.currentSpeed);
-        this.speedBoostTimer = 1000;
+        // Ease velocity up to boost speed
+        this._tweenSpeed(this.baseSpeed * 1.5, 250);
 
-        // Use running frame for speed boost
-        this.setFrame(5);
+        // Use racing pose during boost
+        this.setTexture('rail_running_2');
 
-        // Visual feedback
+        // Visual feedback — brief scale pulse
         this.scene.tweens.add({
             targets: this,
-            scaleX: 0.09,
-            scaleY: 0.09,
+            scaleX: RAIL_BOOST_SCALE,
+            scaleY: RAIL_BOOST_SCALE,
             duration: 100,
             yoyo: true,
             onComplete: () => {
-                this.setScale(0.07);
+                this.setScale(this.baseScale);
             }
+        });
+
+        // Return to base speed after 1 second
+        this.scene.time.delayedCall(1000, () => {
+            if (this.isAlive && !this.isSafe) {
+                this._tweenSpeed(this.baseSpeed, 400);
+            }
+        });
+    }
+
+    // Smoothly tween _speedX to a new value
+    _tweenSpeed(targetSpeed, duration) {
+        this.scene.tweens.add({
+            targets: this,
+            _speedX: targetSpeed,
+            duration,
+            ease: 'Sine.easeOut',
         });
     }
 
@@ -150,15 +175,15 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocity(0, 0);
 
         // Switch to calling/celebrating pose
-        this.setFrame(6);
+        this.setTexture('rail_calling');
 
         // Celebration animation
         this.scene.tweens.add({
             targets: this,
             y: this.y - 20,
             alpha: 0,
-            scaleX: 0.10,
-            scaleY: 0.10,
+            scaleX: RAIL_CELEBRATION_SCALE,
+            scaleY: RAIL_CELEBRATION_SCALE,
             duration: 500,
             ease: 'Power2',
             onComplete: () => {
@@ -177,17 +202,16 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
     // Called when a predator spots this Rail - shows warning before death
     panic() {
-        if (!this.scene || !this.isAlive || this.isPanicking) return;
+        if (!this.isAlive || this.isPanicking) return;
 
         this.isPanicking = true;
+        this.setRotation(0);
 
         // Switch to surprised pose immediately
-        this.setFrame(5);
+        this.setTexture('rail_surprised');
 
         // Stop moving briefly
-        if (this.body) {
-            this.body.setVelocity(0, 0);
-        }
+        this.body.setVelocity(0, 0);
 
         // Create exclamation mark warning above Rail
         const exclaim = this.scene.add.text(this.x, this.y - 40, '!', {
@@ -210,9 +234,6 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
             repeat: 1,
             onComplete: () => {
                 exclaim.destroy();
-                if (this.isAlive) {
-                    this.isPanicking = false;
-                }
             }
         });
 
@@ -227,16 +248,15 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
     }
 
     die(cause = 'predator') {
-        if (!this.scene || !this.isAlive) return;
+        if (!this.isAlive) return;
 
         this.isAlive = false;
         this.isPanicking = false;
-        if (this.body) {
-            this.body.setVelocity(0, 0);
-        }
+        this.setRotation(0);
+        this.body.setVelocity(0, 0);
 
         // Switch to surprised pose
-        this.setFrame(5);
+        this.setTexture('rail_surprised');
 
         // Death animation
         if (cause === 'water') {

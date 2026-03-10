@@ -1,12 +1,14 @@
 import * as Phaser from 'phaser';
 
+const HARRIER_BASE_SCALE = 0.22;
+
 export class Harrier extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
         super(scene, x, y);
 
         scene.add.existing(this);
 
-        this.baseScale = 0.15;
+        this.baseScale = HARRIER_BASE_SCALE;
 
         // Shadow sprite (what we see on the ground)
         this.shadow = scene.add.sprite(0, 0, 'harrier_sheet', 0);
