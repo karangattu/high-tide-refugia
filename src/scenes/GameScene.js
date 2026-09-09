@@ -241,22 +241,27 @@ export class GameScene extends Phaser.Scene {
         upland.fillRect(uplandX, marshY, width - uplandX, height - marshY);
         upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0, 0.85, 0, 0.85);
         if (isMobileLandscape) {
-            upland.fillRect(uplandX - 30, marshY, 60, height - marshY);
+            upland.fillRect(uplandX - 10, marshY, 40, height - marshY);
         } else {
             upland.fillRect(uplandX - 70, marshY, 100, height - marshY);
         }
 
+        // Single vertical row of decorative gumplants down the upland
+        // refuge — one fixed column so it reads as a border, not a thicket.
+        const gumplantRowX = uplandX + (isMobileLandscape ? 75 : 55);
         const gumplantCount = Math.round((this.marshBottom - this.marshTop) / 20);
         for (let i = 0; i <= gumplantCount; i++) {
-            // Lean on mobile: thin out every other bush so the right edge
-            // stays a hint of cover instead of a wide wall.
-            if (isMobileLandscape && i % 2 === 1) continue;
+            // Lean on mobile: keep 1 in 3 bushes so the row stays airy.
+            if (isMobileLandscape && i % 3 !== 0) continue;
             const y = this.marshTop + i * 20 + Phaser.Math.Between(-8, 8);
-            let x = uplandX + Phaser.Math.Between(10, 100);
+            const x = Phaser.Math.Clamp(
+                gumplantRowX + Phaser.Math.Between(-8, 8),
+                uplandX + 10,
+                width - 25
+            );
             const scale = isMobileLandscape
-                ? Phaser.Math.FloatBetween(0.17, 0.22)
+                ? Phaser.Math.FloatBetween(0.14, 0.18)
                 : Phaser.Math.FloatBetween(0.26, 0.34);
-            if (isMobileLandscape) x += 15;
             const gp = this.add.image(x, y, 'gumplant_8')
                 .setScale(scale)
                 .setDepth(2);
@@ -271,16 +276,18 @@ export class GameScene extends Phaser.Scene {
             });
         }
 
+        const glowW = isMobileLandscape ? 110 : 150;
+        const glowX = isMobileLandscape ? width - 55 : width - 75;
         const safeZoneGlow = this.add.rectangle(
-            width - 75, (marshY + height) / 2,
-            150, height - marshY,
+            glowX, (marshY + height) / 2,
+            glowW, height - marshY,
             0x27ae60, 0.12
         );
         safeZoneGlow.setDepth(1);
 
-        this.add.text(width - 75, marshY + 22, 'SAFE REFUGE', {
+        this.add.text(glowX, marshY + 22, 'SAFE REFUGE', {
             fontFamily: 'Mona Sans',
-            fontSize: '20px',
+            fontSize: isMobileLandscape ? '14px' : '20px',
             fontStyle: 'bold',
             color: '#2ecc71',
             stroke: '#0c1a0c',

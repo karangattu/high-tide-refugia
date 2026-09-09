@@ -180,8 +180,8 @@ test('GameScene keeps decorative grindelia/gumplant strictly in upland refugia a
 
     assert.match(
         gameSceneContent,
-        /const\s+gumplantCount[\s\S]*?uplandX\s*\+\s*Phaser\.Math\.Between\(10,\s*100\)[\s\S]*?'gumplant_8'/,
-        'GameScene must restrict decorative gumplant to the upland safe refuge'
+        /const\s+gumplantCount[\s\S]*?gumplantRowX[\s\S]*?'gumplant_8'/,
+        'GameScene must restrict decorative gumplant to a single row in the upland safe refuge'
     );
 
     assert.match(
