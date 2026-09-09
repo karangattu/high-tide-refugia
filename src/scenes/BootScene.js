@@ -30,8 +30,8 @@ export class BootScene extends Phaser.Scene {
         // Load Ridgways Rail sprite sheet (4x2 grid, 4000x2233 -> 1000x1116 per frame)
         this.load.spritesheet('rail_sheet', 'assets/sprites/rail_sprite_sheet.png', { frameWidth: 1000, frameHeight: 1116 });
 
-        // Load Harrier sprite sheet (4x4 grid, 4000x2233 -> 1000x558 per frame)
-        this.load.spritesheet('harrier_sheet', 'assets/sprites/northern_harrier_sprite.png', { frameWidth: 1000, frameHeight: 558 });
+        // Load Harrier sheet (raw image; sliced into flight frames in create())
+        this.load.image('harrier_sheet_raw', 'assets/sprites/northern_harrier_sprite.png');
 
         // Load Cat sprite sheet (7x2 grid, 3500x1014 -> 500x507 per frame)
         this.load.spritesheet('cat_sheet', 'assets/sprites/cat_with_padding.png', {
@@ -311,6 +311,9 @@ export class BootScene extends Phaser.Scene {
         // Split plant growth sheets into staged textures (Plant.js uses these)
         this.slicePlantSheets();
 
+        // Split the harrier sheet into flight frames (Harrier.js uses these)
+        this.sliceHarrier();
+
         // Re-apply NEAREST now that the sliced rail textures exist
         // (plant stage textures intentionally keep LINEAR filtering)
         this.applyNearestFilter();
@@ -454,8 +457,7 @@ export class BootScene extends Phaser.Scene {
 
     /** Crop (sx, sy, sw, sh) from src, keep only the largest connected
      *  alpha mass, and return its trimmed canvas + bbox (or null). */
-    _trimLargestBlob(src, sx, sy, sw, sh) {
-        const cell = document.createElement('canvas');
+    _trimLargestBlob(src, sx, sy, sw, sh) {        const cell = document.createElement('canvas');
         cell.width = sw;
         cell.height = sh;
         const cctx = cell.getContext('2d', { willReadFrequently: true });
@@ -528,6 +530,68 @@ export class BootScene extends Phaser.Scene {
             x: minX, y: minY,
             w: maxX - minX + 1, h: maxY - minY + 1,
         };
+    }
+
+    // ─── HARRIER SHEET SLICER ────────────────────────────────
+
+    /** The harrier sheet is 1774x887: a top row of 6 glide poses and a
+     *  bottom row of 4 dive/catch poses (with prey). Frames bleed across
+     *  borders, so each is reduced to its largest connected alpha mass,
+     *  trimmed, and CENTRE-anchored on a shared canvas (it flies — no
+     *  ground line). Generates `harrier_glide_1..6`, `harrier_dive`
+     *  (level-wing glide pose) and `harrier_kill` (carrying prey). */
+    sliceHarrier() {
+        const RAW = 'harrier_sheet_raw';
+        if (!this.textures.exists(RAW)) return;
+        const src = this.textures.get(RAW).source[0].image;
+        const W = src.width, H = src.height;
+        const INSET = 6;
+
+        const regions = [];
+        for (let i = 0; i < 6; i++) {
+            regions.push({
+                sx: Math.round((i * W) / 6 + INSET), sy: INSET,
+                sw: Math.round(W / 6 - INSET * 2), sh: Math.round(H / 2 - INSET * 2),
+                key: `harrier_glide_${i + 1}`,
+            });
+        }
+        regions.push({
+            sx: Math.round((3 * W) / 4 + INSET), sy: Math.round(H / 2 + INSET),
+            sw: Math.round(W / 4 - INSET * 2), sh: Math.round(H / 2 - INSET * 2),
+            key: 'harrier_kill',
+        });
+
+        const stages = regions.map((r) => this._trimLargestBlob(src, r.sx, r.sy, r.sw, r.sh));
+        let maxW = 1, maxH = 1;
+        stages.forEach((st) => {
+            if (st) {
+                maxW = Math.max(maxW, st.w);
+                maxH = Math.max(maxH, st.h);
+            }
+        });
+
+        const paint = (texKey, stage) => {
+            if (this.textures.exists(texKey)) this.textures.remove(texKey);
+            const tex = this.textures.createCanvas(texKey, maxW, maxH);
+            if (!tex) return;
+            const ctx = tex.getContext();
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            if (stage) {
+                ctx.drawImage(
+                    stage.canvas, stage.x, stage.y, stage.w, stage.h,
+                    Math.round((maxW - stage.w) / 2), Math.round((maxH - stage.h) / 2),
+                    stage.w, stage.h
+                );
+            }
+            tex.refresh();
+        };
+
+        regions.forEach((r, i) => paint(r.key, stages[i]));
+        // Dive reuses the level-wing glide pose (scale tween sells the stoop)
+        paint('harrier_dive', stages[3]);
+
+        this.textures.remove(RAW);
     }
 
     // ─── HARRIER TEXTURE GENERATORS (Northern Harrier / Marsh Hawk) ───

@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 
-const HARRIER_BASE_SCALE = 0.22;
+const HARRIER_BASE_SCALE = 0.4;
 
 export class Harrier extends Phaser.GameObjects.Container {
     constructor(scene, x, y) {
@@ -11,7 +11,7 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.baseScale = HARRIER_BASE_SCALE;
 
         // Shadow sprite (what we see on the ground)
-        this.shadow = scene.add.sprite(0, 0, 'harrier_sheet', 0);
+        this.shadow = scene.add.sprite(0, 0, 'harrier_glide_1');
         this.shadow.setScale(this.baseScale);
 
         // Slightly transparent so we can see what's under it but not fully like a shadow
@@ -34,7 +34,10 @@ export class Harrier extends Phaser.GameObjects.Container {
         // Animation state
         this.animationTimer = 0;
         this.currentFrame = 0;
-        this.glidingFrames = [0, 1, 2, 4, 5, 6];
+        this.glidingFrames = [
+            'harrier_glide_1', 'harrier_glide_2', 'harrier_glide_3',
+            'harrier_glide_4', 'harrier_glide_5', 'harrier_glide_6',
+        ];
         this.animationSpeed = 100;
 
         // Scene bounds
@@ -53,7 +56,7 @@ export class Harrier extends Phaser.GameObjects.Container {
 
             if (this.state === 'glide' || this.state === 'recovery') {
                 this.currentFrame = (this.currentFrame + 1) % this.glidingFrames.length;
-                this.shadow.setFrame(this.glidingFrames[this.currentFrame]);
+                this.shadow.setTexture(this.glidingFrames[this.currentFrame]);
             }
         }
 
@@ -125,8 +128,8 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.target = rail;
         this.diveTimer = 0;
 
-        // Switch to diving silhouette (frame 10 - attacking with claws out)
-        this.shadow.setFrame(10);
+        // Switch to diving silhouette (talons-out stoop)
+        this.shadow.setTexture('harrier_dive');
 
         // Make it face the target during dive
         if (this.target.x < this.x) {
@@ -199,8 +202,8 @@ export class Harrier extends Phaser.GameObjects.Container {
             this.target.die('predator');
             this.scene.events.emit('railCaught', this.target);
 
-            // Switch to standing with kill frame (frame 15 - catching rail on ground)
-            this.shadow.setFrame(15);
+            // Switch to kill pose (carrying prey)
+            this.shadow.setTexture('harrier_kill');
         }
 
         // Impact effect
