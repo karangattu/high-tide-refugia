@@ -213,9 +213,15 @@ export class GameScene extends Phaser.Scene {
 
         const cordgrassCount = Math.round((height - this.marshY) / 20);
         for (let i = 0; i <= cordgrassCount; i++) {
+            // Lean on mobile: thin out every other tuft so the left edge
+            // stays a hint of cover instead of a wide wall.
+            if (isMobileLandscape && i % 2 === 1) continue;
             const y = this.marshY + 10 + i * 20 + Phaser.Math.Between(-6, 6);
-            const x = Phaser.Math.Between(15, 80);
-            const scale = Phaser.Math.FloatBetween(0.24, 0.32);
+            let x = Phaser.Math.Between(15, 80);
+            const scale = isMobileLandscape
+                ? Phaser.Math.FloatBetween(0.15, 0.20)
+                : Phaser.Math.FloatBetween(0.24, 0.32);
+            if (isMobileLandscape) x = Math.min(x, 45);
             const cg = this.add.image(x, y, 'cordgrass_8')
                 .setScale(scale)
                 .setDepth(6);
@@ -234,13 +240,23 @@ export class GameScene extends Phaser.Scene {
         upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x2f4a1d, 0x2f4a1d, 1, 1, 1, 1);
         upland.fillRect(uplandX, marshY, width - uplandX, height - marshY);
         upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0, 0.85, 0, 0.85);
-        upland.fillRect(uplandX - 70, marshY, 100, height - marshY);
+        if (isMobileLandscape) {
+            upland.fillRect(uplandX - 30, marshY, 60, height - marshY);
+        } else {
+            upland.fillRect(uplandX - 70, marshY, 100, height - marshY);
+        }
 
         const gumplantCount = Math.round((this.marshBottom - this.marshTop) / 20);
         for (let i = 0; i <= gumplantCount; i++) {
+            // Lean on mobile: thin out every other bush so the right edge
+            // stays a hint of cover instead of a wide wall.
+            if (isMobileLandscape && i % 2 === 1) continue;
             const y = this.marshTop + i * 20 + Phaser.Math.Between(-8, 8);
-            const x = uplandX + Phaser.Math.Between(10, 100);
-            const scale = Phaser.Math.FloatBetween(0.26, 0.34);
+            let x = uplandX + Phaser.Math.Between(10, 100);
+            const scale = isMobileLandscape
+                ? Phaser.Math.FloatBetween(0.17, 0.22)
+                : Phaser.Math.FloatBetween(0.26, 0.34);
+            if (isMobileLandscape) x += 15;
             const gp = this.add.image(x, y, 'gumplant_8')
                 .setScale(scale)
                 .setDepth(2);
