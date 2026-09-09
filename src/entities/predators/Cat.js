@@ -1,37 +1,33 @@
 import * as Phaser from 'phaser';
 
-const FOX_BASE_SCALE = 0.30;
-const FOX_CHASE_SCALE = 0.34;
-const FOX_ALERT_SCALE = 0.38;
-const FOX_ATTACK_SCALE_X = 0.38;
-const FOX_ATTACK_SCALE_Y = 0.32;
-
 const CAT_BASE_SCALE = 0.26;
 const CAT_CHASE_SCALE = 0.29;
 const CAT_ALERT_SCALE = 0.32;
 const CAT_ATTACK_SCALE_X = 0.32;
 const CAT_ATTACK_SCALE_Y = 0.27;
 
-export class Fox extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, patrolMinX, patrolMaxX) {
+// Shared ground-predator behaviour (patrol / chase / attack / cooldown).
+class GroundPredator extends Phaser.Physics.Arcade.Sprite {
+    constructor(scene, x, y, patrolMinX, patrolMaxX, texture) {
         // Start with walking pose 1 (frame 0)
-        super(scene, x, y, 'fox_sheet', 0);
+        super(scene, x, y, texture, 0);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.baseScale = FOX_BASE_SCALE;
-        this.chaseScale = FOX_CHASE_SCALE;
-        this.alertScale = FOX_ALERT_SCALE;
-        this.attackScaleX = FOX_ATTACK_SCALE_X;
-        this.attackScaleY = FOX_ATTACK_SCALE_Y;
+        this.baseScale = CAT_BASE_SCALE;
+        this.chaseScale = CAT_CHASE_SCALE;
+        this.alertScale = CAT_ALERT_SCALE;
+        this.attackScaleX = CAT_ATTACK_SCALE_X;
+        this.attackScaleY = CAT_ATTACK_SCALE_Y;
 
         // Scale down the sprites (they're large images)
-        this.setScale(this.baseScale); // slightly smaller to compensate for the padding in 860x960
+        this.setScale(this.baseScale);
 
         // Physics properties - adjust for scaled sprite
-        this.body.setSize(500, 250);
-        this.body.setOffset(200, 450);
+        this.body.setSize(200, 200);
+        // Center the body horizontally, push down vertically for the feet
+        this.body.setOffset(150, 200);
 
         // Patrol boundaries
         this.patrolMinX = patrolMinX;
@@ -153,11 +149,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.target = rail;
 
         // Switch to pouncing/running pose for chase
-        if (typeof this.walkingFrames[0] === 'number') {
-            this.setFrame(5);
-        } else {
-            this.setTexture('fox_pouncing');
-        }
+        this.setFrame(5);
 
         // Trigger panic on the Rail - shows surprised sprite with exclamation
         if (rail.panic) {
@@ -238,11 +230,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocity(0, 0);
 
         // Switch to standing with kill pose
-        if (typeof this.walkingFrames[0] === 'number') {
-            this.setFrame(7);
-        } else {
-            this.setTexture('fox_with_kill');
-        }
+        this.setFrame(7);
 
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
@@ -274,11 +262,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.state = 'patrol';
         this.target = null;
         // Return to walking animation
-        if (typeof this.walkingFrames[0] === 'number') {
-            this.setFrame(0);
-        } else {
-            this.setTexture('fox_walking_1');
-        }
+        this.setFrame(0);
         this.setScale(this.baseScale);
         this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
         this.body.setVelocityY(0);
@@ -299,12 +283,9 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
     }
 }
 
-export class Cat extends Fox {
+export class Cat extends GroundPredator {
     constructor(scene, x, y, patrolMinX, patrolMaxX) {
-        super(scene, x, y, patrolMinX, patrolMaxX);
-
-        this.setTexture('cat_sheet');
-        this.setFrame(0);
+        super(scene, x, y, patrolMinX, patrolMaxX, 'cat_sheet');
 
         this.baseScale = CAT_BASE_SCALE;
         this.chaseScale = CAT_CHASE_SCALE;

@@ -30,9 +30,6 @@ export class BootScene extends Phaser.Scene {
         // Load Ridgways Rail sprite sheet (4x2 grid, 4000x2233 -> 1000x1116 per frame)
         this.load.spritesheet('rail_sheet', 'assets/sprites/rail_sprite_sheet.png', { frameWidth: 1000, frameHeight: 1116 });
 
-        // Load Fox sprite sheet
-        this.load.spritesheet('fox_sheet', 'assets/sprites/gray_fox_sprite_sheet.png', { frameWidth: 688, frameHeight: 768 });
-
         // Load Harrier sprite sheet (4x4 grid, 4000x2233 -> 1000x558 per frame)
         this.load.spritesheet('harrier_sheet', 'assets/sprites/northern_harrier_sprite.png', { frameWidth: 1000, frameHeight: 558 });
 
@@ -281,7 +278,7 @@ export class BootScene extends Phaser.Scene {
      *  intentionally keep LINEAR filtering; text keeps LINEAR too. */
     applyNearestFilter() {
         const spriteKeys = [
-            'fox', 'cat',
+            'cat',
             'cat_walking_1', 'cat_walking_2', 'cat_walking_3', 'cat_walking_4',
             'cat_pouncing', 'cat_with_kill',
             'water', 'water_edge', 'mud', 'grass',
@@ -296,8 +293,7 @@ export class BootScene extends Phaser.Scene {
             // Icon textures (emoji replacements)
             'icon_trophy', 'icon_heart_green', 'icon_heart_broken',
             'icon_leaf', 'icon_flame', 'icon_wave',
-            'icon_paw', 'icon_bolt', 'icon_target', 'icon_star',
-            'fox_sheet',
+            'icon_paw', 'icon_bolt', 'icon_target',             'icon_star',
             'cat_sheet',
         ];
         spriteKeys.forEach(key => {

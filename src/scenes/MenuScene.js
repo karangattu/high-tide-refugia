@@ -541,7 +541,7 @@ export class MenuScene extends Phaser.Scene {
         const instructions = [
             { icon: 'icon_wave', text: 'The tide is rising! Rails flee from left to right.' },
             { icon: 'icon_leaf', text: 'TAP the marsh to plant vegetation and create hiding spots.' },
-            { icon: 'icon_paw', text: 'Foxes, cats and harriers hunt exposed Rails.' },
+            { icon: 'icon_paw', text: 'Cats and harriers hunt exposed Rails.' },
             { icon: 'icon_bolt', text: 'Rails in plants become invisible to predators.' },
             { icon: 'icon_trophy', text: 'Bonus points for "Continuous Cover" paths!' },
             { icon: 'icon_heart_green', text: 'Save as many Rails as you can before the tide rises!' },

@@ -3,7 +3,7 @@ import Phaser from 'phaser';
 const TEXT_RES = window.devicePixelRatio || 2;
 import { Rail } from '../entities/Rail.js';
 import { Plant, PlantPreview, PLANT_TYPES } from '../entities/Plant.js';
-import { Fox, Cat } from '../entities/predators/Fox.js';
+import { Cat } from '../entities/predators/Cat.js';
 import { Harrier } from '../entities/predators/Harrier.js';
 import { ParticleManager } from '../effects/ParticleManager.js';
 import { WaterSystem } from '../systems/WaterSystem.js';
@@ -233,7 +233,7 @@ export class GameScene extends Phaser.Scene {
         this.plants = this.physics.add.staticGroup();
 
         // Predators
-        this.foxes = this.add.group();
+        this.groundPredators = this.add.group();
         this.harriers = this.add.group();
 
         // Plant variety rotation index
@@ -353,7 +353,7 @@ export class GameScene extends Phaser.Scene {
         // Clear entities
         this.rails.clear(true, true);
         this.plants.clear(true, true);
-        this.foxes.clear(true, true);
+        this.groundPredators.clear(true, true);
         this.harriers.clear(true, true);
 
         // Spawn predators
@@ -390,22 +390,6 @@ export class GameScene extends Phaser.Scene {
         const top = this.marshTop + 10;
         const bottom = this.marshBottom - 10;
 
-        // Spawn foxes
-        for (let i = 0; i < config.foxCount; i++) {
-            const patrolStart = zoneStart + (zoneWidth / config.foxCount) * i;
-            const patrolEnd = patrolStart + (zoneWidth / config.foxCount);
-            const y = top + ((bottom - top) * ((i % 3) + 0.5)) / 3;
-
-            const fox = new Fox(
-                this,
-                (patrolStart + patrolEnd) / 2,
-                y,
-                patrolStart,
-                patrolEnd
-            );
-            this.foxes.add(fox);
-        }
-
         // Spawn cats
         for (let i = 0; i < config.catCount; i++) {
             const patrolStart = zoneStart + 50 + (zoneWidth / config.catCount) * i;
@@ -419,7 +403,7 @@ export class GameScene extends Phaser.Scene {
                 patrolStart,
                 patrolEnd
             );
-            this.foxes.add(cat);
+            this.groundPredators.add(cat);
         }
 
         // Spawn harriers
@@ -633,8 +617,8 @@ export class GameScene extends Phaser.Scene {
         this.seedBank.update(delta);
 
         // Update predators
-        this.foxes.children.entries.forEach(fox => {
-            fox.update(time, delta, this.rails);
+        this.groundPredators.children.entries.forEach(predator => {
+            predator.update(time, delta, this.rails);
         });
 
         this.harriers.children.entries.forEach(harrier => {
