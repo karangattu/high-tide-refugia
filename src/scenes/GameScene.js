@@ -766,13 +766,13 @@ export class GameScene extends Phaser.Scene {
 
         // Game over if too many rails are lost
         if (stats.railsLost > 5) {
-            this.gameOver('Too many rails lost!');
+            this.gameOver('Too many rails were lost to predators.');
             return;
         }
 
         // Game over if water reaches safe zone
         if (waterX >= this.safeZoneX - 50) {
-            this.gameOver('The tide has risen too high!');
+            this.gameOver('The king tide submerged the safe refuge.');
         }
     }
 
@@ -810,9 +810,11 @@ export class GameScene extends Phaser.Scene {
             this.scene.stop('UIScene');
             this.scene.start('GameOverScene', {
                 stats,
-                reason: 'You saved the marsh!',
+                reason: stats.railsLost === 0
+                    ? 'All rails reached high-tide refugia safely!'
+                    : 'You guided the rails safely to high-tide refugia!',
                 level: this.levelManager.currentLevel,
-                victory: true
+                victory: true,
             });
         });
     }
@@ -902,6 +904,7 @@ export class GameScene extends Phaser.Scene {
                 stats,
                 reason,
                 level: this.levelManager.currentLevel,
+                victory: false,
             });
         });
     }

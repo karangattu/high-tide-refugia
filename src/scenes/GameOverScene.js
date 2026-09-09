@@ -30,6 +30,47 @@ export class GameOverScene extends Phaser.Scene {
         }
     }
 
+    getHeaderInfo() {
+        if (this.victory) {
+            const perfect = (this.stats.railsLost || 0) === 0;
+            return {
+                titleText: perfect ? 'PERFECT REFUGE!' : 'TIDE SURVIVED!',
+                titleColor: '#2ecc71',
+                borderColor: 0x27ae60,
+                subText: perfect
+                    ? 'Flawless restoration! All rails reached safety.'
+                    : (this.reason && this.reason !== 'Game Over'
+                        ? this.reason
+                        : 'You guided the rails safely to high-tide refugia!'),
+                buttonText: 'PLAY AGAIN',
+            };
+        }
+
+        const isWaterLoss = this.reason && (
+            this.reason.toLowerCase().includes('tide') ||
+            this.reason.toLowerCase().includes('water') ||
+            this.reason.toLowerCase().includes('submerge')
+        );
+
+        if (isWaterLoss) {
+            return {
+                titleText: 'REFUGE FLOODED',
+                titleColor: '#e74c3c',
+                borderColor: 0xc0392b,
+                subText: 'The king tide rose too high before enough rails reached safety.',
+                buttonText: 'TRY AGAIN',
+            };
+        }
+
+        return {
+            titleText: 'TOO MANY RAILS LOST',
+            titleColor: '#e74c3c',
+            borderColor: 0xc0392b,
+            subText: 'Plant continuous plant cover so rails can shelter from predators.',
+            buttonText: 'TRY AGAIN',
+        };
+    }
+
     createPanel(width, height) {
         const isShortLandscape = height <= 520;
         const compact = height <= 520 || width < 600;
@@ -40,30 +81,32 @@ export class GameOverScene extends Phaser.Scene {
             const panelX = width / 2 - panelW / 2;
             const panelY = Math.max(10, (height - panelH) / 2);
 
+            const header = this.getHeaderInfo();
+
             const panel = this.add.graphics();
             panel.fillStyle(0x1a2a1a, 0.95);
             panel.fillRoundedRect(panelX, panelY, panelW, panelH, 20);
-            panel.lineStyle(2, 0x27ae60, 0.5);
+            panel.lineStyle(2, header.borderColor, 0.6);
             panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 20);
-
-            const titleText = this.victory ? 'MARSH SAVED!' : (this.stats.railsSaved > 0 ? 'TIDE SURVIVED!' : 'SWEPT AWAY');
-            const titleColor = this.victory ? '#2ecc71' : (this.stats.railsSaved > 0 ? '#27ae60' : '#e74c3c');
 
             const col1X = panelX + panelW * 0.28;
             const col2X = panelX + panelW * 0.72;
 
-            this.add.text(col1X, panelY + 34, titleText, {
+            const titleFontSize = header.titleText.length > 15 ? '22px' : '28px';
+            this.add.text(col1X, panelY + 34, header.titleText, {
                 fontFamily: 'Outfit',
-                fontSize: '30px',
+                fontSize: titleFontSize,
                 fontStyle: 'bold',
-                color: titleColor,
+                color: header.titleColor,
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
 
-            this.add.text(col1X, panelY + 64, this.reason, {
+            this.add.text(col1X, panelY + 64, header.subText, {
                 fontFamily: 'Outfit',
-                fontSize: '15px',
-                color: '#888888',
+                fontSize: '13px',
+                color: '#aaaaaa',
+                wordWrap: { width: panelW * 0.44 },
+                align: 'center',
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
 
@@ -129,7 +172,7 @@ export class GameOverScene extends Phaser.Scene {
 
             const buttonY = panelY + panelH - 42;
             const btnSpread = 90;
-            this.createButton(col2X - btnSpread, buttonY, 'PLAY AGAIN', () => {
+            this.createButton(col2X - btnSpread, buttonY, header.buttonText, () => {
                 this.cameras.main.fadeOut(300);
                 this.time.delayedCall(300, () => {
                     this.scene.start('GameScene');
@@ -152,27 +195,32 @@ export class GameOverScene extends Phaser.Scene {
         const panelX = width / 2 - panelW / 2;
         const panelY = Math.max(15, (height - panelH) / 2);
 
+        const header = this.getHeaderInfo();
+
         const panel = this.add.graphics();
         panel.fillStyle(0x1a2a1a, 0.95);
         panel.fillRoundedRect(panelX, panelY, panelW, panelH, 24);
-        panel.lineStyle(3, 0x27ae60, 0.5);
+        panel.lineStyle(3, header.borderColor, 0.6);
         panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 24);
 
-        const titleText = this.victory ? 'MARSH SAVED!' : (this.stats.railsSaved > 0 ? 'TIDE SURVIVED!' : 'SWEPT AWAY');
-        const titleColor = this.victory ? '#2ecc71' : (this.stats.railsSaved > 0 ? '#27ae60' : '#e74c3c');
+        const titleFontSize = compact
+            ? (header.titleText.length > 15 ? '30px' : '38px')
+            : (header.titleText.length > 15 ? '42px' : '52px');
 
-        this.add.text(width / 2, panelY + (compact ? 48 : 60), titleText, {
+        this.add.text(width / 2, panelY + (compact ? 46 : 58), header.titleText, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '40px' : '54px',
+            fontSize: titleFontSize,
             fontStyle: 'bold',
-            color: titleColor,
+            color: header.titleColor,
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, panelY + (compact ? 92 : 118), this.reason, {
+        this.add.text(width / 2, panelY + (compact ? 90 : 116), header.subText, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '20px' : '26px',
-            color: '#888888',
+            fontSize: compact ? '15px' : '19px',
+            color: '#aaaaaa',
+            wordWrap: { width: panelW - 40 },
+            align: 'center',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
@@ -242,7 +290,7 @@ export class GameOverScene extends Phaser.Scene {
         const buttonY = panelY + panelH - (compact ? 50 : 58);
         const btnSpread = compact ? 100 : 140;
 
-        this.createButton(width / 2 - btnSpread, buttonY, 'PLAY AGAIN', () => {
+        this.createButton(width / 2 - btnSpread, buttonY, header.buttonText, () => {
             this.cameras.main.fadeOut(300);
             this.time.delayedCall(300, () => {
                 this.scene.start('GameScene');
