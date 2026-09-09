@@ -198,7 +198,6 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             rail.panic();
         }
 
-        // Alert animation on predator
         this.scene.tweens.add({
             targets: this,
             scaleX: this.alertScale,
@@ -208,22 +207,6 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             onComplete: () => {
                 this.setScale(this.chaseScale);
             }
-        });
-
-        // Exclamation effect on predator
-        const exclaim = this.scene.add.text(this.x, this.y - 40, '!', {
-            fontFamily: 'Outfit',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: '#ff0000',
-        }).setOrigin(0.5);
-
-        this.scene.tweens.add({
-            targets: exclaim,
-            y: exclaim.y - 20,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => exclaim.destroy(),
         });
     }
 
@@ -372,21 +355,6 @@ export class Cat extends GroundPredator {
             onComplete: () => {
                 this.setScale(this.chaseScale);
             }
-        });
-
-        const exclaim = this.scene.add.text(this.x, this.y - 30, '!', {
-            fontFamily: 'Outfit',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: '#ff0000',
-        }).setOrigin(0.5);
-
-        this.scene.tweens.add({
-            targets: exclaim,
-            y: exclaim.y - 20,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => exclaim.destroy(),
         });
     }
 
