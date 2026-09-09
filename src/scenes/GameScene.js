@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 import { Rail } from '../entities/Rail.js';
-import { Plant, PlantPreview, PLANT_TYPES } from '../entities/Plant.js';
+import { Plant, PlantPreview, getPlantTypeForX } from '../entities/Plant.js';
 import { Cat } from '../entities/predators/Cat.js';
 import { Harrier } from '../entities/predators/Harrier.js';
 import { ParticleManager } from '../effects/ParticleManager.js';
@@ -291,12 +291,9 @@ export class GameScene extends Phaser.Scene {
         this.groundPredators = this.add.group();
         this.harriers = this.add.group();
 
-        // Plant variety rotation index
-        this.nextPlantIndex = 0;
-
         // Plant preview
         this.plantPreview = new PlantPreview(this, 0, 0);
-        this.plantPreview.setPlantType(PLANT_TYPES[0].key);
+        this.plantPreview.setPlantType('cordgrass');
     }
 
     setupInput() {
@@ -304,12 +301,16 @@ export class GameScene extends Phaser.Scene {
         this.input.on('pointermove', (pointer) => {
             if (this.isPaused || this.isGameOver) return;
 
+            const plantType = getPlantTypeForX(pointer.x, this.scale.width);
+            this.plantPreview.setPlantType(plantType);
             const canPlace = this.canPlantAt(pointer.x, pointer.y);
             this.plantPreview.show(pointer.x, pointer.y, canPlace);
         });
 
         this.input.on('pointerdown', (pointer) => {
             if (this.isPaused || this.isGameOver) return;
+            const plantType = getPlantTypeForX(pointer.x, this.scale.width);
+            this.plantPreview.setPlantType(plantType);
             this.tryPlantAt(pointer.x, pointer.y);
         });
 
@@ -374,12 +375,7 @@ export class GameScene extends Phaser.Scene {
         // Spend seeds
         if (!this.seedBank.spendSeeds()) return;
 
-        // Pick current plant species and advance to next
-        const plantType = PLANT_TYPES[this.nextPlantIndex % PLANT_TYPES.length].key;
-        this.nextPlantIndex++;
-        this.plantPreview.setPlantType(PLANT_TYPES[this.nextPlantIndex % PLANT_TYPES.length].key);
-
-        // Create plant
+        const plantType = getPlantTypeForX(x, this.scale.width);
         const plant = new Plant(this, x, y, plantType);
         this.plants.add(plant);
 

@@ -49,6 +49,9 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         // Visual
         this.originalTint = 0xffffff;
 
+        this.boostTimer = null;
+        this.boostResetTimer = null;
+
         // Ground contact shadow (positioned dynamically in update())
         this.shadow = scene.add.image(x, y, 'shadow')
             .setAlpha(0.35)
@@ -56,6 +59,18 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.once('destroy', () => {
             if (this.shadow) this.shadow.destroy();
             this.shadow = null;
+            if (this.boostTimer) {
+                this.boostTimer.remove();
+                this.boostTimer = null;
+            }
+            if (this.boostResetTimer) {
+                this.boostResetTimer.remove();
+                this.boostResetTimer = null;
+            }
+            if (this.scene && this.scene.tweens) {
+                this.scene.tweens.killTweensOf(this);
+            }
+            this.isAlive = false;
         });
 
         // Start moving right
@@ -109,27 +124,31 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
     }
 
     enterPlant() {
-        if (!this.isSafe) {
-            this.isSafe = true;
-            this.isDetectable = false;
+        if (!this.scene || !this.isAlive || this.isSafe) return;
+        this.isSafe = true;
+        this.isDetectable = false;
 
-            // Fade to hiding texture
+        if (this.scene.tweens) {
             this.scene.tweens.add({
                 targets: this,
                 alpha: 0.55,
                 duration: 150,
                 ease: 'Sine.easeOut',
                 onComplete: () => {
-                    if (this.isSafe) this.setTexture('rail_hiding');
+                    if (this.scene && this.isSafe) this.setTexture('rail_hiding');
                 }
             });
+        }
 
-            // Brief slowdown inside cover
-            this._tweenSpeed(this.baseSpeed * 0.3, 200);
+        this._tweenSpeed(this.baseSpeed * 0.3, 200);
 
-            // Schedule speed boost after brief pause
-            this.scene.time.delayedCall(300, () => {
-                if (this.isAlive) {
+        if (this.boostTimer) {
+            this.boostTimer.remove();
+            this.boostTimer = null;
+        }
+        if (this.scene.time) {
+            this.boostTimer = this.scene.time.delayedCall(300, () => {
+                if (this.scene && this.isAlive) {
                     this.giveSpeedBoost();
                 }
             });
@@ -137,55 +156,61 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
     }
 
     exitPlant() {
+        if (!this.scene || !this.isAlive) return;
         this.isSafe = false;
         this.isDetectable = true;
 
-        // Snap back to running texture immediately, then fade in
         this.setTexture(this.runningFrames[this.currentFrame]);
-        this.scene.tweens.add({
-            targets: this,
-            alpha: 1,
-            duration: 150,
-            ease: 'Sine.easeOut',
-        });
+        if (this.scene.tweens) {
+            this.scene.tweens.add({
+                targets: this,
+                alpha: 1,
+                duration: 150,
+                ease: 'Sine.easeOut',
+            });
+        }
 
-        // Return toward base speed smoothly
         this._tweenSpeed(this.baseSpeed, 300);
     }
 
     giveSpeedBoost() {
-        // Ease velocity up to boost speed
+        if (!this.scene || !this.isAlive) return;
         this._tweenSpeed(this.baseSpeed * 1.5, 250);
 
-        // Switch to the gallop cycle during the boost
         this.isBoosting = true;
         if (!this.isSafe && !this.isPanicking) {
             this.setTexture(this.sprintFrames[this.currentFrame]);
         }
 
-        // Visual feedback — brief scale pulse
-        this.scene.tweens.add({
-            targets: this,
-            scaleX: RAIL_BOOST_SCALE,
-            scaleY: RAIL_BOOST_SCALE,
-            duration: 100,
-            yoyo: true,
-            onComplete: () => {
-                this.setScale(this.baseScale);
-            }
-        });
+        if (this.scene.tweens) {
+            this.scene.tweens.add({
+                targets: this,
+                scaleX: RAIL_BOOST_SCALE,
+                scaleY: RAIL_BOOST_SCALE,
+                duration: 100,
+                yoyo: true,
+                onComplete: () => {
+                    if (this.scene) this.setScale(this.baseScale);
+                }
+            });
+        }
 
-        // Return to base speed after 1 second
-        this.scene.time.delayedCall(1000, () => {
-            this.isBoosting = false;
-            if (this.isAlive && !this.isSafe) {
-                this._tweenSpeed(this.baseSpeed, 400);
-            }
-        });
+        if (this.boostResetTimer) {
+            this.boostResetTimer.remove();
+            this.boostResetTimer = null;
+        }
+        if (this.scene.time) {
+            this.boostResetTimer = this.scene.time.delayedCall(1000, () => {
+                this.isBoosting = false;
+                if (this.scene && this.isAlive && !this.isSafe) {
+                    this._tweenSpeed(this.baseSpeed, 400);
+                }
+            });
+        }
     }
 
-    // Smoothly tween _speedX to a new value
     _tweenSpeed(targetSpeed, duration) {
+        if (!this.scene || !this.scene.tweens || !this.isAlive) return;
         this.scene.tweens.add({
             targets: this,
             _speedX: targetSpeed,
@@ -198,79 +223,83 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         if (this.hasReachedSafety) return;
 
         this.hasReachedSafety = true;
-        this.body.setVelocity(0, 0);
+        this.isAlive = false;
+        if (this.boostTimer) {
+            this.boostTimer.remove();
+            this.boostTimer = null;
+        }
+        if (this.boostResetTimer) {
+            this.boostResetTimer.remove();
+            this.boostResetTimer = null;
+        }
+        if (this.body) this.body.setVelocity(0, 0);
 
-        // Switch to calling/celebrating pose
         this.setTexture('rail_calling');
 
-        // Celebration animation
-        this.scene.tweens.add({
-            targets: this,
-            y: this.y - 20,
-            alpha: 0,
-            scaleX: RAIL_CELEBRATION_SCALE,
-            scaleY: RAIL_CELEBRATION_SCALE,
-            duration: 500,
-            ease: 'Power2',
-            onComplete: () => {
-                this.destroy();
-            }
-        });
+        if (this.scene && this.scene.tweens) {
+            this.scene.tweens.add({
+                targets: this,
+                y: this.y - 20,
+                alpha: 0,
+                scaleX: RAIL_CELEBRATION_SCALE,
+                scaleY: RAIL_CELEBRATION_SCALE,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    this.destroy();
+                }
+            });
+        } else {
+            this.destroy();
+        }
 
-        // Emit heart particles
-        if (this.scene.particleManager) {
+        if (this.scene && this.scene.particleManager) {
             this.scene.particleManager.emitHearts(this.x, this.y);
         }
 
-        // Return whether it was a perfect run
         return !this.touchedDirt;
     }
 
-    // Called when a predator spots this Rail - shows warning before death
     panic() {
-        if (!this.isAlive || this.isPanicking) return;
+        if (!this.isAlive || this.isPanicking || !this.scene) return;
 
         this.isPanicking = true;
         this.setRotation(0);
-
-        // Switch to surprised pose immediately
         this.setTexture('rail_surprised');
+        if (this.body) this.body.setVelocity(0, 0);
 
-        // Stop moving briefly
-        this.body.setVelocity(0, 0);
+        if (this.scene.add) {
+            const exclaim = this.scene.add.text(this.x, this.y - 40, '!', {
+                fontFamily: 'Outfit',
+                fontSize: '32px',
+                fontStyle: 'bold',
+                color: '#ffcc00',
+                stroke: '#ff0000',
+                strokeThickness: 4,
+            }).setOrigin(0.5).setDepth(100);
 
-        // Create exclamation mark warning above Rail
-        const exclaim = this.scene.add.text(this.x, this.y - 40, '!', {
-            fontFamily: 'Outfit',
-            fontSize: '32px',
-            fontStyle: 'bold',
-            color: '#ffcc00',
-            stroke: '#ff0000',
-            strokeThickness: 4,
-        }).setOrigin(0.5).setDepth(100);
-
-        // Animate exclamation mark
-        this.scene.tweens.add({
-            targets: exclaim,
-            y: exclaim.y - 15,
-            scaleX: 1.3,
-            scaleY: 1.3,
-            duration: 200,
-            yoyo: true,
-            repeat: 1,
-            onComplete: () => {
-                exclaim.destroy();
+            if (this.scene.tweens) {
+                this.scene.tweens.add({
+                    targets: exclaim,
+                    y: exclaim.y - 15,
+                    scaleX: 1.3,
+                    scaleY: 1.3,
+                    duration: 200,
+                    yoyo: true,
+                    repeat: 1,
+                    onComplete: () => {
+                        exclaim.destroy();
+                    }
+                });
+                this.scene.tweens.add({
+                    targets: this,
+                    x: this.x + 3,
+                    duration: 50,
+                    yoyo: true,
+                    repeat: 3,
+                });
             }
-        });
-
-        // Brief shake effect on the Rail
-        this.scene.tweens.add({
-            targets: this,
-            x: this.x + 3,
-            duration: 50,
-            yoyo: true,
-            repeat: 3,
-        });
+        }
     }
 
     die(cause = 'predator') {
@@ -278,34 +307,45 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
         this.isAlive = false;
         this.isPanicking = false;
+        if (this.boostTimer) {
+            this.boostTimer.remove();
+            this.boostTimer = null;
+        }
+        if (this.boostResetTimer) {
+            this.boostResetTimer.remove();
+            this.boostResetTimer = null;
+        }
         this.setRotation(0);
-        this.body.setVelocity(0, 0);
+        if (this.body) this.body.setVelocity(0, 0);
 
-        // Switch to surprised pose
         this.setTexture('rail_surprised');
 
-        // Death animation
-        if (cause === 'water') {
-            // Swept away by water
-            this.scene.tweens.add({
-                targets: this,
-                x: this.x - 50,
-                alpha: 0,
-                rotation: Math.PI / 2,
-                duration: 500,
-                onComplete: () => this.destroy()
-            });
+        if (this.scene && this.scene.tweens) {
+            this.scene.tweens.killTweensOf(this);
+            if (cause === 'water') {
+                this.scene.tweens.add({
+                    targets: this,
+                    x: this.x - 50,
+                    alpha: 0,
+                    rotation: Math.PI / 2,
+                    duration: 500,
+                    onComplete: () => this.destroy()
+                });
+            } else {
+                this.scene.tweens.add({
+                    targets: this,
+                    alpha: 0,
+                    duration: 120,
+                    onComplete: () => this.destroy()
+                });
+            }
         } else {
-            this.scene.tweens.add({
-                targets: this,
-                alpha: 0,
-                duration: 120,
-                onComplete: () => this.destroy()
-            });
+            this.destroy();
         }
 
-        // Screen shake
-        this.scene.cameras.main.shake(100, 0.005);
+        if (this.scene && this.scene.cameras && this.scene.cameras.main) {
+            this.scene.cameras.main.shake(100, 0.005);
+        }
     }
 
     isPerfectRun() {

@@ -201,26 +201,33 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.state = 'catch';
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
-            this.scene.events.emit('railCaught', this.target);
+            if (this.scene && this.scene.events) {
+                this.scene.events.emit('railCaught', this.target);
+            }
         }
 
         this.bird.setTexture('harrier_catch');
         this.bird.setScale(this.diveScale);
         this.bird.y = 0;
 
-        if (this.scene.particleManager) {
+        if (this.scene && this.scene.particleManager) {
             this.scene.particleManager.emitDirt(this.x, this.y);
         }
-        this.scene.cameras.main.shake(120, 0.006);
+        if (this.scene && this.scene.cameras && this.scene.cameras.main) {
+            this.scene.cameras.main.shake(120, 0.006);
+        }
 
-        this.scene.time.delayedCall(220, () => {
-            if (this.active) {
-                this.startCarry();
-            }
-        });
+        if (this.scene && this.scene.time) {
+            this.scene.time.delayedCall(220, () => {
+                if (this.active && this.scene) {
+                    this.startCarry();
+                }
+            });
+        }
     }
 
     startCarry() {
+        if (!this.scene || !this.scene.tweens) return;
         this.state = 'carry';
         this.carryTimer = 2200;
         this.target = null;
@@ -255,13 +262,14 @@ export class Harrier extends Phaser.GameObjects.Container {
 
     missPrey() {
         this.target = null;
-        if (this.scene.particleManager) {
+        if (this.scene && this.scene.particleManager) {
             this.scene.particleManager.emitDirt(this.x, this.y);
         }
         this.startRecovery();
     }
 
     startRecovery() {
+        if (!this.scene || !this.scene.tweens) return;
         this.state = 'recovery';
         this.cooldownTimer = 2200;
         this.target = null;

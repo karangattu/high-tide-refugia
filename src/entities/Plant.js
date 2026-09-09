@@ -5,21 +5,36 @@ import * as Phaser from 'phaser';
 // BootScene into `{key}_1..{key}_8`. targetW is the mature on-screen
 // width in pixels; smaller species read as low ground cover.
 export const PLANT_TYPES = [
-    { key: 'gumplant',   label: 'Gumplant',   desc: 'Grindelia stricta – bushy with yellow flowers', targetW: 110 },
-    { key: 'saltgrass',  label: 'Saltgrass',  desc: 'Distichlis spicata – low blue-green tufts',     targetW: 100 },
-    { key: 'pickleweed', label: 'Pickleweed', desc: 'Salicornia pacifica – succulent red-green stems', targetW: 95 },
-    { key: 'cordgrass',  label: 'Cordgrass',  desc: 'Spartina foliosa – tall arching blades',        targetW: 110 },
-    { key: 'jaumea',     label: 'Jaumea',     desc: 'Jaumea carnosa – fleshy mat with tiny flowers', targetW: 90 },
+    { key: 'cordgrass',  label: 'Cordgrass',  zone: 'Low Marsh',         desc: 'Spartina foliosa – tidal mudflats & low marsh',    targetW: 110 },
+    { key: 'pickleweed', label: 'Pickleweed', zone: 'Mid Marsh',         desc: 'Salicornia pacifica – mid marsh succulent plain',  targetW: 95 },
+    { key: 'jaumea',     label: 'Jaumea',     zone: 'Marsh Plain',       desc: 'Jaumea carnosa – moist depressions & saline mats', targetW: 90 },
+    { key: 'saltgrass',  label: 'Saltgrass',  zone: 'High Marsh',        desc: 'Distichlis spicata – tough high-marsh sod',        targetW: 100 },
+    { key: 'gumplant',   label: 'Gumplant',   zone: 'High-Tide Refugia', desc: 'Grindelia stricta – tall bushes & upland refugia', targetW: 110 },
 ];
 
+export const MARSH_ZONES = PLANT_TYPES;
+
 export const GROWTH_STAGES = 8;
-// Stage at which the plant counts as cover (rails can hide in it)
 export const COVER_STAGE = 4;
-// ms between growth steps — sprout to mature in ~1.5s
 const STAGE_DELAY = 200;
 
 export function plantTargetWidth(type) {
     return PLANT_TYPES.find(p => p.key === type)?.targetW || 100;
+}
+
+export function getPlantZoneForX(x, sceneWidth) {
+    const minX = 60;
+    const maxX = Math.max(minX + 100, sceneWidth - 150);
+    const u = Math.min(Math.max((x - minX) / (maxX - minX), 0), 0.999);
+    if (u < 0.20) return PLANT_TYPES[0];
+    if (u < 0.40) return PLANT_TYPES[1];
+    if (u < 0.60) return PLANT_TYPES[2];
+    if (u < 0.80) return PLANT_TYPES[3];
+    return PLANT_TYPES[4];
+}
+
+export function getPlantTypeForX(x, sceneWidth) {
+    return getPlantZoneForX(x, sceneWidth).key;
 }
 
 export class Plant extends Phaser.Physics.Arcade.Sprite {
@@ -122,35 +137,72 @@ export class Plant extends Phaser.Physics.Arcade.Sprite {
     }
 }
 
-// Placement preview ghost – shows the mature frame of the next plant type
 export class PlantPreview extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y) {
-        super(scene, x, y, 'gumplant_8');
+        super(scene, x, y, 'cordgrass_8');
 
         scene.add.existing(this);
 
         this.setAlpha(0.5);
         this.setTint(0x00ff00);
-        this.setScale(plantTargetWidth('gumplant') / this.width);
+        this.setScale(plantTargetWidth('cordgrass') / this.width);
         this.setDepth(10);
         this.setVisible(false);
+
+        this.currentType = 'cordgrass';
+        this.labelBg = scene.add.graphics().setDepth(11).setVisible(false);
+        this.labelText = scene.add.text(x, y - 40, '', {
+            fontFamily: 'Outfit',
+            fontSize: '12px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            resolution: window.devicePixelRatio || 2,
+        }).setOrigin(0.5).setDepth(12).setVisible(false);
+
+        this.once('destroy', () => {
+            if (this.labelBg) this.labelBg.destroy();
+            if (this.labelText) this.labelText.destroy();
+            this.labelBg = null;
+            this.labelText = null;
+        });
     }
 
-    /** Update which plant species the preview shows */
     setPlantType(typeKey) {
-        const known = PLANT_TYPES.some(p => p.key === typeKey);
-        const key = known ? typeKey : 'gumplant';
-        this.setTexture(`${key}_${GROWTH_STAGES}`);
-        this.setScale(plantTargetWidth(key) / this.width);
+        const entry = PLANT_TYPES.find(p => p.key === typeKey) || PLANT_TYPES[0];
+        if (this.currentType !== entry.key) {
+            this.currentType = entry.key;
+            this.setTexture(`${entry.key}_${GROWTH_STAGES}`);
+            this.setScale(plantTargetWidth(entry.key) / this.width);
+        }
+        if (this.labelText) {
+            this.labelText.setText(`${entry.label} · ${entry.zone}`);
+        }
     }
 
     show(x, y, canPlace = true) {
         this.setPosition(x, y);
         this.setVisible(true);
         this.setTint(canPlace ? 0x00ff00 : 0xff0000);
+
+        if (this.labelText && this.labelBg) {
+            const ly = y - 44;
+            this.labelText.setPosition(x, ly);
+            this.labelText.setVisible(true);
+
+            const textW = this.labelText.width + 16;
+            const textH = this.labelText.height + 6;
+            this.labelBg.clear();
+            this.labelBg.fillStyle(0x07150c, canPlace ? 0.88 : 0.70);
+            this.labelBg.lineStyle(1, canPlace ? 0x2ecc71 : 0xe74c3c, 0.75);
+            this.labelBg.fillRoundedRect(x - textW / 2, ly - textH / 2, textW, textH, 6);
+            this.labelBg.strokeRoundedRect(x - textW / 2, ly - textH / 2, textW, textH, 6);
+            this.labelBg.setVisible(true);
+        }
     }
 
     hide() {
         this.setVisible(false);
+        if (this.labelText) this.labelText.setVisible(false);
+        if (this.labelBg) this.labelBg.setVisible(false);
     }
 }
