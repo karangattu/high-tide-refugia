@@ -203,7 +203,7 @@ export class WaterSystem {
             100,
             'KING TIDE!',
             {
-                fontFamily: 'Outfit',
+                fontFamily: 'Mona Sans',
                 fontSize: '64px',
                 fontStyle: 'bold',
                 color: '#ff6b6b',

@@ -285,14 +285,14 @@ export class MenuScene extends Phaser.Scene {
 
         this.add.text(width / 2, titleY - (compact ? 38 : 60),
             'A  M A R S H  C O N S E R V A T I O N  G A M E', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: eyebrowSize,
             color: '#9fd8e8',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setAlpha(0.85);
 
         const titleGlow = this.add.text(width / 2, titleY, 'RAIL REFUGE', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: titleSize,
             fontStyle: '900',
             color: AMBER_STR,
@@ -300,7 +300,7 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
 
         this.add.text(width / 2, titleY, 'RAIL REFUGE', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: titleSize,
             fontStyle: '900',
             color: AMBER_STR,
@@ -341,7 +341,7 @@ export class MenuScene extends Phaser.Scene {
         );
 
         const subtitle = this.add.text(width / 2, divY + (compact ? 28 : 38), 'H I G H  T I D E  R I S I N G', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: subSize,
             color: '#bfe8f2',
             resolution: TEXT_RES,
@@ -430,7 +430,7 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(10);
 
         const text = this.add.text(x, y, label, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize,
             fontStyle: 'bold',
             color,
@@ -477,7 +477,7 @@ export class MenuScene extends Phaser.Scene {
         );
         this.add.text(width / 2, footerY,
             "Help endangered Ridgway's Rails cross the marsh before the tide rises", {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '14px' : '19px',
             color: '#ffffff',
             resolution: TEXT_RES,
@@ -486,7 +486,7 @@ export class MenuScene extends Phaser.Scene {
 
         const sfbboFooter = this.add.text(width / 2, footerY + lineGap,
             'A project with the San Francisco Bay Bird Observatory  •  sfbbo.org', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '13px' : '17px',
             color: TEAL_STR,
             resolution: TEXT_RES,
@@ -518,7 +518,7 @@ export class MenuScene extends Phaser.Scene {
         panel.strokeRoundedRect(left, top, panelW, panelH, 20);
 
         const titleText = this.add.text(width / 2, top + (compact ? (title.length > 18 ? 34 : 42) : 54), title, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? (title.length > 18 ? '21px' : '28px') : (title.length > 18 ? '32px' : '40px'),
             fontStyle: '900',
             color: AMBER_STR,
@@ -553,7 +553,7 @@ export class MenuScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true });
         const labelText = countdown > 0 ? `${defaultLabel} (${countdown}s)` : defaultLabel;
         const label = this.add.text(cx, cy, labelText, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? (panelH < 390 ? '15px' : '18px') : '22px',
             fontStyle: 'bold',
             color: isPrimary ? '#ffffff' : '#9be29b',
@@ -628,7 +628,7 @@ export class MenuScene extends Phaser.Scene {
         }
 
         const txt = this.add.text(x, y, label, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: this.compact ? '12px' : '15px',
             fontStyle: 'bold',
             color: '#ffffff',
@@ -687,7 +687,7 @@ export class MenuScene extends Phaser.Scene {
             const ico = this.add.image(iconX, y, item.icon)
                 .setScale(veryShort ? 0.7 : (compact ? 0.9 : 1.25)).setDepth(92);
             const txt = this.add.text(textX, y, item.text, {
-                fontFamily: 'Outfit',
+                fontFamily: 'Mona Sans',
                 fontSize: veryShort ? '13px' : (compact ? '15px' : '20px'),
                 color: '#ffffff',
                 resolution: TEXT_RES,
@@ -714,7 +714,7 @@ export class MenuScene extends Phaser.Scene {
         shell.titleText.setY(titleY);
 
         const sub = this.add.text(width / 2, titleY + (compact ? 22 : 32), 'San Francisco Bay Bird Observatory', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '12px' : '16px',
             fontStyle: 'bold',
             color: TEAL_STR,
@@ -728,7 +728,7 @@ export class MenuScene extends Phaser.Scene {
         const missionText = "Over 90% of SF Bay's historic tidal wetlands have been lost or degraded. SFBBO's Tidal Marsh Program researches and restores vital transition zones—the ecotones between marsh plains and uplands.\n\nBy planting native species like Gumplant, Cordgrass, and Saltgrass, SFBBO builds high-tide refugia: life-saving escape cover where endangered Ridgway's Rails and salt marsh harvest mice find food, shelter, and safety during extreme king tides.";
 
         const p1 = this.add.text(left + panelW / 2, textStartY, missionText, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '12px' : '15.5px',
             color: '#eef7f2',
             resolution: TEXT_RES,
@@ -742,7 +742,7 @@ export class MenuScene extends Phaser.Scene {
         const volunteerText = "Want to get involved? Volunteers propagate native plants in nurseries, restore marsh habitat corridors, remove invasive weeds, and support bird conservation!";
 
         const p2 = this.add.text(left + panelW / 2, volunteerStartY, volunteerText, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '12px' : '15px',
             fontStyle: 'bold',
             color: '#ffd166',

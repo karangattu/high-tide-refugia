@@ -72,12 +72,12 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     createPanel(width, height) {
-        const isShortLandscape = height <= 520;
-        const compact = height <= 520 || width < 600;
+        const isLandscape = height <= 520 || (width >= 680 && width > height);
+        const compact = height <= 520 || width < 680;
 
-        if (isShortLandscape) {
-            const panelW = Math.min(680, width - 30);
-            const panelH = Math.min(320, height - 20);
+        if (isLandscape) {
+            const panelW = Math.min(compact ? 680 : 760, width - 30);
+            const panelH = Math.min(compact ? 320 : 380, height - 20);
             const panelX = width / 2 - panelW / 2;
             const panelY = Math.max(10, (height - panelH) / 2);
 
@@ -92,34 +92,34 @@ export class GameOverScene extends Phaser.Scene {
             const col1X = panelX + panelW * 0.28;
             const col2X = panelX + panelW * 0.72;
 
-            const titleFontSize = header.titleText.length > 15 ? '22px' : '28px';
-            this.add.text(col1X, panelY + 34, header.titleText, {
-                fontFamily: 'Outfit',
+            const titleFontSize = header.titleText.length > 15 ? (compact ? '22px' : '26px') : (compact ? '28px' : '32px');
+            this.add.text(col1X, panelY + (compact ? 34 : 44), header.titleText, {
+                fontFamily: 'Mona Sans',
                 fontSize: titleFontSize,
                 fontStyle: 'bold',
                 color: header.titleColor,
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
 
-            this.add.text(col1X, panelY + 64, header.subText, {
-                fontFamily: 'Outfit',
-                fontSize: '13px',
+            this.add.text(col1X, panelY + (compact ? 64 : 80), header.subText, {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '13px' : '15px',
                 color: '#aaaaaa',
                 wordWrap: { width: panelW * 0.44 },
                 align: 'center',
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
 
-            this.add.text(col1X, panelY + 98, 'FINAL SCORE', {
-                fontFamily: 'Outfit',
-                fontSize: '13px',
+            this.add.text(col1X, panelY + (compact ? 98 : 124), 'FINAL SCORE', {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '13px' : '15px',
                 color: '#f39c12',
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
 
-            const scoreText = this.add.text(col1X, panelY + 138, this.stats.score?.toString() || '0', {
-                fontFamily: 'Outfit',
-                fontSize: '44px',
+            const scoreText = this.add.text(col1X, panelY + (compact ? 138 : 172), this.stats.score?.toString() || '0', {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '44px' : '56px',
                 fontStyle: 'bold',
                 color: '#ffffff',
                 resolution: TEXT_RES,
@@ -136,9 +136,9 @@ export class GameOverScene extends Phaser.Scene {
             });
 
             const survivalRate = this.stats.survivalRate ? Math.round(this.stats.survivalRate * 100) : 0;
-            this.add.text(col1X, panelY + 185, `${survivalRate}% Survival Rate`, {
-                fontFamily: 'Outfit',
-                fontSize: '15px',
+            this.add.text(col1X, panelY + (compact ? 185 : 230), `${survivalRate}% Survival Rate`, {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '15px' : '18px',
                 color: survivalRate >= 50 ? '#27ae60' : '#e74c3c',
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
@@ -150,42 +150,42 @@ export class GameOverScene extends Phaser.Scene {
                 { icon: 'icon_flame', label: 'Max Combo', value: this.stats.maxCombo || 0, color: '#e67e22' },
             ];
 
-            const statsY = panelY + 36;
-            const statsSpacing = 36;
+            const statsY = panelY + (compact ? 36 : 46);
+            const statsSpacing = compact ? 36 : 44;
             statsData.forEach((stat, i) => {
                 const y = statsY + i * statsSpacing;
-                this.add.image(col2X - 85, y, stat.icon).setScale(0.8);
-                this.add.text(col2X - 60, y, stat.label, {
-                    fontFamily: 'Outfit',
-                    fontSize: '15px',
+                this.add.image(col2X - (compact ? 85 : 100), y, stat.icon).setScale(compact ? 0.8 : 0.95);
+                this.add.text(col2X - (compact ? 60 : 70), y, stat.label, {
+                    fontFamily: 'Mona Sans',
+                    fontSize: compact ? '15px' : '17px',
                     color: '#aaaaaa',
                     resolution: TEXT_RES,
                 }).setOrigin(0, 0.5);
-                this.add.text(col2X + 85, y, stat.value.toString(), {
-                    fontFamily: 'Outfit',
-                    fontSize: '18px',
+                this.add.text(col2X + (compact ? 85 : 100), y, stat.value.toString(), {
+                    fontFamily: 'Mona Sans',
+                    fontSize: compact ? '18px' : '22px',
                     fontStyle: 'bold',
                     color: stat.color,
                     resolution: TEXT_RES,
                 }).setOrigin(0.5);
             });
 
-            const buttonY = panelY + panelH - 42;
-            const btnSpread = 90;
+            const buttonY = panelY + panelH - (compact ? 42 : 50);
+            const btnSpread = compact ? 90 : 110;
             this.createButton(col2X - btnSpread, buttonY, header.buttonText, () => {
                 this.cameras.main.fadeOut(300);
                 this.time.delayedCall(300, () => {
                     this.scene.start('GameScene');
                     this.scene.launch('UIScene');
                 });
-            }, false, 140, 42);
+            }, false, compact ? 140 : 160, compact ? 42 : 48);
 
             this.createButton(col2X + btnSpread, buttonY, 'MENU', () => {
                 this.cameras.main.fadeOut(300);
                 this.time.delayedCall(300, () => {
                     this.scene.start('MenuScene');
                 });
-            }, true, 120, 42);
+            }, true, compact ? 120 : 140, compact ? 42 : 48);
 
             return;
         }
@@ -208,7 +208,7 @@ export class GameOverScene extends Phaser.Scene {
             : (header.titleText.length > 15 ? '42px' : '52px');
 
         this.add.text(width / 2, panelY + (compact ? 46 : 58), header.titleText, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: titleFontSize,
             fontStyle: 'bold',
             color: header.titleColor,
@@ -216,7 +216,7 @@ export class GameOverScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         this.add.text(width / 2, panelY + (compact ? 90 : 116), header.subText, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '15px' : '19px',
             color: '#aaaaaa',
             wordWrap: { width: panelW - 40 },
@@ -225,14 +225,14 @@ export class GameOverScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         this.add.text(width / 2, panelY + (compact ? 132 : 192), 'FINAL SCORE', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '16px' : '20px',
             color: '#f39c12',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         const scoreText = this.add.text(width / 2, panelY + (compact ? 172 : 248), this.stats.score?.toString() || '0', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '54px' : '80px',
             fontStyle: 'bold',
             color: '#ffffff',
@@ -264,14 +264,14 @@ export class GameOverScene extends Phaser.Scene {
             this.add.image(width / 2 - (compact ? 90 : 120), y, stat.icon).setScale(compact ? 0.85 : 1.1);
 
             this.add.text(width / 2 - (compact ? 64 : 88), y, stat.label, {
-                fontFamily: 'Outfit',
+                fontFamily: 'Mona Sans',
                 fontSize: compact ? '17px' : '21px',
                 color: '#aaaaaa',
                 resolution: TEXT_RES,
             }).setOrigin(0, 0.5);
 
             this.add.text(width / 2 + (compact ? 90 : 120), y, stat.value.toString(), {
-                fontFamily: 'Outfit',
+                fontFamily: 'Mona Sans',
                 fontSize: compact ? '20px' : '26px',
                 fontStyle: 'bold',
                 color: stat.color,
@@ -280,14 +280,15 @@ export class GameOverScene extends Phaser.Scene {
         });
 
         const survivalRate = this.stats.survivalRate ? Math.round(this.stats.survivalRate * 100) : 0;
-        this.add.text(width / 2, panelY + panelH - (compact ? 104 : 116), `${survivalRate}% Survival Rate`, {
-            fontFamily: 'Outfit',
+        const survivalY = Math.max(statsY + statsData.length * statsSpacing + (compact ? 12 : 20), panelY + panelH - (compact ? 104 : 116));
+        this.add.text(width / 2, survivalY, `${survivalRate}% Survival Rate`, {
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '18px' : '24px',
             color: survivalRate >= 50 ? '#27ae60' : '#e74c3c',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        const buttonY = panelY + panelH - (compact ? 50 : 58);
+        const buttonY = Math.max(survivalY + (compact ? 46 : 56), panelY + panelH - (compact ? 50 : 58));
         const btnSpread = compact ? 100 : 140;
 
         this.createButton(width / 2 - btnSpread, buttonY, header.buttonText, () => {
@@ -320,7 +321,7 @@ export class GameOverScene extends Phaser.Scene {
         bg.fillRoundedRect(x - btnW / 2, y - btnH / 2, btnW, btnH, 10);
 
         this.add.text(x, y, text, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '16px' : '24px',
             fontStyle: 'bold',
             color: '#ffffff',

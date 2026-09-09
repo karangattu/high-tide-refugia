@@ -152,7 +152,7 @@ export class PlantPreview extends Phaser.GameObjects.Sprite {
         this.currentType = 'cordgrass';
         this.labelBg = scene.add.graphics().setDepth(11).setVisible(false);
         this.labelText = scene.add.text(x, y - 40, '', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: '12px',
             fontStyle: 'bold',
             color: '#ffffff',

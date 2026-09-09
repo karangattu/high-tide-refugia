@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import '@fontsource/mona-sans/index.css';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuScene.js';
 import { GameScene } from './scenes/GameScene.js';
@@ -40,8 +41,10 @@ const config = {
     scene: [BootScene, MenuScene, IntroScene, GameScene, UIScene, GameOverScene],
 };
 
-// Create the game instance
 const game = new Phaser.Game(config);
+if (typeof window !== 'undefined') {
+    window.__game = game;
+}
 
 function syncMobileOrientationLock() {
     const portraitLocked = isPhonePortrait(MOBILE_PHONE_MAX_DIMENSION);

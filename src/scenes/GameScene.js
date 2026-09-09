@@ -261,7 +261,7 @@ export class GameScene extends Phaser.Scene {
         safeZoneGlow.setDepth(1);
 
         this.add.text(width - 75, marshY + 22, 'SAFE REFUGE', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: '20px',
             fontStyle: 'bold',
             color: '#2ecc71',
@@ -476,7 +476,7 @@ export class GameScene extends Phaser.Scene {
 
         const levelText = this.add.text(width / 2, bandY - 60,
             config.name.toUpperCase(), {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '56px' : '84px',
             fontStyle: 'bold',
             color: '#f39c12',
@@ -487,7 +487,7 @@ export class GameScene extends Phaser.Scene {
 
         const nameText = this.add.text(width / 2, bandY + 30,
             'Survive the rising tide', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '28px' : '40px',
             color: '#ffffff',
             stroke: '#000000',
@@ -531,15 +531,15 @@ export class GameScene extends Phaser.Scene {
         panel.fillStyle(0x000000, 0.7);
         panel.fillRoundedRect(panelX - panelW / 2, panelY - 65, panelW, 130, 16);
 
-        const arrow = this.add.text(panelX, panelY + 78, '\\u25bc', {
-            fontFamily: 'Outfit',
+        const arrow = this.add.text(panelX, panelY + 78, '▼', {
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '36px' : '46px',
             color: '#f1c40f',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(91);
 
         const hint = this.add.text(panelX, panelY - 16, 'TAP here to plant cover!', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '24px' : '32px',
             fontStyle: 'bold',
             color: '#ffffff',
@@ -547,7 +547,7 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(91);
 
         const subHint = this.add.text(panelX, panelY + 30, 'Rails need vegetation to hide from predators', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '15px' : '19px',
             color: '#aaaaaa',
             resolution: TEXT_RES,
@@ -586,7 +586,7 @@ export class GameScene extends Phaser.Scene {
 
         // Step 2 — success message
         const msg1 = this.add.text(width / 2, msgY, 'Nice! Rails hide in plants to stay safe.', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: '30px',
             fontStyle: 'bold',
             color: '#2ecc71',
@@ -611,7 +611,7 @@ export class GameScene extends Phaser.Scene {
                         // Step 3 — corridor hint
                         const msg2 = this.add.text(width / 2, msgY,
                             'Plant more to create a corridor to the safe zone  →', {
-                            fontFamily: 'Outfit',
+                            fontFamily: 'Mona Sans',
                             fontSize: '28px',
                             fontStyle: 'bold',
                             color: '#f1c40f',
@@ -849,7 +849,7 @@ export class GameScene extends Phaser.Scene {
 
         const leafL = this.add.image(width / 2 - (compact ? 100 : 140), height / 2 - panelH / 2 + 52, 'icon_leaf').setScale(1.5).setDepth(102);
         const title = this.add.text(width / 2, height / 2 - panelH / 2 + 52, 'MARSH FACT', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '28px' : '36px',
             fontStyle: 'bold',
             color: '#27ae60',
@@ -858,7 +858,7 @@ export class GameScene extends Phaser.Scene {
         const leafR = this.add.image(width / 2 + (compact ? 100 : 140), height / 2 - panelH / 2 + 52, 'icon_leaf').setScale(1.5).setDepth(102);
 
         const factText = this.add.text(width / 2, height / 2 + 10, fact, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '18px' : '24px',
             color: '#ffffff',
             wordWrap: { width: panelW - 70 },
@@ -867,7 +867,7 @@ export class GameScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(102);
 
         const continueText = this.add.text(width / 2, height / 2 + panelH / 2 - 45, 'Tap to continue...', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '16px' : '20px',
             color: '#888888',
             resolution: TEXT_RES,

@@ -35,7 +35,7 @@ export class IntroScene extends Phaser.Scene {
 
         // Instructions
         const skipText = this.add.text(width - 24, height - 24, 'Click or Press Space to Skip', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: '26px',
             color: '#ffffff',
             alpha: 0.5,

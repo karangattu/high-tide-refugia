@@ -46,7 +46,7 @@ export class UIScene extends Phaser.Scene {
         this.add.image(x + (compact ? 14 : 26), cy, 'seed').setScale(compact ? 0.95 : 1.5);
 
         this.add.text(x + (compact ? 28 : 46), y + (compact ? 5 : 10), 'SEEDS', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '11px' : '15px',
             fontStyle: 'bold',
             color: '#f39c12',
@@ -54,7 +54,7 @@ export class UIScene extends Phaser.Scene {
         });
 
         this.seedsText = this.add.text(x + (compact ? 28 : 46), y + (compact ? 18 : 28), '8 / 10', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '15px' : '24px',
             fontStyle: 'bold',
             color: '#ffffff',
@@ -76,7 +76,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     createHeaderStatus(cx, y, compact) {
-        const panelW = compact ? 175 : 300;
+        const panelW = compact ? 150 : 250;
         const panelH = compact ? 38 : 58;
         const cy = y + (compact ? 21 : 33);
 
@@ -87,7 +87,7 @@ export class UIScene extends Phaser.Scene {
         const spread = compact ? 46 : 84;
 
         this.waveText = this.add.text(cx - spread, cy, 'WAVE 1/3', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '12px' : '16px',
             fontStyle: 'bold',
             color: '#f1c40f',
@@ -95,7 +95,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         this.add.text(cx - spread / 3, cy, '·', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '14px' : '18px',
             color: '#445544',
             resolution: TEXT_RES,
@@ -103,7 +103,7 @@ export class UIScene extends Phaser.Scene {
 
         this.add.image(cx - 3, cy, 'icon_heart_green').setScale(compact ? 0.55 : 0.9);
         this.savedText = this.add.text(cx + (compact ? 9 : 17), cy, '0', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '13px' : '18px',
             fontStyle: 'bold',
             color: '#2ecc71',
@@ -111,7 +111,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0, 0.5);
 
         this.add.text(cx + spread / 3 + 3, cy, '·', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '14px' : '18px',
             color: '#445544',
             resolution: TEXT_RES,
@@ -119,7 +119,7 @@ export class UIScene extends Phaser.Scene {
 
         this.add.image(cx + spread - (compact ? 16 : 28), cy, 'icon_heart_broken').setScale(compact ? 0.55 : 0.9);
         this.lostText = this.add.text(cx + spread - (compact ? 6 : 10), cy, '0/5', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '13px' : '18px',
             fontStyle: 'bold',
             color: '#e74c3c',
@@ -140,7 +140,7 @@ export class UIScene extends Phaser.Scene {
         this.add.image(cx - (compact ? 54 : 104), cy, 'icon_trophy').setScale(compact ? 0.8 : 1.3);
 
         this.add.text(cx - (compact ? 38 : 78), y + (compact ? 5 : 10), 'POINTS', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '10px' : '14px',
             fontStyle: 'bold',
             color: '#f1c40f',
@@ -148,7 +148,7 @@ export class UIScene extends Phaser.Scene {
         });
 
         this.scoreText = this.add.text(cx - (compact ? 38 : 78), y + (compact ? 16 : 27), '0', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '15px' : '26px',
             fontStyle: 'bold',
             color: '#ffffff',
@@ -156,7 +156,7 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0, 0);
 
         this.comboText = this.add.text(cx + (compact ? 42 : 72), cy, 'x1.0', {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: compact ? '11px' : '17px',
             fontStyle: 'bold',
             color: '#f1c40f',
@@ -181,11 +181,11 @@ export class UIScene extends Phaser.Scene {
 
         const brand = compact
             ? 'SF BAY REFUGE'
-            : "SAN FRANCISCO BAY ESTUARY · RIDGWAY'S RAIL REFUGE";
+            : "RIDGWAY'S RAIL REFUGE";
 
         this.add.text(leafX + (compact ? 22 : 28), cy, brand, {
-            fontFamily: 'Outfit',
-            fontSize: compact ? '13px' : '16px',
+            fontFamily: 'Mona Sans',
+            fontSize: compact ? '13px' : '15px',
             fontStyle: 'bold',
             color: '#2ecc71',
             resolution: TEXT_RES,
@@ -198,24 +198,16 @@ export class UIScene extends Phaser.Scene {
             fsBtn.on('pointerdown', () => toggleFullscreen());
 
             this.footerTipText = this.add.text(width - 40, cy, 'Plant cover to save Rails', {
-                fontFamily: 'Outfit',
+                fontFamily: 'Mona Sans',
                 fontSize: '12px',
                 color: '#b0c4b1',
                 resolution: TEXT_RES,
             }).setOrigin(1, 0.5);
         } else {
-            const tip = 'Rising King Tide · Plant Gumplant & Cordgrass corridors to guide Rails to safety';
-            this.footerTipText = this.add.text(width / 2 + 50, cy, tip, {
-                fontFamily: 'Outfit',
-                fontSize: '15px',
-                color: '#b0c4b1',
-                resolution: TEXT_RES,
-            }).setOrigin(0.5);
-
             const fsContainer = this.add.container(width - 145, cy);
             const fsIcon = this.add.image(-48, 0, 'icon_maximize').setScale(0.6);
             const fsText = this.add.text(-34, 0, 'FULLSCREEN', {
-                fontFamily: 'Outfit',
+                fontFamily: 'Mona Sans',
                 fontSize: '13px',
                 color: '#9fd8e8',
                 resolution: TEXT_RES,
@@ -225,11 +217,21 @@ export class UIScene extends Phaser.Scene {
             fsContainer.on('pointerdown', () => toggleFullscreen());
 
             this.add.text(width - 26, cy, '[ESC] PAUSE', {
-                fontFamily: 'Outfit',
-                fontSize: '15px',
+                fontFamily: 'Mona Sans',
+                fontSize: '14px',
                 color: '#65806e',
                 resolution: TEXT_RES,
             }).setOrigin(1, 0.5);
+
+            const tip = width >= 1100
+                ? 'Rising King Tide · Plant Gumplant & Cordgrass corridors to guide Rails to safety'
+                : 'Plant Gumplant & Cordgrass corridors to guide Rails to safety';
+            this.footerTipText = this.add.text(width / 2, cy, tip, {
+                fontFamily: 'Mona Sans',
+                fontSize: '14px',
+                color: '#b0c4b1',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5);
         }
     }
 
@@ -310,7 +312,7 @@ export class UIScene extends Phaser.Scene {
                 this.scale.height / 2,
                 'PAUSED\n\nPress ESC to resume',
                 {
-                    fontFamily: 'Outfit',
+                    fontFamily: 'Mona Sans',
                     fontSize: '52px',
                     fontStyle: 'bold',
                     color: '#ffffff',

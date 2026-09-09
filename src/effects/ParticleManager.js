@@ -81,7 +81,7 @@ export class ParticleManager {
 
     emitScorePopup(x, y, text, color = '#27ae60') {
         const popup = this.scene.add.text(x, y, text, {
-            fontFamily: 'Outfit',
+            fontFamily: 'Mona Sans',
             fontSize: '24px',
             fontStyle: 'bold',
             color: color,

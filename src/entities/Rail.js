@@ -270,7 +270,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
         if (this.scene.add) {
             const exclaim = this.scene.add.text(this.x, this.y - 40, '!', {
-                fontFamily: 'Outfit',
+                fontFamily: 'Mona Sans',
                 fontSize: '32px',
                 fontStyle: 'bold',
                 color: '#ffcc00',
