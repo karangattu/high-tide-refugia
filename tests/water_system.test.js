@@ -39,3 +39,32 @@ test('reset restores initial water state', () => {
     assert.equal(ws.currentX, 50);
     assert.equal(ws.elapsed, 0);
 });
+
+test('water rendering uses solid fillStyle on waterGraphics without fillGradientStyle', () => {
+    let fillGradientStyleCalled = false;
+    let fillStyleCalls = 0;
+    const mockGraphics = {
+        clear: () => {},
+        fillStyle: () => { fillStyleCalls++; },
+        fillGradientStyle: () => { fillGradientStyleCalled = true; },
+        beginPath: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        closePath: () => {},
+        fillPath: () => {},
+        lineStyle: () => {},
+        strokePath: () => {},
+        fillCircle: () => {}
+    };
+    const ws = new WaterSystem({
+        scale: { height: 600 },
+        add: {
+            graphics: () => ({ setDepth: () => mockGraphics }),
+            particles: () => ({ setDepth: () => ({ setPosition: () => {} }), setPosition: () => {} })
+        }
+    }, 50, 100, 500);
+
+    ws.update(1000);
+    assert.equal(fillGradientStyleCalled, false);
+    assert.ok(fillStyleCalls > 0);
+});

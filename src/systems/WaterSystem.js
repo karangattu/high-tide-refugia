@@ -97,9 +97,8 @@ export class WaterSystem {
         this.wetSandGraphics.closePath();
         this.wetSandGraphics.fillPath();
 
-        // ── Water body: deep gradient base ──
         this.waterGraphics.clear();
-        this.waterGraphics.fillGradientStyle(0x0a2d42, 0x0a2d42, 0x11465e, 0x11465e, 0.94, 0.94, 0.96, 0.96);
+        this.waterGraphics.fillStyle(0x0e3b52, 0.95);
         this.waterGraphics.beginPath();
         this.waterGraphics.moveTo(0, this.topY);
         for (let i = 0; i < points.length; i++) {
@@ -110,54 +109,35 @@ export class WaterSystem {
         this.waterGraphics.fillPath();
 
         // ── Shallow luminous band where light catches the thin water ──
-        this.waterGraphics.fillStyle(0x3598b8, 0.28);
-        this.waterGraphics.beginPath();
-        this.waterGraphics.moveTo(0, this.topY);
-        for (let i = 0; i < points.length; i++) {
-            const shallowInset = Math.max(0, points[i].x - (18 + Math.sin(points[i].y * 0.03) * 6));
-            this.waterGraphics.lineTo(shallowInset, points[i].y);
-        }
-        for (let i = points.length - 1; i >= 0; i--) {
-            this.waterGraphics.lineTo(points[i].x, points[i].y);
-        }
-        this.waterGraphics.closePath();
-        this.waterGraphics.fillPath();
-
-        // ── Brighter glassy strip right at the edge ──
-        this.waterGraphics.fillStyle(0x7fd4e8, 0.22);
-        this.waterGraphics.beginPath();
-        this.waterGraphics.moveTo(0, this.topY);
-        for (let i = 0; i < points.length; i++) {
-            const edgeInset = Math.max(0, points[i].x - (8 + Math.sin(points[i].y * 0.05 + t * 0.002) * 3));
-            this.waterGraphics.lineTo(edgeInset, points[i].y);
-        }
-        for (let i = points.length - 1; i >= 0; i--) {
-            this.waterGraphics.lineTo(points[i].x, points[i].y);
-        }
-        this.waterGraphics.closePath();
-        this.waterGraphics.fillPath();
-
-        // ── Internal current streaks drifting inside the water body ──
-        for (let s = 0; s < 3; s++) {
-            const drift = Math.sin(t * 0.0011 + s * 2.4) * 8;
-            const inset = 30 + s * 34 + drift;
-            this.waterGraphics.lineStyle(2, 0x9fd8e8, 0.12 - s * 0.03);
+        if (points.length > 0) {
+            const firstInset = Math.max(0, points[0].x - (18 + Math.sin(points[0].y * 0.03) * 6));
+            this.waterGraphics.fillStyle(0x3598b8, 0.28);
             this.waterGraphics.beginPath();
-            let started = false;
-            for (let i = 0; i < points.length; i++) {
-                const sx = points[i].x - inset;
-                if (sx <= 2) {
-                    started = false;
-                    continue;
-                }
-                if (!started) {
-                    this.waterGraphics.moveTo(sx, points[i].y);
-                    started = true;
-                } else {
-                    this.waterGraphics.lineTo(sx, points[i].y);
-                }
+            this.waterGraphics.moveTo(firstInset, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                const shallowInset = Math.max(0, points[i].x - (18 + Math.sin(points[i].y * 0.03) * 6));
+                this.waterGraphics.lineTo(shallowInset, points[i].y);
             }
-            this.waterGraphics.strokePath();
+            for (let i = points.length - 1; i >= 0; i--) {
+                this.waterGraphics.lineTo(points[i].x, points[i].y);
+            }
+            this.waterGraphics.closePath();
+            this.waterGraphics.fillPath();
+
+            // ── Brighter glassy strip right at the edge ──
+            const firstEdgeInset = Math.max(0, points[0].x - (8 + Math.sin(points[0].y * 0.05 + t * 0.002) * 3));
+            this.waterGraphics.fillStyle(0x7fd4e8, 0.22);
+            this.waterGraphics.beginPath();
+            this.waterGraphics.moveTo(firstEdgeInset, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                const edgeInset = Math.max(0, points[i].x - (8 + Math.sin(points[i].y * 0.05 + t * 0.002) * 3));
+                this.waterGraphics.lineTo(edgeInset, points[i].y);
+            }
+            for (let i = points.length - 1; i >= 0; i--) {
+                this.waterGraphics.lineTo(points[i].x, points[i].y);
+            }
+            this.waterGraphics.closePath();
+            this.waterGraphics.fillPath();
         }
 
         this.foamGraphics.clear();
