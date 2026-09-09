@@ -25,6 +25,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.isSafe = false;        // Inside a plant (invisible to predators)
         this.isDetectable = true;   // Can be seen by predators
         this.isAlive = true;
+        this.isBeingCaught = false;
         this.hasReachedSafety = false;
         this.touchedDirt = false;   // For continuous cover tracking
 
@@ -79,6 +80,10 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
     update(time, delta) {
         if (!this.isAlive) return;
+        if (this.isBeingCaught) {
+            this.body.setVelocity(0, 0);
+            return;
+        }
 
         // Glue the contact shadow to the body's feet (tracks boost pulses)
         if (this.shadow && this.body) {
@@ -352,4 +357,3 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         return !this.touchedDirt;
     }
 }
-

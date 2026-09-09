@@ -1,14 +1,21 @@
 import * as Phaser from 'phaser';
 
-const FOX_BASE_SCALE = 0.32;
-const FOX_CHASE_SCALE = 0.35;
-const FOX_ALERT_SCALE = 0.37;
-const FOX_ATTACK_SCALE_X = 0.38;
-const FOX_ATTACK_SCALE_Y = 0.30;
+const FOX_BASE_SCALE = 0.36;
+const FOX_CHASE_SCALE = 0.39;
+const FOX_ALERT_SCALE = 0.41;
+const FOX_RUN_TEXTURES = [
+    'fox_run_1', 'fox_run_2', 'fox_run_3', 'fox_run_4',
+    'fox_run_5', 'fox_run_6', 'fox_run_7',
+];
+const FOX_POUNCE_TEXTURES = [
+    'fox_pounce_1', 'fox_pounce_2', 'fox_pounce_3', 'fox_pounce_4',
+    'fox_pounce_5', 'fox_pounce_6', 'fox_pounce_7', 'fox_pounce_8',
+];
+const POUNCE_CONTACT_FRAME = 2;
 
 export class Fox extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
-        super(scene, x, y, 'fox_sheet', 0);
+        super(scene, x, y, FOX_RUN_TEXTURES[0]);
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -16,8 +23,6 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.baseScale = FOX_BASE_SCALE;
         this.chaseScale = FOX_CHASE_SCALE;
         this.alertScale = FOX_ALERT_SCALE;
-        this.attackScaleX = FOX_ATTACK_SCALE_X;
-        this.attackScaleY = FOX_ATTACK_SCALE_Y;
 
         this.setScale(this.baseScale);
         this.setDepth(4);
@@ -39,10 +44,14 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.target = null;
         this.cooldownTimer = 0;
 
-        this.trottingFrames = [0, 1, 2, 3];
-        this.currentFrame = 0;
+        this.runningFrames = FOX_RUN_TEXTURES;
+        this.pounceFrames = FOX_POUNCE_TEXTURES;
+        this.currentRunFrame = 0;
+        this.currentPounceFrame = 0;
         this.animationTimer = 0;
-        this.animationSpeed = 90;
+        this.runAnimationSpeed = 90;
+        this.pounceAnimationSpeed = 110;
+        this.pounceResolved = false;
 
         this.shadow = scene.add.image(x, y, 'shadow')
             .setAlpha(0.28)
@@ -94,7 +103,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         if (this.x <= safeWaterX && this.patrolDirX < 0) {
             this.x = safeWaterX;
             this.patrolDirX = 1;
-            if (this.state === 'chase' || this.state === 'attack' || this.state === 'cooldown') {
+            if (this.state === 'chase' || this.state === 'cooldown') {
                 this.endChase();
             } else if (this.state === 'patrol') {
                 this.applyDiagonalVelocity();
@@ -102,7 +111,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         } else if (this.x >= maxMarshX && this.patrolDirX > 0) {
             this.x = maxMarshX;
             this.patrolDirX = -1;
-            if (this.state === 'chase' || this.state === 'attack' || this.state === 'cooldown') {
+            if (this.state === 'chase' || this.state === 'cooldown') {
                 this.endChase();
             } else if (this.state === 'patrol') {
                 this.applyDiagonalVelocity();
@@ -116,14 +125,8 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             this.shadow.setScale(worldW / 128, (worldW / 128) * 0.32);
         }
 
-        this.animationTimer += delta;
-        if (this.animationTimer >= this.animationSpeed) {
-            this.animationTimer = 0;
-            this.currentFrame = (this.currentFrame + 1) % this.trottingFrames.length;
-
-            if (this.state === 'patrol') {
-                this.setFrame(this.trottingFrames[this.currentFrame]);
-            }
+        if (this.state === 'patrol' || this.state === 'chase') {
+            this.animateRun(delta);
         }
 
         switch (this.state) {
@@ -140,6 +143,19 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             case 'cooldown':
                 this.cooldown(delta);
                 break;
+        }
+    }
+
+    animateRun(delta) {
+        this.animationTimer += delta;
+        const frameDuration = this.state === 'chase'
+            ? this.runAnimationSpeed * 0.78
+            : this.runAnimationSpeed;
+
+        if (this.animationTimer >= frameDuration) {
+            this.animationTimer %= frameDuration;
+            this.currentRunFrame = (this.currentRunFrame + 1) % this.runningFrames.length;
+            this.setTexture(this.runningFrames[this.currentRunFrame]);
         }
     }
 
@@ -185,8 +201,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
     startChase(rail) {
         this.state = 'chase';
         this.target = rail;
-
-        this.setFrame(4);
+        this.animationTimer = 0;
 
         if (rail.panic) {
             rail.panic();
@@ -245,38 +260,57 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
     catchPrey() {
         this.state = 'attack';
         this.body.setVelocity(0, 0);
+        this.setScale(this.baseScale);
+        this.currentPounceFrame = 0;
+        this.animationTimer = 0;
+        this.pounceResolved = false;
+        this.setTexture(this.pounceFrames[0]);
 
-        this.setFrame(5);
-
-        if (this.target && this.target.isAlive) {
-            this.target.die('predator');
-            this.scene.events.emit('railCaught', this.target);
-        }
-
-        if (this.scene && this.scene.tweens) {
-            this.scene.tweens.add({
-                targets: this,
-                scaleX: this.attackScaleX,
-                scaleY: this.attackScaleY,
-                duration: 200,
-                yoyo: true,
-                onComplete: () => {
-                    this.setScale(this.baseScale);
-                    this.startCooldown();
-                }
-            });
-        } else {
-            this.startCooldown();
+        // Hold the live rail in place until the artwork reaches the bite pose.
+        // Later pounce frames contain the rail, so the standalone sprite is
+        // hidden at contact to avoid showing two birds.
+        if (this.target && this.target.body) {
+            this.target.isBeingCaught = true;
+            this.target.body.setVelocity(0, 0);
         }
     }
 
-    attack(_delta) {
+    attack(delta) {
+        this.animationTimer += delta;
+        if (this.animationTimer < this.pounceAnimationSpeed) return;
+
+        this.animationTimer %= this.pounceAnimationSpeed;
+        if (this.currentPounceFrame < this.pounceFrames.length - 1) {
+            this.currentPounceFrame++;
+            this.setTexture(this.pounceFrames[this.currentPounceFrame]);
+
+            if (this.currentPounceFrame === POUNCE_CONTACT_FRAME) {
+                this.resolvePounce();
+            }
+            return;
+        }
+
+        if (!this.pounceResolved) this.resolvePounce();
+        this.startCooldown();
+    }
+
+    resolvePounce() {
+        if (this.pounceResolved) return;
+        this.pounceResolved = true;
+
+        if (this.target && this.target.isAlive) {
+            this.target.setVisible(false);
+            this.target.die('predator');
+            this.scene.events.emit('railCaught', this.target);
+        }
     }
 
     endChase() {
         this.state = 'patrol';
         this.target = null;
-        this.setFrame(0);
+        this.currentRunFrame = 0;
+        this.animationTimer = 0;
+        this.setTexture(this.runningFrames[0]);
         this.setScale(this.baseScale);
 
         const waterX = this.getWaterXAtFox();
@@ -290,7 +324,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
     startCooldown() {
         this.state = 'cooldown';
-        this.cooldownTimer = 1800;
+        this.cooldownTimer = 900;
         this.target = null;
     }
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { execSync } from 'node:child_process';
 
-test('gray fox sprite sheet exists with valid 6-frame dimensions and zero border bleed', () => {
+test('gray fox sprite sheet keeps the authored 4x4 sequence layout', () => {
     const spritePath = 'public/assets/sprites/gray_fox_sprite.png';
     assert.ok(fs.existsSync(spritePath), 'gray_fox_sprite.png must exist');
 
@@ -13,38 +13,34 @@ import numpy as np
 
 img = Image.open('${spritePath}')
 w, h = img.size
-assert w == 2700 and h == 250, f"Expected 2700x250, got {w}x{h}"
-
-arr = np.array(img)
-cell_w = 450
-cell_h = 250
-edge_violations = 0
-for i in range(6):
-    f = arr[0:cell_h, i*cell_w:(i+1)*cell_w]
-    alpha = f[:, :, 3]
-    edge_violations += int(np.sum(alpha[0, :] > 0) + np.sum(alpha[-1, :] > 0) + np.sum(alpha[:, 0] > 0) + np.sum(alpha[:, -1] > 0))
-print(edge_violations)
+assert w == 4784 and h == 3584, f"Expected 4784x3584, got {w}x{h}"
+assert w % 4 == 0 and h % 4 == 0
+print(f'{w // 4}x{h // 4}')
 `;
     const out = execSync('python3', { input: script }).toString().trim();
-    assert.equal(parseInt(out, 10), 0, 'All 6 fox frames must have 0 edge bleed pixels');
+    assert.equal(out, '1196x896', 'The authored grid must divide into 1196x896 cells');
 });
 
-test('BootScene preloads fox_sheet with 450x250 frame dimensions', () => {
+test('BootScene loads the fox art raw and slices away its embedded guide text', () => {
     const bootContent = fs.readFileSync('src/scenes/BootScene.js', 'utf-8');
     assert.match(
         bootContent,
-        /this\.load\.spritesheet\(\s*['"]fox_sheet['"],\s*['"]assets\/sprites\/gray_fox_sprite\.png['"],\s*\{\s*frameWidth:\s*450,\s*frameHeight:\s*250\s*\}\s*\)/,
-        'BootScene must preload fox_sheet with 450x250 frames'
+        /this\.load\.image\(\s*['"]fox_sheet_raw['"],\s*['"]assets\/sprites\/gray_fox_sprite\.png['"]\s*\)/,
+        'BootScene must load the full fox sheet as a raw source image'
     );
+    assert.match(bootContent, /this\.sliceFoxSheet\(\)/, 'BootScene must slice clean gameplay textures from the source art');
+    assert.match(bootContent, /fox_run_1/, 'BootScene must create named running textures');
+    assert.match(bootContent, /fox_pounce_8/, 'BootScene must create the full pounce sequence');
 });
 
 test('Fox class implementation enforces diagonal movement, boundaries, and depth', () => {
     const foxContent = fs.readFileSync('src/entities/predators/Fox.js', 'utf-8');
 
     assert.match(foxContent, /this\.setDepth\(4\)/, 'Fox must be set to depth 4 (ground predator)');
-    assert.match(foxContent, /this\.trottingFrames\s*=\s*\[0,\s*1,\s*2,\s*3\]/, 'Fox uses frames 0-3 for trot cycle');
-    assert.match(foxContent, /this\.setFrame\(4\)/, 'Fox uses frame 4 for stalk/alert pose');
-    assert.match(foxContent, /this\.setFrame\(5\)/, 'Fox uses frame 5 for pounce/catch pose');
+    assert.match(foxContent, /this\.runningFrames\s*=\s*FOX_RUN_TEXTURES/, 'Fox uses all seven authored run poses');
+    assert.match(foxContent, /this\.pounceFrames\s*=\s*FOX_POUNCE_TEXTURES/, 'Fox uses all eight authored pounce poses');
+    assert.match(foxContent, /this\.state\s*===\s*['"]patrol['"]\s*\|\|\s*this\.state\s*===\s*['"]chase['"]/, 'Fox animates the run cycle while patrolling and chasing');
+    assert.match(foxContent, /this\.resolvePounce\(\)/, 'Fox resolves the catch when the pounce reaches its contact frame');
 
     assert.match(foxContent, /Math\.cos\(this\.headingAngle\)/, 'Fox calculates diagonal horizontal velocity');
     assert.match(foxContent, /Math\.sin\(this\.headingAngle\)/, 'Fox calculates diagonal vertical velocity');
@@ -53,6 +49,13 @@ test('Fox class implementation enforces diagonal movement, boundaries, and depth
     assert.match(foxContent, /this\.y\s*>=\s*maxY\s*&&\s*this\.patrolDirY\s*>\s*0/, 'Fox bounces off bottom marsh boundary');
     assert.match(foxContent, /this\.x\s*<=\s*safeWaterX\s*&&\s*this\.patrolDirX\s*<\s*0/, 'Fox bounces off water safe line');
     assert.match(foxContent, /this\.x\s*>=\s*maxMarshX\s*&&\s*this\.patrolDirX\s*>\s*0/, 'Fox bounces off upland refuge boundary');
+});
+
+test('Fox presentation scale keeps the larger predator visibly ahead of a rail', () => {
+    const foxContent = fs.readFileSync('src/entities/predators/Fox.js', 'utf-8');
+    const baseScale = Number(foxContent.match(/FOX_BASE_SCALE\s*=\s*([0-9.]+)/)?.[1]);
+
+    assert.ok(baseScale >= 0.36, `Fox base scale (${baseScale}) should give its larger artwork a clear size lead`);
 });
 
 test('Fox cover evasion ensures rails in vegetation are invisible and immune from chase', () => {
@@ -68,6 +71,16 @@ test('Fox cover evasion ensures rails in vegetation are invisible and immune fro
         foxContent,
         /if\s*\(\s*!this\.target\s*\|\|\s*!this\.target\.isAlive\s*\|\|\s*!this\.target\.isDetectable\s*\)\s*\{\s*this\.endChase\(\);/,
         'Fox chase must immediately abort if target enters cover'
+    );
+});
+
+test('A rail stays fixed while the fox pounce animation approaches contact', () => {
+    const railContent = fs.readFileSync('src/entities/Rail.js', 'utf-8');
+
+    assert.match(
+        railContent,
+        /if\s*\(this\.isBeingCaught\)\s*\{\s*this\.body\.setVelocity\(0,\s*0\);\s*return;/,
+        'Rail update must not resume autonomous movement during the pounce wind-up'
     );
 });
 

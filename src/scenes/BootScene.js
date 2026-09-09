@@ -40,10 +40,9 @@ export class BootScene extends Phaser.Scene {
             frameHeight: 507
         });
 
-        this.load.spritesheet('fox_sheet', 'assets/sprites/gray_fox_sprite.png', {
-            frameWidth: 450,
-            frameHeight: 250
-        });
+        // The authored fox sheet includes two labelled animation sequences.
+        // Load it raw so create() can crop only the artwork from each pose.
+        this.load.image('fox_sheet_raw', 'assets/sprites/gray_fox_sprite.png');
 
         // Load plant growth sheets (4x2 grid of stages, sprout → mature)
         ['gumplant', 'saltgrass', 'pickleweed', 'cordgrass', 'jaumea'].forEach((key) => {
@@ -316,6 +315,10 @@ export class BootScene extends Phaser.Scene {
             'rail_running_1', 'rail_running_2', 'rail_running_3', 'rail_running_4',
             'rail_sprint_1', 'rail_sprint_2', 'rail_sprint_3', 'rail_sprint_4',
             'rail_hiding', 'rail_calling', 'rail_surprised',
+            'fox_run_1', 'fox_run_2', 'fox_run_3', 'fox_run_4',
+            'fox_run_5', 'fox_run_6', 'fox_run_7',
+            'fox_pounce_1', 'fox_pounce_2', 'fox_pounce_3', 'fox_pounce_4',
+            'fox_pounce_5', 'fox_pounce_6', 'fox_pounce_7', 'fox_pounce_8',
             'cat_sheet',
         ];
         spriteKeys.forEach(key => {
@@ -336,12 +339,66 @@ export class BootScene extends Phaser.Scene {
         // Split the harrier sheet into flight frames (Harrier.js uses these)
         this.sliceHarrier();
 
+        // Split the labelled fox reference sheet into clean gameplay frames
+        this.sliceFoxSheet();
+
         // Re-apply NEAREST now that the sliced rail textures exist
         // (plant stage textures intentionally keep LINEAR filtering)
         this.applyNearestFilter();
 
         // Transition to menu scene
         this.scene.start('MenuScene');
+    }
+
+    // ─── GRAY FOX SHEET SLICER ─────────────────────────────────
+
+    /** The 4784x3584 source is an authored 4x4 reference sheet rather than a
+     *  tightly packed atlas: rows 1-2 contain seven running poses (cell 8 is
+     *  intentionally empty), and rows 3-4 contain eight pounce/carry poses.
+     *  The explicit artwork bounds avoid headings, frame labels, and poses
+     *  that extend across nominal cell edges. Every pose is then placed on a
+     *  shared 450x250 bottom-centred canvas to keep the fox grounded and the
+     *  existing world scale stable throughout both sequences. */
+    sliceFoxSheet() {
+        if (!this.textures.exists('fox_sheet_raw')) return;
+
+        const CANVAS_W = 450;
+        const CANVAS_H = 250;
+        const SOURCE_SCALE = 0.32;
+        const GROUND_Y = 242;
+        const src = this.textures.get('fox_sheet_raw').source[0].image;
+        const frames = [
+            ['fox_run_1', 270, 404, 825, 428],
+            ['fox_run_2', 1200, 399, 1031, 433],
+            ['fox_run_3', 2374, 409, 1070, 452],
+            ['fox_run_4', 3589, 383, 1051, 475],
+            ['fox_run_5', 147, 1082, 1060, 451],
+            ['fox_run_6', 1312, 1081, 1027, 442],
+            ['fox_run_7', 2435, 1072, 1033, 438],
+            ['fox_pounce_1', 106, 2161, 963, 382],
+            ['fox_pounce_2', 1172, 2123, 973, 447],
+            ['fox_pounce_3', 2264, 2123, 1364, 457],
+            ['fox_pounce_4', 3702, 2148, 1027, 456],
+            ['fox_pounce_5', 112, 2835, 1066, 561],
+            ['fox_pounce_6', 1267, 2850, 1055, 562],
+            ['fox_pounce_7', 2507, 2833, 1089, 564],
+            ['fox_pounce_8', 3666, 2861, 1070, 552],
+        ];
+
+        frames.forEach(([key, sx, sy, sw, sh]) => {
+            if (this.textures.exists(key)) this.textures.remove(key);
+            const texture = this.textures.createCanvas(key, CANVAS_W, CANVAS_H);
+            if (!texture) return;
+
+            const ctx = texture.getContext();
+            ctx.imageSmoothingEnabled = false;
+            const dw = Math.round(sw * SOURCE_SCALE);
+            const dh = Math.round(sh * SOURCE_SCALE);
+            const dx = Math.round((CANVAS_W - dw) / 2);
+            const dy = GROUND_Y - dh;
+            ctx.drawImage(src, sx, sy, sw, sh, dx, dy, dw, dh);
+            texture.refresh();
+        });
     }
 
     // ─── RAIL SHEET SLICER ───────────────────────────────────────
