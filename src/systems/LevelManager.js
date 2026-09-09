@@ -19,6 +19,7 @@ export class LevelManager {
                 waves: 8,
                 railsPerWave: 5,
                 catCount: 2,
+                foxCount: 1,
                 harrierCount: 1,
                 waterSpeed: 6,
                 railSpeedMultiplier: 0.7,

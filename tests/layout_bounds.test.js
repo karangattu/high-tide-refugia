@@ -5,10 +5,10 @@ import fs from 'node:fs';
 function calculateEnvironmentLayout(width, height) {
     const portrait = height > width;
     const isMobileLandscape = height <= 520 || (width < 768 && height < 600);
-    const horizonY = Math.round(height * (portrait ? 0.14 : (isMobileLandscape ? 0.08 : 0.36)));
-    const marshY = Math.round(height * (portrait ? 0.24 : (isMobileLandscape ? 0.15 : 0.52)));
+    const horizonY = Math.round(height * (portrait ? 0.12 : (isMobileLandscape ? 0.08 : 0.10)));
+    const marshY = Math.round(height * (portrait ? 0.20 : (isMobileLandscape ? 0.15 : 0.17)));
     const footerH = isMobileLandscape ? 34 : 50;
-    const marshTop = marshY + (isMobileLandscape ? 12 : 30);
+    const marshTop = marshY + (isMobileLandscape ? 12 : 24);
     const marshBottom = height - footerH - 45;
     const footerTop = height - footerH;
 
@@ -40,31 +40,37 @@ test('marshBottom maintains at least 45px safety buffer above footer on all devi
     }
 });
 
-test('mobile landscape gives marsh >= 80% of vertical height', () => {
-    const mobileViewports = [
-        { width: 800, height: 360 },
-        { width: 844, height: 390 },
-        { width: 667, height: 375 },
+test('desktop and mobile viewports allocate >= 80% of vertical height to marsh', () => {
+    const viewports = [
+        { width: 800, height: 360, name: 'Android phone landscape' },
+        { width: 844, height: 390, name: 'iPhone 14 landscape' },
+        { width: 667, height: 375, name: 'iPhone SE landscape' },
+        { width: 1024, height: 768, name: 'iPad landscape' },
+        { width: 1280, height: 800, name: 'Desktop standard' },
+        { width: 1920, height: 1080, name: 'Desktop Full HD' },
     ];
 
-    for (const vp of mobileViewports) {
+    for (const vp of viewports) {
         const layout = calculateEnvironmentLayout(vp.width, vp.height);
         const marshFraction = (vp.height - layout.marshY) / vp.height;
         assert.ok(
             marshFraction >= 0.80,
-            `mobile landscape (${vp.width}x${vp.height}) marsh fraction ${marshFraction.toFixed(2)} >= 0.80`
+            `${vp.name} (${vp.width}x${vp.height}) marsh fraction ${marshFraction.toFixed(2)} >= 0.80`
         );
     }
 });
 
-test('mobile landscape allocates >= 55% of total screen height to active playable strip', () => {
-    const mobileViewports = [
+test('desktop and mobile landscape allocate >= 55% of total screen height to active playable strip', () => {
+    const viewports = [
         { width: 800, height: 360, name: 'Android phone landscape' },
         { width: 844, height: 390, name: 'iPhone 14 landscape' },
         { width: 667, height: 375, name: 'iPhone SE landscape' },
+        { width: 1024, height: 768, name: 'iPad landscape' },
+        { width: 1280, height: 800, name: 'Desktop standard' },
+        { width: 1920, height: 1080, name: 'Desktop Full HD' },
     ];
 
-    for (const vp of mobileViewports) {
+    for (const vp of viewports) {
         const layout = calculateEnvironmentLayout(vp.width, vp.height);
         const playableHeight = layout.marshBottom - layout.marshTop;
         const playableFraction = playableHeight / vp.height;
@@ -91,18 +97,18 @@ test('mobile compact top HUD panels total width fits smallest phones without ove
     assert.ok(rightStart > centerEnd, `Gap between center and right is ${rightStart - centerEnd}px > 0`);
 });
 
-test('GameScene source code reduces sun and distant water on mobile', () => {
+test('GameScene source code reduces sun and distant water on mobile and compact viewports', () => {
     const gameSceneContent = fs.readFileSync('src/scenes/GameScene.js', 'utf-8');
 
     assert.match(
         gameSceneContent,
-        /if\s*\(\s*isMobileLandscape\s*\)\s*\{[\s\S]*?sun\.fillCircle[\s\S]*?horizonY\s*\*\s*0\.42/,
+        /if\s*\(\s*isMobileLandscape[\s\S]*?sun\.fillCircle[\s\S]*?horizonY\s*\*\s*0\.42/,
         'GameScene must render compact sun on mobile landscape'
     );
 
     assert.match(
         gameSceneContent,
-        /this\.marshY\s*=\s*Math\.round\(height\s*\*\s*\(portrait\s*\?\s*0\.24\s*:\s*\(isMobileLandscape\s*\?\s*0\.15\s*:\s*0\.52\)\)\)/,
-        'GameScene marshY must allocate 85% of screen height to marsh on mobile landscape'
+        /this\.marshY\s*=\s*Math\.round\(height\s*\*\s*\(portrait\s*\?\s*0\.20\s*:\s*\(isMobileLandscape\s*\?\s*0\.15\s*:\s*0\.17\)\)\)/,
+        'GameScene marshY must allocate 83-85% of screen height to marsh'
     );
 });

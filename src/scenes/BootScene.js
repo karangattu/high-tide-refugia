@@ -40,6 +40,11 @@ export class BootScene extends Phaser.Scene {
             frameHeight: 507
         });
 
+        this.load.spritesheet('fox_sheet', 'assets/sprites/gray_fox_sprite.png', {
+            frameWidth: 450,
+            frameHeight: 250
+        });
+
         // Load plant growth sheets (4x2 grid of stages, sprout → mature)
         ['gumplant', 'saltgrass', 'pickleweed', 'cordgrass', 'jaumea'].forEach((key) => {
             this.load.image(`${key}_sheet`, `assets/sprites/${key}_sprite_sheet.png`);

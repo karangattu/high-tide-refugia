@@ -4,6 +4,7 @@ const TEXT_RES = window.devicePixelRatio || 2;
 import { Rail } from '../entities/Rail.js';
 import { Plant, PlantPreview, getPlantTypeForX } from '../entities/Plant.js';
 import { Cat } from '../entities/predators/Cat.js';
+import { Fox } from '../entities/predators/Fox.js';
 import { Harrier } from '../entities/predators/Harrier.js';
 import { ParticleManager } from '../effects/ParticleManager.js';
 import { WaterSystem } from '../systems/WaterSystem.js';
@@ -82,23 +83,24 @@ export class GameScene extends Phaser.Scene {
         // All gameplay (rails, plants, predators, tide flood) lives in the marsh strip.
         const portrait = height > width;
         const isMobileLandscape = height <= 520 || (width < 768 && height < 600);
-        this.horizonY = Math.round(height * (portrait ? 0.14 : (isMobileLandscape ? 0.08 : 0.36)));
-        this.marshY = Math.round(height * (portrait ? 0.24 : (isMobileLandscape ? 0.15 : 0.52)));
+        this.horizonY = Math.round(height * (portrait ? 0.12 : (isMobileLandscape ? 0.08 : 0.10)));
+        this.marshY = Math.round(height * (portrait ? 0.20 : (isMobileLandscape ? 0.15 : 0.17)));
         const { horizonY, marshY } = this;
         const footerH = isMobileLandscape ? 34 : 50;
-        this.marshTop = marshY + (isMobileLandscape ? 12 : 30);
+        this.marshTop = marshY + (isMobileLandscape ? 12 : 24);
         this.marshBottom = height - footerH - 45;
 
         const sky = this.add.graphics().setDepth(-30);
         sky.fillGradientStyle(0x1976d2, 0x1976d2, 0xffd54f, 0xffd54f, 1, 1, 1, 1);
         sky.fillRect(0, 0, width, horizonY + 2);
 
+        const compactSun = isMobileLandscape || horizonY < 120;
         const sunX = width * 0.72;
-        const sunY = isMobileLandscape ? horizonY * 0.65 : horizonY * 0.46;
+        const sunY = compactSun ? horizonY * 0.65 : horizonY * 0.46;
         const sun = this.add.graphics().setDepth(-29);
         sun.setBlendMode(Phaser.BlendModes.ADD);
 
-        if (isMobileLandscape) {
+        if (isMobileLandscape || horizonY < 120) {
             sun.fillStyle(0xffa726, 0.25);
             sun.fillCircle(sunX, sunY, horizonY * 0.42);
             sun.fillStyle(0xfff59d, 0.75);
@@ -133,11 +135,11 @@ export class GameScene extends Phaser.Scene {
 
         const refl = this.add.graphics().setDepth(-28);
         refl.setBlendMode(Phaser.BlendModes.ADD);
-        const reflCount = isMobileLandscape ? 3 : 8;
+        const reflCount = compactSun ? 4 : 8;
         for (let i = 0; i < reflCount; i++) {
             const t = reflCount === 1 ? 0.5 : i / (reflCount - 1);
             const y = horizonY + 3 + t * Math.max(2, marshY - horizonY - 6);
-            const w = (1 - t) * (isMobileLandscape ? 50 : 140) + 16;
+            const w = (1 - t) * (compactSun ? 60 : 140) + 16;
             refl.fillStyle(0xffe082, 0.30 * (1 - t) + 0.08);
             refl.fillEllipse(
                 sunX + Phaser.Math.Between(-8, 8), y,
@@ -145,12 +147,12 @@ export class GameScene extends Phaser.Scene {
             );
         }
 
-        const shimmerCount = isMobileLandscape ? 4 : 14;
+        const shimmerCount = compactSun ? 5 : 14;
         for (let i = 0; i < shimmerCount; i++) {
             const y = Phaser.Math.Between(horizonY + 3, marshY - 3);
             const line = this.add.rectangle(
                 Phaser.Math.Between(0, width), y,
-                Phaser.Math.Between(16, isMobileLandscape ? 40 : 90), 2,
+                Phaser.Math.Between(16, compactSun ? 45 : 90), 2,
                 0x9fd8e8, Phaser.Math.FloatBetween(0.10, 0.25)
             ).setDepth(-28);
             this.tweens.add({
@@ -458,6 +460,14 @@ export class GameScene extends Phaser.Scene {
                 patrolEnd
             );
             this.groundPredators.add(cat);
+        }
+
+        const foxCount = config.foxCount !== undefined ? config.foxCount : 1;
+        for (let i = 0; i < foxCount; i++) {
+            const startX = zoneStart + 80 + i * 220;
+            const startY = top + ((bottom - top) * (0.35 + i * 0.3));
+            const fox = new Fox(this, startX, startY);
+            this.groundPredators.add(fox);
         }
 
         // Spawn harriers
