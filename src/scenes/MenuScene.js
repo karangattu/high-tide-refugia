@@ -399,28 +399,29 @@ export class MenuScene extends Phaser.Scene {
         const { compact, portrait } = this;
         const veryShort = height <= 420;
 
-        const spacing = veryShort ? 10 : (compact ? 16 : 22);
-        const totalStack = this.btnPrimaryH + 2 * this.btnSecondaryH + 2 * spacing;
+        const spacing = veryShort ? 12 : (compact ? 16 : 22);
+        const totalStack = this.btnPrimaryH + this.btnSecondaryH + spacing;
         const footerReserve = compact ? 50 : 92;
         const startY = Math.min(
-            height * (compact ? 0.40 : (portrait ? 0.52 : 0.48)),
+            height * (compact ? 0.44 : (portrait ? 0.54 : 0.50)),
             height - footerReserve - totalStack
         );
 
         const primaryY = startY + this.btnPrimaryH / 2;
         this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', veryShort ? '26px' : '36px', '#2b1c07', () => {
-            this.cameras.main.fadeOut(500);
-            this.time.delayedCall(500, () => this.scene.start('IntroScene'));
+            this.showTutorial(() => this.startGame());
         });
 
-        let y = primaryY + this.btnPrimaryH / 2 + spacing;
-        this.createButton(width / 2, y + this.btnSecondaryH / 2, 'HOW TO PLAY', 'menu_btn_secondary',
-            veryShort ? '16px' : (compact ? '21px' : '26px'), '#eef7f2', () => this.showTutorial());
-        y += this.btnSecondaryH + spacing;
+        const y = primaryY + this.btnPrimaryH / 2 + spacing;
         this.createButton(width / 2, y + this.btnSecondaryH / 2, 'SFBBO & VOLUNTEER', 'menu_btn_secondary',
             veryShort ? '14px' : (compact ? '18px' : '22px'), '#eef7f2', () => this.showSFBBOInfo());
 
         this.stackBottom = y + this.btnSecondaryH;
+    }
+
+    startGame() {
+        this.cameras.main.fadeOut(500);
+        this.time.delayedCall(500, () => this.scene.start('IntroScene'));
     }
 
     createButton(x, y, label, texture, fontSize, color, callback) {
@@ -527,18 +528,22 @@ export class MenuScene extends Phaser.Scene {
         return { overlay, panel, titleText, panelW, panelH, left, top, compact };
     }
 
-    buildModalClose(shell, onClose) {
+    buildModalClose(shell, onClose, options = {}) {
         const { left, top, panelW, panelH, compact } = shell;
-        const bw = compact ? (panelH < 390 ? 170 : 200) : 250;
-        const bh = compact ? (panelH < 390 ? 38 : 48) : 62;
+        const bw = compact ? (panelH < 390 ? 180 : 210) : 260;
+        const bh = compact ? (panelH < 390 ? 36 : 46) : 58;
         const cx = left + panelW / 2;
-        const cy = top + panelH - bh / 2 - (compact ? 16 : 24);
+        const cy = top + panelH - bh / 2 - (compact ? 12 : 18);
+
+        const defaultLabel = options.label || 'GOT IT';
+        let countdown = options.countdown || 0;
+        const isPrimary = Boolean(options.primary);
 
         if (this.textures.exists('modal_close_btn')) this.textures.remove('modal_close_btn');
         const g = this.make.graphics({ x: 0, y: 0, add: false });
-        g.fillStyle(INK, 0.9);
+        g.fillStyle(isPrimary ? 0xc8760a : INK, 0.92);
         g.fillRoundedRect(0, 0, bw, bh, bh / 2);
-        g.lineStyle(1.5, 0x3ddc84, 0.7);
+        g.lineStyle(1.5, isPrimary ? 0xffd27a : 0x3ddc84, 0.8);
         g.strokeRoundedRect(1, 1, bw - 2, bh - 2, bh / 2);
         g.generateTexture('modal_close_btn', bw, bh);
         g.destroy();
@@ -546,19 +551,44 @@ export class MenuScene extends Phaser.Scene {
         const btn = this.add.image(cx, cy, 'modal_close_btn')
             .setDepth(93)
             .setInteractive({ useHandCursor: true });
-        const label = this.add.text(cx, cy, 'GOT IT', {
+        const labelText = countdown > 0 ? `${defaultLabel} (${countdown}s)` : defaultLabel;
+        const label = this.add.text(cx, cy, labelText, {
             fontFamily: 'Outfit',
-            fontSize: compact ? (panelH < 390 ? '16px' : '20px') : '26px',
+            fontSize: compact ? (panelH < 390 ? '15px' : '18px') : '22px',
             fontStyle: 'bold',
-            color: '#9be29b',
+            color: isPrimary ? '#ffffff' : '#9be29b',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(94);
 
+        let timer = null;
+        let destroyed = false;
+
         const destroyModal = () => {
+            if (destroyed) return;
+            destroyed = true;
+            if (timer) {
+                timer.remove(false);
+                timer = null;
+            }
             [shell.overlay, shell.panel, shell.titleText, btn, label,
                 ...(shell.items || [])].forEach(o => o && o.destroy());
             if (onClose) onClose();
         };
+
+        if (countdown > 0) {
+            timer = this.time.addEvent({
+                delay: 1000,
+                repeat: countdown - 1,
+                callback: () => {
+                    countdown--;
+                    if (countdown > 0) {
+                        label.setText(`${defaultLabel} (${countdown}s)`);
+                    } else {
+                        destroyModal();
+                    }
+                },
+            });
+        }
 
         btn.on('pointerover', () => this.tweens.add({ targets: [btn, label], scaleX: 1.05, scaleY: 1.05, duration: 100 }));
         btn.on('pointerout', () => this.tweens.add({ targets: [btn, label], scaleX: 1, scaleY: 1, duration: 100 }));
@@ -631,10 +661,10 @@ export class MenuScene extends Phaser.Scene {
         return items;
     }
 
-    showTutorial() {
+    showTutorial(onStart = null) {
         const { width, height } = this.scale;
         const shell = this.buildModalShell(width, height, 'HOW TO PLAY');
-        const { panelW, left, top, compact } = shell;
+        const { panelW, panelH, left, top, compact } = shell;
 
         const instructions = [
             { icon: 'icon_wave', text: 'The tide is rising! Rails flee from left to right.' },
@@ -645,27 +675,32 @@ export class MenuScene extends Phaser.Scene {
             { icon: 'icon_heart_green', text: 'Save as many Rails as you can before the tide rises!' },
         ];
 
-        const itemSpacing = compact ? 52 : 66;
-        const startY = top + (compact ? 96 : 128);
-        const iconX = left + (compact ? 42 : 64);
-        const textX = iconX + (compact ? 28 : 34);
+        const veryShort = height <= 420;
+        const itemSpacing = veryShort ? Math.min(34, (panelH - 110) / instructions.length) : (compact ? 46 : 60);
+        const startY = top + (veryShort ? 50 : (compact ? 74 : 105));
+        const iconX = left + (compact ? 34 : 54);
+        const textX = iconX + (compact ? 24 : 32);
 
         shell.items = [];
         instructions.forEach((item, i) => {
             const y = startY + i * itemSpacing;
             const ico = this.add.image(iconX, y, item.icon)
-                .setScale(compact ? 1.1 : 1.5).setDepth(92);
+                .setScale(veryShort ? 0.7 : (compact ? 0.9 : 1.25)).setDepth(92);
             const txt = this.add.text(textX, y, item.text, {
                 fontFamily: 'Outfit',
-                fontSize: compact ? '18px' : '24px',
+                fontSize: veryShort ? '13px' : (compact ? '15px' : '20px'),
                 color: '#ffffff',
                 resolution: TEXT_RES,
-                wordWrap: { width: panelW - (compact ? 100 : 140) },
+                wordWrap: { width: panelW - (compact ? 80 : 120) },
             }).setOrigin(0, 0.5).setDepth(92);
             shell.items.push(ico, txt);
         });
 
-        this.buildModalClose(shell);
+        this.buildModalClose(shell, onStart, {
+            label: onStart ? 'START GAME' : 'GOT IT',
+            primary: Boolean(onStart),
+            countdown: onStart ? 5 : 0,
+        });
     }
 
     showSFBBOInfo() {
