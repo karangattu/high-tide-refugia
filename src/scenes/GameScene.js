@@ -65,20 +65,75 @@ export class GameScene extends Phaser.Scene {
     }
 
     createEnvironment(width, height) {
-        // Upland (safe zone) - far right
-        for (let y = 0; y < height; y += 64) {
-            for (let x = width - 150; x < width; x += 64) {
-                const grass = this.add.image(x + 32, y + 32, 'grass');
-                grass.setDepth(0);
+        const uplandX = width - 150;
+
+        // ── Marsh floor: wet mud (left) drying toward olive upland (right) ──
+        const marsh = this.add.graphics().setDepth(-30);
+        marsh.fillGradientStyle(0x413d31, 0x4c5a33, 0x37352a, 0x3e4a29, 1, 1, 1, 1);
+        marsh.fillRect(0, 0, width, height);
+
+        // ── Organic mud texture: speckles + tidal wrack lines ──
+        const detail = this.add.graphics().setDepth(-29);
+        const speckles = Math.round((width * height) / 9000);
+        for (let i = 0; i < speckles; i++) {
+            const x = Math.random() * width;
+            const y = Math.random() * height;
+            const dark = Math.random() < 0.6;
+            detail.fillStyle(dark ? 0x2e2b22 : 0x6a6148, Phaser.Math.FloatBetween(0.15, 0.4));
+            detail.fillEllipse(x, y, Phaser.Math.Between(4, 14), Phaser.Math.Between(2, 6));
+        }
+        for (let i = 0; i < 12; i++) {
+            const x = Math.random() * width * 0.8;
+            const y = Math.random() * height;
+            const len = Phaser.Math.Between(40, 130);
+            detail.lineStyle(1, 0x2e2b22, 0.22);
+            detail.beginPath();
+            detail.moveTo(x, y);
+            detail.lineTo(x + len, y + Phaser.Math.Between(-3, 3));
+            detail.strokePath();
+        }
+
+        // ── Sparse reed clusters (background dressing) ──
+        const reeds = this.add.graphics().setDepth(-28);
+        const clusters = Math.round(width / 260);
+        for (let i = 0; i < clusters; i++) {
+            const x = Phaser.Math.Between(30, width - 30);
+            const y = Phaser.Math.Between(40, height - 30);
+            const blades = Phaser.Math.Between(3, 5);
+            for (let b = 0; b < blades; b++) {
+                const bx = x + (b - blades / 2) * 6;
+                const lean = Phaser.Math.Between(-6, 6);
+                const h = Phaser.Math.Between(14, 26);
+                reeds.lineStyle(1.5, 0x2a3d1c, 0.7);
+                reeds.beginPath();
+                reeds.moveTo(bx, y);
+                for (let s = 1; s <= 5; s++) {
+                    const t = s / 5;
+                    const mt = 1 - t;
+                    reeds.lineTo(
+                        mt * mt * bx + 2 * mt * t * (bx + lean * 0.5) + t * t * (bx + lean),
+                        mt * mt * y + 2 * mt * t * (y - h * 0.6) + t * t * (y - h)
+                    );
+                }
+                reeds.strokePath();
             }
         }
 
-        // Transition zone (middle)
-        for (let y = 0; y < height; y += 64) {
-            for (let x = 120; x < width - 150; x += 64) {
-                const mud = this.add.image(x + 32, y + 32, 'mud');
-                mud.setDepth(0);
-            }
+        // ── Upland / safe zone strip ──
+        const upland = this.add.graphics().setDepth(-27);
+        upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x2f4a1d, 0x2f4a1d, 1, 1, 1, 1);
+        upland.fillRect(uplandX, 0, width - uplandX, height);
+        // Soft seam blending marsh into upland
+        upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0, 0.85, 0, 0.85);
+        upland.fillRect(uplandX - 70, 0, 100, height);
+        // Grass blade silhouettes scattered over the upland
+        const tufts = Math.round((width - uplandX) / 10);
+        for (let i = 0; i < tufts; i++) {
+            const x = Phaser.Math.Between(uplandX, width - 8);
+            const y = Phaser.Math.Between(10, height - 10);
+            const h = Phaser.Math.Between(8, 20);
+            upland.fillStyle(0x2a4a16, Phaser.Math.FloatBetween(0.5, 0.9));
+            upland.fillTriangle(x, y, x + 3, y - h, x + 6, y);
         }
 
         // Safe zone indicator
@@ -96,6 +151,13 @@ export class GameScene extends Phaser.Scene {
             color: '#27ae60',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(10);
+
+        // Vignette to seat the composition
+        const vignette = this.add.graphics().setDepth(8);
+        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.3, 0.3, 0, 0);
+        vignette.fillRect(0, 0, width, height * 0.09);
+        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.28, 0.28);
+        vignette.fillRect(0, height * 0.93, width, height * 0.07);
 
         // Floating seed particles
         this.particleManager.createFloatingSeeds(width, height);
