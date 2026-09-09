@@ -168,3 +168,47 @@ test('GameScene wires up zone-based plant species mapping on hover and touch pla
         'GameScene tryPlantAt must use getPlantTypeForX'
     );
 });
+
+test('GameScene keeps decorative grindelia/gumplant strictly in upland refugia and clear of sides/low-mid marsh', () => {
+    const gameSceneContent = fs.readFileSync('src/scenes/GameScene.js', 'utf-8');
+
+    assert.doesNotMatch(
+        gameSceneContent,
+        /Phaser\.Math\.Between\(\s*30\s*,\s*uplandX\s*-\s*60\s*\)[\s\S]*?gumplant/,
+        'GameScene must not scatter gumplants across the marsh sides and waterline'
+    );
+
+    assert.match(
+        gameSceneContent,
+        /const\s+gumplantCount[\s\S]*?uplandX\s*\+\s*Phaser\.Math\.Between\(10,\s*100\)[\s\S]*?'gumplant_8'/,
+        'GameScene must restrict decorative gumplant to the upland safe refuge'
+    );
+
+    assert.match(
+        gameSceneContent,
+        /const\s+cordgrassCount[\s\S]*?Phaser\.Math\.Between\(15,\s*80\)[\s\S]*?'cordgrass_8'/,
+        'GameScene must place cordgrass along the left water boundary'
+    );
+});
+
+test('MenuScene restricts gumplant to the upland refugia on the right and places cordgrass on the left', () => {
+    const menuContent = fs.readFileSync('src/scenes/MenuScene.js', 'utf-8');
+
+    assert.doesNotMatch(
+        menuContent,
+        /Phaser\.Math\.Between\(30,\s*width\s*\*\s*0\.24\)[\s\S]*?gumplant/,
+        'MenuScene must not place gumplant in the left low-marsh waterline zone'
+    );
+
+    assert.match(
+        menuContent,
+        /cordgrassClumps[\s\S]*?'cordgrass'/,
+        'MenuScene must place cordgrass on the left waterline zone'
+    );
+
+    assert.match(
+        menuContent,
+        /gumplantClumps[\s\S]*?'gumplant'/,
+        'MenuScene must place gumplant in the right upland zone'
+    );
+});

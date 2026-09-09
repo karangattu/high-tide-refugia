@@ -160,15 +160,19 @@ export class MenuScene extends Phaser.Scene {
             }
         }
 
-        // Gumplant clumps along the waterline (kept clear of the centre column)
-        const clumps = Math.max(4, Math.round(width / 220));
-        for (let i = 0; i < clumps; i++) {
-            let x = Phaser.Math.Between(30, width - 30);
-            if (Math.abs(x - width / 2) < width * 0.24) {
-                x = x < width / 2
-                    ? Phaser.Math.Between(30, width * 0.24)
-                    : Phaser.Math.Between(width * 0.76, width - 30);
-            }
+        const cordgrassClumps = Math.max(2, Math.round(width / 450));
+        for (let i = 0; i < cordgrassClumps; i++) {
+            const x = Phaser.Math.Between(20, Math.min(width * 0.18, 120));
+            const y = marshY + Phaser.Math.Between(24, 60);
+            this.add.image(x, y, 'cordgrass')
+                .setScale(Phaser.Math.FloatBetween(0.18, 0.26))
+                .setAlpha(0.85)
+                .setDepth(-20);
+        }
+
+        const gumplantClumps = Math.max(2, Math.round(width / 450));
+        for (let i = 0; i < gumplantClumps; i++) {
+            const x = Phaser.Math.Between(Math.max(width * 0.82, width - 140), width - 30);
             const y = marshY + Phaser.Math.Between(24, 60);
             this.add.image(x, y, 'gumplant')
                 .setScale(Phaser.Math.FloatBetween(0.18, 0.28))

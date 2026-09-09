@@ -196,15 +196,6 @@ export class GameScene extends Phaser.Scene {
         }
 
         const uplandX = width - 150;
-        const clumps = Math.max(4, Math.round(width / 260));
-        for (let i = 0; i < clumps; i++) {
-            const x = Phaser.Math.Between(30, uplandX - 60);
-            const y = marshY + Phaser.Math.Between(24, 60);
-            this.add.image(x, y, 'gumplant')
-                .setScale(Phaser.Math.FloatBetween(0.16, 0.24))
-                .setAlpha(0.55)
-                .setDepth(-24);
-        }
 
         const cordgrassCount = Math.round((height - this.marshY) / 20);
         for (let i = 0; i <= cordgrassCount; i++) {
