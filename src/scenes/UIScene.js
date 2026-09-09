@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { toggleFullscreen } from '../utils/mobile.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -186,7 +187,17 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0, 0.5);
 
         if (compact) {
-            this.footerTipText = this.add.text(width - 12, cy, 'Plant cover to save Rails', {
+            const fsBtn = this.add.text(width - 10, cy, '⛶', {
+                fontFamily: 'Outfit',
+                fontSize: '15px',
+                color: '#eef7f2',
+                backgroundColor: '#1b4332',
+                padding: { x: 5, y: 2 },
+                resolution: TEXT_RES,
+            }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+            fsBtn.on('pointerdown', () => toggleFullscreen());
+
+            this.footerTipText = this.add.text(width - 38, cy, 'Plant cover to save Rails', {
                 fontFamily: 'Outfit',
                 fontSize: '12px',
                 color: '#b0c4b1',
@@ -200,6 +211,14 @@ export class UIScene extends Phaser.Scene {
                 color: '#b0c4b1',
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
+
+            const fsBtn = this.add.text(width - 120, cy, '⛶ FULLSCREEN', {
+                fontFamily: 'Outfit',
+                fontSize: '13px',
+                color: '#9fd8e8',
+                resolution: TEXT_RES,
+            }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+            fsBtn.on('pointerdown', () => toggleFullscreen());
 
             this.add.text(width - 26, cy, '[ESC] PAUSE', {
                 fontFamily: 'Outfit',

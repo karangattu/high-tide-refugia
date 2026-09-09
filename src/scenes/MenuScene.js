@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { triggerFullscreenAndOrientation } from '../utils/mobile.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -431,6 +432,9 @@ export class MenuScene extends Phaser.Scene {
         });
 
         btn.on('pointerdown', () => {
+            if (label === 'PLAY') {
+                triggerFullscreenAndOrientation();
+            }
             this.tweens.add({
                 targets: [btn, text],
                 scaleX: 0.95,

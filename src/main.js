@@ -5,6 +5,7 @@ import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { IntroScene } from './scenes/IntroScene.js';
+import { isPhonePortrait, triggerFullscreenAndOrientation } from './utils/mobile.js';
 
 const MOBILE_PHONE_MAX_DIMENSION = 600;
 const GAMEPLAY_SCENES = ['GameScene', 'UIScene'];
@@ -42,17 +43,8 @@ const config = {
 // Create the game instance
 const game = new Phaser.Game(config);
 
-function isPhonePortrait() {
-    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
-    const smallestSide = Math.min(window.innerWidth, window.innerHeight);
-
-    return isTouchDevice
-        && smallestSide <= MOBILE_PHONE_MAX_DIMENSION
-        && window.innerHeight > window.innerWidth;
-}
-
 function syncMobileOrientationLock() {
-    const portraitLocked = isPhonePortrait();
+    const portraitLocked = isPhonePortrait(MOBILE_PHONE_MAX_DIMENSION);
 
     document.body.classList.toggle('landscape-required', portraitLocked);
 
@@ -104,5 +96,24 @@ window.addEventListener('resize', () => {
     game.scale.refresh();
     syncMobileOrientationLock();
 });
+
+export { triggerFullscreenAndOrientation };
+
+const triggerAutoFullscreen = () => {
+    const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    if (isTouch) {
+        triggerFullscreenAndOrientation();
+    }
+    window.removeEventListener('pointerdown', triggerAutoFullscreen);
+    window.removeEventListener('touchstart', triggerAutoFullscreen);
+};
+window.addEventListener('pointerdown', triggerAutoFullscreen, { once: true });
+window.addEventListener('touchstart', triggerAutoFullscreen, { once: true });
+
+if (typeof window !== 'undefined' && 'serviceWorker' in window.navigator && window.location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => {
+        window.navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
 
 export default game;

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b2545"/>
+      <stop offset="100%" stop-color="#1e3d1a"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f39c12"/>
+      <stop offset="100%" stop-color="#e67e22"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d35400"/>
+      <stop offset="100%" stop-color="#962d00"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <circle cx="48" cy="20" r="10" fill="url(#sun)" opacity="0.85"/>
+  <!-- Cordgrass / marsh reeds -->
+  <path d="M8 58 Q14 36 20 22 Q16 40 18 58 Z" fill="#2ecc71" opacity="0.8"/>
+  <path d="M14 58 Q22 30 28 16 Q24 38 24 58 Z" fill="#27ae60" opacity="0.9"/>
+  <!-- Ridgway's Rail head silhouette -->
+  <path d="M26 44 C28 34 35 25 43 23 C48 22 55 24 60 21 C53 26 48 28 47 31 C45 37 42 43 38 52 C32 54 27 50 26 44 Z" fill="url(#rail)"/>
+  <circle cx="44" cy="26" r="2" fill="#ffffff"/>
+  <circle cx="44.5" cy="26" r="1" fill="#111111"/>
+  <!-- Beak -->
+  <path d="M48 24 L62 20 L48 26 Z" fill="#e67e22"/>
+  <!-- Water wave -->
+  <path d="M0 52 Q16 46 32 52 T64 52 L64 64 L0 64 Z" fill="#0a3d62" opacity="0.95"/>
+  <path d="M0 56 Q16 52 32 56 T64 56 L64 64 L0 64 Z" fill="#1a5276" opacity="0.7"/>
+</svg>
