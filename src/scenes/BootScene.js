@@ -62,43 +62,72 @@ export class BootScene extends Phaser.Scene {
         this.createJaumeaTexture();
         // Gumplant / legacy 'plant' keys are loaded from SVG in preload()
 
-        // Water tile (64x64) – rich tidal water with depth gradient & wave detail
+        // Water tile (64x64) – deep tidal water with depth banding & seamless waves
         const waterGraphics = this.make.graphics({ x: 0, y: 0, add: false });
         // Deep base
-        waterGraphics.fillGradientStyle(0x062c47, 0x062c47, 0x0e5a7e, 0x0e5a7e);
+        waterGraphics.fillStyle(0x0a3149);
         waterGraphics.fillRect(0, 0, 64, 64);
-        // Mid-depth colour band
-        waterGraphics.fillStyle(0x0a4468, 0.5);
-        waterGraphics.fillRect(0, 16, 64, 32);
-        // Primary wave crests
-        waterGraphics.lineStyle(2, 0x2498c8, 0.45);
+        // Depth banding
+        waterGraphics.fillStyle(0x0d425f, 0.6);
+        waterGraphics.fillRect(0, 22, 64, 42);
+        // Wave crests – integer sine cycles so the tile repeats seamlessly
         for (let row = 0; row < 4; row++) {
-            const yBase = 8 + row * 16;
+            const yBase = 6 + row * 16;
+            waterGraphics.lineStyle(2, 0x2f86ad, 0.32);
             waterGraphics.beginPath();
-            waterGraphics.moveTo(0, yBase);
-            for (let x = 0; x <= 64; x += 8) {
-                waterGraphics.lineTo(x, yBase + Math.sin((x + row * 12) * 0.18) * 3);
+            waterGraphics.moveTo(0, yBase + Math.sin(row * 1.7) * 2.2);
+            for (let x = 0; x <= 64; x += 4) {
+                const t = (x / 64) * Math.PI * 2;
+                waterGraphics.lineTo(x, yBase + Math.sin(t * 2 + row * 1.7) * 2.2);
             }
-            waterGraphics.stroke();
+            waterGraphics.strokePath();
         }
         // Secondary ripple lines
-        waterGraphics.lineStyle(1, 0x5bbee8, 0.2);
+        waterGraphics.lineStyle(1, 0x7fd4e8, 0.22);
         for (let row = 0; row < 3; row++) {
-            const yBase = 14 + row * 20;
+            const yBase = 13 + row * 21;
             waterGraphics.beginPath();
-            waterGraphics.moveTo(0, yBase);
-            for (let x = 0; x <= 64; x += 6) {
-                waterGraphics.lineTo(x, yBase + Math.cos((x + row * 8) * 0.24) * 2);
+            waterGraphics.moveTo(0, yBase + Math.cos(row * 2.3) * 1.6);
+            for (let x = 0; x <= 64; x += 4) {
+                const t = (x / 64) * Math.PI * 2;
+                waterGraphics.lineTo(x, yBase + Math.cos(t * 3 + row * 2.3) * 1.6);
             }
-            waterGraphics.stroke();
+            waterGraphics.strokePath();
         }
         // Subtle foam dots
-        waterGraphics.fillStyle(0xffffff, 0.12);
+        waterGraphics.fillStyle(0xffffff, 0.10);
         [
             [8, 6], [30, 18], [52, 10], [14, 42], [44, 50], [58, 34], [22, 58],
         ].forEach(([px, py]) => waterGraphics.fillCircle(px, py, 1.5));
         waterGraphics.generateTexture('water', 64, 64);
         waterGraphics.destroy();
+
+        // Vertical depth shade for the water body (real canvas gradient)
+        if (this.textures.exists('water_shade')) this.textures.remove('water_shade');
+        const shadeTex = this.textures.createCanvas('water_shade', 4, 64);
+        const shadeCtx = shadeTex.getContext();
+        const shadeGrad = shadeCtx.createLinearGradient(0, 0, 0, 64);
+        shadeGrad.addColorStop(0, 'rgba(5,26,40,0)');
+        shadeGrad.addColorStop(0.6, 'rgba(5,26,40,0.18)');
+        shadeGrad.addColorStop(1, 'rgba(5,26,40,0.5)');
+        shadeCtx.fillStyle = shadeGrad;
+        shadeCtx.fillRect(0, 0, 4, 64);
+        shadeTex.refresh();
+
+        // Soft contact shadow (radial gradient squashed into an ellipse)
+        if (this.textures.exists('shadow')) this.textures.remove('shadow');
+        const shadowTex = this.textures.createCanvas('shadow', 128, 40);
+        const shadowCtx = shadowTex.getContext();
+        shadowCtx.translate(64, 20);
+        shadowCtx.scale(1, 0.32);
+        shadowCtx.translate(-64, -20);
+        const shadowGrad = shadowCtx.createRadialGradient(64, 20, 2, 64, 20, 60);
+        shadowGrad.addColorStop(0, 'rgba(0,0,0,0.42)');
+        shadowGrad.addColorStop(0.7, 'rgba(0,0,0,0.20)');
+        shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        shadowCtx.fillStyle = shadowGrad;
+        shadowCtx.fillRect(-10, -60, 148, 160);
+        shadowTex.refresh();
 
         // Water-edge / shoreline overlay (16x64) for foam & wet-sand at the tide front
         const edgeGraphics = this.make.graphics({ x: 0, y: 0, add: false });
@@ -260,6 +289,10 @@ export class BootScene extends Phaser.Scene {
             'button', 'button_hover',
             'seedbank_bg', 'score_panel',
             'hud_panel', 'hud_panel_wide', 'hud_panel_bottom',
+            // Rail sheet slices
+            'rail_running_1', 'rail_running_2', 'rail_running_3', 'rail_running_4',
+            'rail_sprint_1', 'rail_sprint_2', 'rail_sprint_3', 'rail_sprint_4',
+            'rail_hiding', 'rail_calling', 'rail_surprised',
             // Icon textures (emoji replacements)
             'icon_trophy', 'icon_heart_green', 'icon_heart_broken',
             'icon_leaf', 'icon_flame', 'icon_wave',
@@ -276,8 +309,82 @@ export class BootScene extends Phaser.Scene {
     }
 
     create() {
+        // Split the rail sheet into named textures (Rail.js references these keys)
+        this.sliceRailSheet();
+
+        // Re-apply NEAREST now that the sliced rail textures exist
+        this.applyNearestFilter();
+
         // Transition to menu scene
         this.scene.start('MenuScene');
+    }
+
+    // ─── RAIL SHEET SLICER ───────────────────────────────────────
+
+    /** The rail sheet is a 4x2 grid of run-cycle poses (top row = upright
+     *  strides, bottom row = stretched gallops) with per-frame transparent
+     *  padding. Slice it into named textures trimmed to the bird's bounding
+     *  box and re-anchored bottom-center on a shared canvas so the feet stay
+     *  on one ground line across the whole cycle (no frame-to-frame jitter).
+     *  Derived poses (hiding / calling / surprised) are generated from the
+     *  closest matching stride since no dedicated art exists for them. */
+    sliceRailSheet() {
+        if (!this.textures.exists('rail_sheet')) return;
+
+        const FRAME_W = 1000;
+        const FRAME_H = 1116;
+        const CANVAS_W = 864;
+        const CANVAS_H = 624;
+        const src = this.textures.get('rail_sheet').source[0].image;
+
+        const makeTex = (key, frameIndex, squashY = 1) => {
+            const fx = (frameIndex % 4) * FRAME_W;
+            const fy = Math.floor(frameIndex / 4) * FRAME_H;
+
+            // Trim transparent padding via an alpha scan of this frame cell
+            const scan = document.createElement('canvas');
+            scan.width = FRAME_W;
+            scan.height = FRAME_H;
+            const sctx = scan.getContext('2d', { willReadFrequently: true });
+            sctx.drawImage(src, fx, fy, FRAME_W, FRAME_H, 0, 0, FRAME_W, FRAME_H);
+            const data = sctx.getImageData(0, 0, FRAME_W, FRAME_H).data;
+
+            let minX = FRAME_W, minY = FRAME_H, maxX = -1, maxY = -1;
+            for (let y = 0; y < FRAME_H; y++) {
+                for (let x = 0; x < FRAME_W; x++) {
+                    if (data[(y * FRAME_W + x) * 4 + 3] > 8) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+            if (maxX < 0) return;
+
+            const cw = maxX - minX + 1;
+            const ch = Math.round((maxY - minY + 1) * squashY);
+
+            if (this.textures.exists(key)) this.textures.remove(key);
+            const tex = this.textures.createCanvas(key, CANVAS_W, CANVAS_H);
+            if (!tex) return;
+            const ctx = tex.getContext();
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            // Bottom-center anchor: feet on the ground line, squash keeps them there
+            const dx = Math.round((CANVAS_W - cw) / 2);
+            ctx.drawImage(scan, minX, minY, cw, maxY - minY + 1, dx, CANVAS_H - ch, cw, ch);
+            tex.refresh();
+        };
+
+        // Top row: upright strides → default run cycle
+        for (let i = 0; i < 4; i++) makeTex(`rail_running_${i + 1}`, i);
+        // Bottom row: stretched gallops → speed-boost sprint cycle
+        for (let i = 0; i < 4; i++) makeTex(`rail_sprint_${i + 1}`, i + 4);
+        // Derived poses
+        makeTex('rail_hiding', 2, 0.72);   // crouched low in vegetation
+        makeTex('rail_calling', 0);        // head-up alert stance
+        makeTex('rail_surprised', 2);      // mid-stride alarm
     }
 
     // ─── PLANT TEXTURE GENERATORS ────────────────────────────────

@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 
-const RAIL_BASE_SCALE = 0.18;
-const RAIL_BOOST_SCALE = 0.22;
-const RAIL_CELEBRATION_SCALE = 0.24;
+const RAIL_BASE_SCALE = 0.16;
+const RAIL_BOOST_SCALE = 0.195;
+const RAIL_CELEBRATION_SCALE = 0.215;
 
 export class Rail extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, speedMultiplier = 1) {
@@ -18,8 +18,8 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.setScale(this.baseScale);
 
         // Physics properties - adjust for scaled sprite
-        this.body.setSize(300, 250);
-        this.body.setOffset(50, 100);
+        this.body.setSize(520, 380);
+        this.body.setOffset(170, 230);
         this.setBounce(0.3);
         this.setCollideWorldBounds(true);
 
@@ -44,10 +44,22 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.animationTimer = 0;
         this.currentFrame = 0;
         this.runningFrames = ['rail_running_1', 'rail_running_2', 'rail_running_3', 'rail_running_4'];
+        this.sprintFrames = ['rail_sprint_1', 'rail_sprint_2', 'rail_sprint_3', 'rail_sprint_4'];
         this.animationSpeed = 110; // ms per frame
+        this.isBoosting = false;
 
         // Visual
         this.originalTint = 0xffffff;
+
+        // Ground contact shadow
+        this.shadow = scene.add.image(x, y + 46, 'shadow')
+            .setAlpha(0.35)
+            .setScale(0.55, 0.5)
+            .setDepth(-1);
+        this.once('destroy', () => {
+            if (this.shadow) this.shadow.destroy();
+            this.shadow = null;
+        });
 
         // Start moving right
         this.body.setVelocityX(this._speedX);
@@ -55,6 +67,9 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
     update(time, delta) {
         if (!this.isAlive) return;
+
+        // Keep the contact shadow glued to the ground
+        if (this.shadow) this.shadow.setPosition(this.x, this.y + 46);
 
         // Apply tweened horizontal speed
         this.body.setVelocityX(this._speedX);
@@ -67,13 +82,14 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         const maxLean = 0.13; // ~7.5 degrees
         this.setRotation((targetVY / this.wobbleAmp) * maxLean);
 
-        // Animate running frames
+        // Animate running frames (gallop cycle while boosting)
         this.animationTimer += delta;
         if (this.animationTimer >= this.animationSpeed) {
             this.animationTimer = 0;
             this.currentFrame = (this.currentFrame + 1) % this.runningFrames.length;
-            if (!this.isSafe) {
-                this.setTexture(this.runningFrames[this.currentFrame]);
+            if (!this.isSafe && !this.isPanicking) {
+                const frames = this.isBoosting ? this.sprintFrames : this.runningFrames;
+                this.setTexture(frames[this.currentFrame]);
             }
         }
 
@@ -135,8 +151,11 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         // Ease velocity up to boost speed
         this._tweenSpeed(this.baseSpeed * 1.5, 250);
 
-        // Use racing pose during boost
-        this.setTexture('rail_running_2');
+        // Switch to the gallop cycle during the boost
+        this.isBoosting = true;
+        if (!this.isSafe && !this.isPanicking) {
+            this.setTexture(this.sprintFrames[this.currentFrame]);
+        }
 
         // Visual feedback — brief scale pulse
         this.scene.tweens.add({
@@ -152,6 +171,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
         // Return to base speed after 1 second
         this.scene.time.delayedCall(1000, () => {
+            this.isBoosting = false;
             if (this.isAlive && !this.isSafe) {
                 this._tweenSpeed(this.baseSpeed, 400);
             }
