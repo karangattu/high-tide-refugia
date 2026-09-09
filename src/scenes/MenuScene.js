@@ -163,7 +163,7 @@ export class MenuScene extends Phaser.Scene {
             }
             const y = marshY + Phaser.Math.Between(24, 60);
             this.add.image(x, y, 'gumplant')
-                .setScale(Phaser.Math.FloatBetween(1.4, 2.4))
+                .setScale(Phaser.Math.FloatBetween(0.18, 0.28))
                 .setAlpha(0.92)
                 .setDepth(marshY + (y - marshY));
         }

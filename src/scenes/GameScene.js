@@ -183,7 +183,7 @@ export class GameScene extends Phaser.Scene {
             const x = Phaser.Math.Between(30, uplandX - 60);
             const y = marshY + Phaser.Math.Between(24, 60);
             this.add.image(x, y, 'gumplant')
-                .setScale(Phaser.Math.FloatBetween(1.2, 2.0))
+                .setScale(Phaser.Math.FloatBetween(0.16, 0.24))
                 .setAlpha(0.55)
                 .setDepth(-24);
         }
@@ -686,7 +686,8 @@ export class GameScene extends Phaser.Scene {
 
             this.plants.children.entries.forEach(plant => {
                 const distance = Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y);
-                if (distance < 35) {
+                // Young sprouts are too small to hide a rail
+                if (distance < 35 && plant.isCover && plant.isCover()) {
                     isOverlappingPlant = true;
                     if (!rail.isSafe) {
                         rail.enterPlant();
