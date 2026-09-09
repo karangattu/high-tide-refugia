@@ -408,15 +408,24 @@ export class MenuScene extends Phaser.Scene {
         );
 
         const primaryY = startY + this.btnPrimaryH / 2;
-        this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', veryShort ? '26px' : '36px', '#2b1c07', () => {
+        const b1 = this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', veryShort ? '26px' : '36px', '#2b1c07', () => {
             this.showTutorial(() => this.startGame());
         });
 
         const y = primaryY + this.btnPrimaryH / 2 + spacing;
-        this.createButton(width / 2, y + this.btnSecondaryH / 2, 'SFBBO & VOLUNTEER', 'menu_btn_secondary',
+        const b2 = this.createButton(width / 2, y + this.btnSecondaryH / 2, 'SFBBO & VOLUNTEER', 'menu_btn_secondary',
             veryShort ? '14px' : (compact ? '18px' : '22px'), '#eef7f2', () => this.showSFBBOInfo());
 
+        this.menuElements = [b1.btn, b1.text, b2.btn, b2.text];
         this.stackBottom = y + this.btnSecondaryH;
+    }
+
+    setMenuButtonsVisible(visible) {
+        if (this.menuElements) {
+            this.menuElements.forEach((el) => {
+                if (el) el.setVisible(visible);
+            });
+        }
     }
 
     startGame() {
@@ -500,40 +509,47 @@ export class MenuScene extends Phaser.Scene {
 
     // ─── MODALS ──────────────────────────────────────────────────
 
-    buildModalShell(width, height, title) {
+    buildModalShell(width, height, title, customH = null) {
         const compact = this.compact;
-        const panelW = Math.min(compact ? 560 : 820, width - 30);
-        const panelH = Math.min(compact ? 430 : 660, height - 40);
+        const panelW = Math.min(compact ? 560 : 780, width - 30);
+        const defaultH = compact ? 420 : 500;
+        const panelH = Math.min(customH || defaultH, height - 30);
         const left = width / 2 - panelW / 2;
-        const top = height / 2 - panelH / 2;
+        const top = Math.max(15, (height - panelH) / 2);
 
-        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.82)
+        this.setMenuButtonsVisible(false);
+
+        const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
             .setDepth(90)
             .setInteractive();
 
         const panel = this.add.graphics().setDepth(91);
-        panel.fillStyle(0x10241c, 0.96);
+        panel.fillStyle(0x0e2319, 1.0);
         panel.fillRoundedRect(left, top, panelW, panelH, 20);
-        panel.lineStyle(1.5, AMBER, 0.5);
+        panel.lineStyle(1.5, AMBER, 0.75);
         panel.strokeRoundedRect(left, top, panelW, panelH, 20);
 
-        const titleText = this.add.text(width / 2, top + (compact ? (title.length > 18 ? 34 : 42) : 54), title, {
+        const panelBlocker = this.add.rectangle(left + panelW / 2, top + panelH / 2, panelW, panelH, 0x000000, 0)
+            .setDepth(91)
+            .setInteractive();
+
+        const titleText = this.add.text(width / 2, top + (compact ? (title.length > 18 ? 28 : 34) : (title.length > 18 ? 32 : 40)), title, {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? (title.length > 18 ? '21px' : '28px') : (title.length > 18 ? '32px' : '40px'),
+            fontSize: compact ? (title.length > 18 ? '20px' : '26px') : (title.length > 18 ? '26px' : '34px'),
             fontStyle: '900',
             color: AMBER_STR,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(92);
 
-        return { overlay, panel, titleText, panelW, panelH, left, top, compact };
+        return { overlay, panel, panelBlocker, titleText, panelW, panelH, left, top, compact };
     }
 
     buildModalClose(shell, onClose, options = {}) {
         const { left, top, panelW, panelH, compact } = shell;
-        const bw = compact ? (panelH < 390 ? 180 : 210) : 260;
-        const bh = compact ? (panelH < 390 ? 36 : 46) : 58;
+        const bw = options.width || (compact ? (panelH < 390 ? 180 : 210) : 250);
+        const bh = options.height || (compact ? (panelH < 390 ? 36 : 44) : 50);
         const cx = left + panelW / 2;
-        const cy = top + panelH - bh / 2 - (compact ? 12 : 18);
+        const cy = options.y || (top + panelH - bh / 2 - (compact ? 12 : 18));
 
         const defaultLabel = options.label || 'GOT IT';
         let countdown = options.countdown || 0;
@@ -541,9 +557,9 @@ export class MenuScene extends Phaser.Scene {
 
         if (this.textures.exists('modal_close_btn')) this.textures.remove('modal_close_btn');
         const g = this.make.graphics({ x: 0, y: 0, add: false });
-        g.fillStyle(isPrimary ? 0xc8760a : INK, 0.92);
+        g.fillStyle(isPrimary ? 0xc8760a : INK, 0.95);
         g.fillRoundedRect(0, 0, bw, bh, bh / 2);
-        g.lineStyle(1.5, isPrimary ? 0xffd27a : 0x3ddc84, 0.8);
+        g.lineStyle(1.5, isPrimary ? 0xffd27a : 0x3ddc84, 0.85);
         g.strokeRoundedRect(1, 1, bw - 2, bh - 2, bh / 2);
         g.generateTexture('modal_close_btn', bw, bh);
         g.destroy();
@@ -554,7 +570,7 @@ export class MenuScene extends Phaser.Scene {
         const labelText = countdown > 0 ? `${defaultLabel} (${countdown}s)` : defaultLabel;
         const label = this.add.text(cx, cy, labelText, {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? (panelH < 390 ? '15px' : '18px') : '22px',
+            fontSize: compact ? (panelH < 390 ? '14px' : '17px') : '20px',
             fontStyle: 'bold',
             color: isPrimary ? '#ffffff' : '#9be29b',
             resolution: TEXT_RES,
@@ -570,7 +586,8 @@ export class MenuScene extends Phaser.Scene {
                 timer.remove(false);
                 timer = null;
             }
-            [shell.overlay, shell.panel, shell.titleText, btn, label,
+            this.setMenuButtonsVisible(true);
+            [shell.overlay, shell.panel, shell.panelBlocker, shell.titleText, btn, label,
                 ...(shell.items || [])].forEach(o => o && o.destroy());
             if (onClose) onClose();
         };
@@ -663,8 +680,9 @@ export class MenuScene extends Phaser.Scene {
 
     showTutorial(onStart = null) {
         const { width, height } = this.scale;
-        const shell = this.buildModalShell(width, height, 'HOW TO PLAY');
-        const { panelW, panelH, left, top, compact } = shell;
+        const compact = this.compact;
+        const veryShort = height <= 420;
+        const panelW = Math.min(compact ? 560 : 760, width - 30);
 
         const instructions = [
             { icon: 'icon_wave', text: 'The tide is rising! Rails flee from left to right.' },
@@ -675,9 +693,20 @@ export class MenuScene extends Phaser.Scene {
             { icon: 'icon_heart_green', text: 'Save as many Rails as you can before the tide rises!' },
         ];
 
-        const veryShort = height <= 420;
-        const itemSpacing = veryShort ? Math.min(34, (panelH - 110) / instructions.length) : (compact ? 46 : 60);
-        const startY = top + (veryShort ? 50 : (compact ? 74 : 105));
+        const itemSpacing = veryShort ? 32 : (compact ? 40 : 50);
+        const bh = veryShort ? 36 : (compact ? 42 : 50);
+        const topPad = veryShort ? 18 : (compact ? 24 : 32);
+        const titleH = veryShort ? 24 : (compact ? 28 : 34);
+        const gapTitleToItems = veryShort ? 12 : (compact ? 18 : 24);
+        const itemsTotalH = (instructions.length - 1) * itemSpacing + (veryShort ? 18 : 22);
+        const gapItemsToClose = veryShort ? 14 : (compact ? 18 : 24);
+        const botPad = veryShort ? 14 : (compact ? 18 : 24);
+
+        const totalH = topPad + titleH + gapTitleToItems + itemsTotalH + gapItemsToClose + bh + botPad;
+
+        const shell = this.buildModalShell(width, height, 'HOW TO PLAY', totalH);
+        const { panelH, left, top } = shell;
+        const startY = top + topPad + titleH + gapTitleToItems + 10;
         const iconX = left + (compact ? 34 : 54);
         const textX = iconX + (compact ? 24 : 32);
 
@@ -685,10 +714,10 @@ export class MenuScene extends Phaser.Scene {
         instructions.forEach((item, i) => {
             const y = startY + i * itemSpacing;
             const ico = this.add.image(iconX, y, item.icon)
-                .setScale(veryShort ? 0.7 : (compact ? 0.9 : 1.25)).setDepth(92);
+                .setScale(veryShort ? 0.7 : (compact ? 0.85 : 1.15)).setDepth(92);
             const txt = this.add.text(textX, y, item.text, {
                 fontFamily: 'Mona Sans',
-                fontSize: veryShort ? '13px' : (compact ? '15px' : '20px'),
+                fontSize: veryShort ? '13px' : (compact ? '15px' : '19px'),
                 color: '#ffffff',
                 resolution: TEXT_RES,
                 wordWrap: { width: panelW - (compact ? 80 : 120) },
@@ -696,52 +725,37 @@ export class MenuScene extends Phaser.Scene {
             shell.items.push(ico, txt);
         });
 
+        const closeY = startY + (instructions.length - 1) * itemSpacing + (veryShort ? 10 : 14) + gapItemsToClose + bh / 2;
+
         this.buildModalClose(shell, onStart, {
             label: onStart ? 'START GAME' : 'GOT IT',
             primary: Boolean(onStart),
             countdown: onStart ? 5 : 0,
+            y: closeY,
+            height: bh,
+            width: compact ? (panelH < 390 ? 180 : 210) : 250,
         });
     }
 
     showSFBBOInfo() {
         const { width, height } = this.scale;
-        const shell = this.buildModalShell(width, height, 'SFBBO TIDAL MARSH PROGRAM');
-        const { left, top, panelW, compact } = shell;
-
-        shell.items = [];
-
-        const titleY = top + (compact ? 32 : 48);
-        shell.titleText.setY(titleY);
-
-        const sub = this.add.text(width / 2, titleY + (compact ? 22 : 32), 'San Francisco Bay Bird Observatory', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '12px' : '16px',
-            fontStyle: 'bold',
-            color: TEAL_STR,
-            resolution: TEXT_RES,
-        }).setOrigin(0.5).setDepth(92);
-        shell.items.push(sub);
-
-        const contentW = panelW - (compact ? 40 : 72);
-        const textStartY = titleY + (compact ? 42 : 62);
+        const compact = this.compact;
+        const panelW = Math.min(compact ? 560 : 780, width - 30);
+        const contentW = panelW - (compact ? 36 : 64);
 
         const missionText = "Over 90% of SF Bay's historic tidal wetlands have been lost or degraded. SFBBO's Tidal Marsh Program researches and restores vital transition zones—the ecotones between marsh plains and uplands.\n\nBy planting native species like Gumplant, Cordgrass, and Saltgrass, SFBBO builds high-tide refugia: life-saving escape cover where endangered Ridgway's Rails and salt marsh harvest mice find food, shelter, and safety during extreme king tides.";
+        const volunteerText = "Want to get involved? Volunteers propagate native plants in nurseries, restore marsh habitat corridors, remove invasive weeds, and support bird conservation!";
 
-        const p1 = this.add.text(left + panelW / 2, textStartY, missionText, {
+        const p1Style = {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? '12px' : '15.5px',
+            fontSize: compact ? '12px' : '15px',
             color: '#eef7f2',
             resolution: TEXT_RES,
             align: 'center',
             lineSpacing: compact ? 2.5 : 5,
             wordWrap: { width: contentW },
-        }).setOrigin(0.5, 0).setDepth(92);
-        shell.items.push(p1);
-
-        const volunteerStartY = textStartY + p1.height + (compact ? 8 : 14);
-        const volunteerText = "Want to get involved? Volunteers propagate native plants in nurseries, restore marsh habitat corridors, remove invasive weeds, and support bird conservation!";
-
-        const p2 = this.add.text(left + panelW / 2, volunteerStartY, volunteerText, {
+        };
+        const p2Style = {
             fontFamily: 'Mona Sans',
             fontSize: compact ? '12px' : '15px',
             fontStyle: 'bold',
@@ -750,40 +764,124 @@ export class MenuScene extends Phaser.Scene {
             align: 'center',
             lineSpacing: compact ? 2 : 4,
             wordWrap: { width: contentW },
-        }).setOrigin(0.5, 0).setDepth(92);
+        };
+
+        const tempP1 = this.add.text(0, 0, missionText, p1Style).setVisible(false);
+        const tempP2 = this.add.text(0, 0, volunteerText, p2Style).setVisible(false);
+        const p1H = tempP1.height;
+        const p2H = tempP2.height;
+        tempP1.destroy();
+        tempP2.destroy();
+
+        const linkStacked = contentW < 520;
+        const btnW = linkStacked
+            ? Math.min(330, contentW)
+            : Math.min(310, (contentW - 16) / 2);
+        const btnH = compact ? 36 : 44;
+        const linksH = linkStacked ? (btnH * 2 + 10) : btnH;
+        const bh = compact ? 40 : 48;
+
+        const topPad = compact ? 24 : 32;
+        const titleH = compact ? 26 : 34;
+        const gapTitleToSub = compact ? 4 : 8;
+        const subH = compact ? 16 : 20;
+        const gapSubToP1 = compact ? 12 : 18;
+        const gapP1ToP2 = compact ? 10 : 14;
+        const gapP2ToLinks = compact ? 14 : 20;
+        const gapLinksToClose = compact ? 16 : 22;
+        const botPad = compact ? 20 : 26;
+
+        const totalH = topPad + titleH + gapTitleToSub + subH + gapSubToP1 + p1H + gapP1ToP2 + p2H + gapP2ToLinks + linksH + gapLinksToClose + bh + botPad;
+
+        const shell = this.buildModalShell(width, height, 'SFBBO TIDAL MARSH PROGRAM', totalH);
+        const { top } = shell;
+        shell.items = [];
+
+        const titleY = top + topPad + titleH / 2;
+        shell.titleText.setY(titleY);
+
+        const subY = titleY + titleH / 2 + gapTitleToSub + subH / 2;
+        const sub = this.add.text(width / 2, subY, 'San Francisco Bay Bird Observatory', {
+            fontFamily: 'Mona Sans',
+            fontSize: compact ? '12px' : '16px',
+            fontStyle: 'bold',
+            color: TEAL_STR,
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(92);
+        shell.items.push(sub);
+
+        const p1Y = subY + subH / 2 + gapSubToP1;
+        const p1 = this.add.text(width / 2, p1Y, missionText, p1Style)
+            .setOrigin(0.5, 0).setDepth(92);
+        shell.items.push(p1);
+
+        const p2Y = p1Y + p1.height + gapP1ToP2;
+        const p2 = this.add.text(width / 2, p2Y, volunteerText, p2Style)
+            .setOrigin(0.5, 0).setDepth(92);
         shell.items.push(p2);
 
-        const btnY = volunteerStartY + p2.height + (compact ? 16 : 24);
-        const btnW = compact ? Math.min(240, (contentW - 12) / 2) : 310;
-        const btnH = compact ? 36 : 46;
-        const btnSpread = compact ? btnW / 2 + 6 : btnW / 2 + 14;
+        const btnY = p2Y + p2.height + gapP2ToLinks + btnH / 2;
+        let lastLinkBottom = btnY + btnH / 2;
 
-        const link1 = this.createModalLinkButton(
-            width / 2 - btnSpread,
-            btnY,
-            btnW,
-            btnH,
-            'sfbbo.org/tidalmarsh',
-            'https://www.sfbbo.org/tidalmarsh/',
-            0xf39c12,
-            0x1c2b1e,
-            'icon_leaf'
-        );
-        shell.items.push(...link1);
+        if (linkStacked) {
+            const link1 = this.createModalLinkButton(
+                width / 2,
+                btnY,
+                btnW,
+                btnH,
+                'sfbbo.org/tidalmarsh',
+                'https://www.sfbbo.org/tidalmarsh/',
+                0xf39c12,
+                0x1c2b1e,
+                'icon_leaf'
+            );
+            const link2Y = btnY + btnH + 10;
+            const link2 = this.createModalLinkButton(
+                width / 2,
+                link2Y,
+                btnW,
+                btnH,
+                'sfbbo.org/volunteer',
+                'https://www.sfbbo.org/volunteer/',
+                0x2ecc71,
+                0x143322,
+                'icon_sprout'
+            );
+            shell.items.push(...link1, ...link2);
+            lastLinkBottom = link2Y + btnH / 2;
+        } else {
+            const btnSpread = btnW / 2 + 8;
+            const link1 = this.createModalLinkButton(
+                width / 2 - btnSpread,
+                btnY,
+                btnW,
+                btnH,
+                'sfbbo.org/tidalmarsh',
+                'https://www.sfbbo.org/tidalmarsh/',
+                0xf39c12,
+                0x1c2b1e,
+                'icon_leaf'
+            );
+            const link2 = this.createModalLinkButton(
+                width / 2 + btnSpread,
+                btnY,
+                btnW,
+                btnH,
+                'sfbbo.org/volunteer',
+                'https://www.sfbbo.org/volunteer/',
+                0x2ecc71,
+                0x143322,
+                'icon_sprout'
+            );
+            shell.items.push(...link1, ...link2);
+        }
 
-        const link2 = this.createModalLinkButton(
-            width / 2 + btnSpread,
-            btnY,
-            btnW,
-            btnH,
-            'sfbbo.org/volunteer',
-            'https://www.sfbbo.org/volunteer/',
-            0x2ecc71,
-            0x143322,
-            'icon_sprout'
-        );
-        shell.items.push(...link2);
-
-        this.buildModalClose(shell);
+        const closeY = lastLinkBottom + gapLinksToClose + bh / 2;
+        this.buildModalClose(shell, null, {
+            label: 'GOT IT',
+            y: closeY,
+            height: bh,
+            width: compact ? 200 : 240,
+        });
     }
 }

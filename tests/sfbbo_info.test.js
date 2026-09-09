@@ -31,3 +31,16 @@ test('MenuScene wires interactive link buttons to window.open with secure rel at
     assert.match(menuSceneRaw, /createModalLinkButton\s*\(/);
     assert.match(menuSceneRaw, /window\.open\(url,\s*'_blank',\s*'noopener,noreferrer'\)/);
 });
+
+test('buildModalShell creates fully opaque panel and toggles menu button visibility', () => {
+    assert.match(menuSceneRaw, /panel\.fillStyle\(0x0e2319,\s*1\.0\)/);
+    assert.match(menuSceneRaw, /this\.setMenuButtonsVisible\(false\)/);
+    assert.match(menuSceneRaw, /this\.setMenuButtonsVisible\(true\)/);
+    assert.match(menuSceneRaw, /panelBlocker/);
+});
+
+test('showSFBBOInfo and showTutorial use content-driven height and explicit close button positioning', () => {
+    assert.match(menuSceneRaw, /totalH\s*=/);
+    assert.match(menuSceneRaw, /buildModalShell\([^)]+totalH\)/);
+    assert.match(menuSceneRaw, /buildModalClose\([^)]+y:\s*closeY/);
+});
