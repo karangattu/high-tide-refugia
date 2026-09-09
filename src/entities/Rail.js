@@ -51,10 +51,9 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         // Visual
         this.originalTint = 0xffffff;
 
-        // Ground contact shadow
-        this.shadow = scene.add.image(x, y + 46, 'shadow')
+        // Ground contact shadow (positioned dynamically in update())
+        this.shadow = scene.add.image(x, y, 'shadow')
             .setAlpha(0.35)
-            .setScale(0.55, 0.5)
             .setDepth(-1);
         this.once('destroy', () => {
             if (this.shadow) this.shadow.destroy();
@@ -68,8 +67,13 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
     update(time, delta) {
         if (!this.isAlive) return;
 
-        // Keep the contact shadow glued to the ground
-        if (this.shadow) this.shadow.setPosition(this.x, this.y + 46);
+        // Glue the contact shadow to the body's feet (tracks boost pulses)
+        if (this.shadow && this.body) {
+            const worldW = this.body.width * Math.abs(this.scaleX);
+            const worldH = this.body.height * Math.abs(this.scaleY);
+            this.shadow.setPosition(this.x, this.y + worldH / 2 + 4);
+            this.shadow.setScale(worldW / 128, (worldW / 128) * 0.35);
+        }
 
         // Apply tweened horizontal speed
         this.body.setVelocityX(this._speedX);

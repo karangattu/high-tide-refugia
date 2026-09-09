@@ -52,11 +52,9 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.body.setVelocityX(this.patrolSpeed);
         this.setFlipX(false);
 
-        // Ground contact shadow
-        this.shadowY = 105;
-        this.shadow = scene.add.image(x, y + this.shadowY, 'shadow')
+        // Ground contact shadow (positioned dynamically in update())
+        this.shadow = scene.add.image(x, y, 'shadow')
             .setAlpha(0.3)
-            .setScale(1.2, 0.75)
             .setDepth(-1);
         this.once('destroy', () => {
             if (this.shadow) this.shadow.destroy();
@@ -65,8 +63,14 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     }
 
     update(time, delta, rails) {
-        // Keep the contact shadow glued to the ground
-        if (this.shadow) this.shadow.setPosition(this.x, this.y + this.shadowY);
+        // Glue the contact shadow to the body's feet and fit it to the
+        // body's world footprint (tracks scale tweens automatically)
+        if (this.shadow && this.body) {
+            const worldW = this.body.width * Math.abs(this.scaleX);
+            const worldH = this.body.height * Math.abs(this.scaleY);
+            this.shadow.setPosition(this.x, this.y + worldH / 2 + 4);
+            this.shadow.setScale(worldW / 128, (worldW / 128) * 0.35);
+        }
         // Animate walking/running
         this.animationTimer += delta;
         if (this.animationTimer >= this.animationSpeed) {
@@ -297,10 +301,6 @@ export class Cat extends GroundPredator {
         this.body.setSize(200, 200);
         // Center the body horizontally, push down vertically for the feet
         this.body.setOffset(150, 200);
-
-        // Tighter shadow for the smaller cat
-        this.shadowY = 62;
-        this.shadow.setScale(0.95, 0.65);
 
         // Smooth jumping/bounding walk cycle (top row)
         this.walkingFrames = [0, 1, 2, 3, 4, 5, 6];
