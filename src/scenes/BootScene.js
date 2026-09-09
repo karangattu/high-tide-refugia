@@ -608,35 +608,36 @@ export class BootScene extends Phaser.Scene {
         const RAW = 'harrier_sheet_raw';
         if (!this.textures.exists(RAW)) return;
         const src = this.textures.get(RAW).source[0].image;
-        const W = src.width, H = src.height;
-        const INSET = 6;
 
-        const regions = [];
-        for (let i = 0; i < 6; i++) {
-            regions.push({
-                sx: Math.round((i * W) / 6 + INSET), sy: INSET,
-                sw: Math.round(W / 6 - INSET * 2), sh: Math.round(H / 2 - INSET * 2),
-                key: `harrier_glide_${i + 1}`,
-            });
-        }
-        regions.push({
-            sx: Math.round((3 * W) / 4 + INSET), sy: Math.round(H / 2 + INSET),
-            sw: Math.round(W / 4 - INSET * 2), sh: Math.round(H / 2 - INSET * 2),
-            key: 'harrier_kill',
-        });
+        const HARRIER_FRAME_BOUNDS = {
+            harrier_glide_1: { x: 10, y: 92, w: 277, h: 263 },
+            harrier_glide_2: { x: 310, y: 168, w: 311, h: 191 },
+            harrier_glide_3: { x: 639, y: 140, w: 267, h: 216 },
+            harrier_glide_4: { x: 927, y: 241, w: 287, h: 118 },
+            harrier_glide_5: { x: 1239, y: 124, w: 247, h: 237 },
+            harrier_glide_6: { x: 1503, y: 88, w: 266, h: 271 },
+            harrier_dive: { x: 501, y: 450, w: 288, h: 270 },
+            harrier_catch: { x: 948, y: 500, w: 309, h: 345 },
+            harrier_kill: { x: 1369, y: 406, w: 329, h: 413 },
+        };
 
-        const stages = regions.map((r) => this._trimLargestBlob(src, r.sx, r.sy, r.sw, r.sh));
+        const entries = Object.entries(HARRIER_FRAME_BOUNDS);
+        const stages = entries.map(([key, b]) => ({
+            key,
+            stage: this._trimLargestBlob(src, b.x, b.y, b.w, b.h),
+        }));
+
         let maxW = 1, maxH = 1;
-        stages.forEach((st) => {
-            if (st) {
-                maxW = Math.max(maxW, st.w);
-                maxH = Math.max(maxH, st.h);
+        stages.forEach(({ stage }) => {
+            if (stage) {
+                maxW = Math.max(maxW, stage.w);
+                maxH = Math.max(maxH, stage.h);
             }
         });
 
-        const paint = (texKey, stage) => {
-            if (this.textures.exists(texKey)) this.textures.remove(texKey);
-            const tex = this.textures.createCanvas(texKey, maxW, maxH);
+        stages.forEach(({ key, stage }) => {
+            if (this.textures.exists(key)) this.textures.remove(key);
+            const tex = this.textures.createCanvas(key, maxW, maxH);
             if (!tex) return;
             const ctx = tex.getContext();
             ctx.imageSmoothingEnabled = true;
@@ -649,11 +650,7 @@ export class BootScene extends Phaser.Scene {
                 );
             }
             tex.refresh();
-        };
-
-        regions.forEach((r, i) => paint(r.key, stages[i]));
-        // Dive reuses the level-wing glide pose (scale tween sells the stoop)
-        paint('harrier_dive', stages[3]);
+        });
 
         this.textures.remove(RAW);
     }

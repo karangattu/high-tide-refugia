@@ -31,7 +31,122 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     createPanel(width, height) {
-        const compact = width < 600;
+        const isShortLandscape = height <= 520;
+        const compact = height <= 520 || width < 600;
+
+        if (isShortLandscape) {
+            const panelW = Math.min(680, width - 30);
+            const panelH = Math.min(320, height - 20);
+            const panelX = width / 2 - panelW / 2;
+            const panelY = Math.max(10, (height - panelH) / 2);
+
+            const panel = this.add.graphics();
+            panel.fillStyle(0x1a2a1a, 0.95);
+            panel.fillRoundedRect(panelX, panelY, panelW, panelH, 20);
+            panel.lineStyle(2, 0x27ae60, 0.5);
+            panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 20);
+
+            const titleText = this.victory ? 'MARSH SAVED!' : (this.stats.railsSaved > 0 ? 'TIDE SURVIVED!' : 'SWEPT AWAY');
+            const titleColor = this.victory ? '#2ecc71' : (this.stats.railsSaved > 0 ? '#27ae60' : '#e74c3c');
+
+            const col1X = panelX + panelW * 0.28;
+            const col2X = panelX + panelW * 0.72;
+
+            this.add.text(col1X, panelY + 34, titleText, {
+                fontFamily: 'Outfit',
+                fontSize: '30px',
+                fontStyle: 'bold',
+                color: titleColor,
+                resolution: TEXT_RES,
+            }).setOrigin(0.5);
+
+            this.add.text(col1X, panelY + 64, this.reason, {
+                fontFamily: 'Outfit',
+                fontSize: '15px',
+                color: '#888888',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5);
+
+            this.add.text(col1X, panelY + 98, 'FINAL SCORE', {
+                fontFamily: 'Outfit',
+                fontSize: '13px',
+                color: '#f39c12',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5);
+
+            const scoreText = this.add.text(col1X, panelY + 138, this.stats.score?.toString() || '0', {
+                fontFamily: 'Outfit',
+                fontSize: '44px',
+                fontStyle: 'bold',
+                color: '#ffffff',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5);
+
+            this.tweens.addCounter({
+                from: 0,
+                to: this.stats.score || 0,
+                duration: 1500,
+                ease: 'Power2',
+                onUpdate: (tween) => {
+                    scoreText.setText(Math.floor(tween.getValue()).toString());
+                }
+            });
+
+            const survivalRate = this.stats.survivalRate ? Math.round(this.stats.survivalRate * 100) : 0;
+            this.add.text(col1X, panelY + 185, `${survivalRate}% Survival Rate`, {
+                fontFamily: 'Outfit',
+                fontSize: '15px',
+                color: survivalRate >= 50 ? '#27ae60' : '#e74c3c',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5);
+
+            const statsData = [
+                { icon: 'icon_heart_green', label: 'Rails Saved', value: this.stats.railsSaved || 0, color: '#27ae60' },
+                { icon: 'icon_heart_broken', label: 'Rails Lost', value: this.stats.railsLost || 0, color: '#e74c3c' },
+                { icon: 'icon_leaf', label: 'Perfect Runs', value: this.stats.perfectRuns || 0, color: '#f1c40f' },
+                { icon: 'icon_flame', label: 'Max Combo', value: this.stats.maxCombo || 0, color: '#e67e22' },
+            ];
+
+            const statsY = panelY + 36;
+            const statsSpacing = 36;
+            statsData.forEach((stat, i) => {
+                const y = statsY + i * statsSpacing;
+                this.add.image(col2X - 85, y, stat.icon).setScale(0.8);
+                this.add.text(col2X - 60, y, stat.label, {
+                    fontFamily: 'Outfit',
+                    fontSize: '15px',
+                    color: '#aaaaaa',
+                    resolution: TEXT_RES,
+                }).setOrigin(0, 0.5);
+                this.add.text(col2X + 85, y, stat.value.toString(), {
+                    fontFamily: 'Outfit',
+                    fontSize: '18px',
+                    fontStyle: 'bold',
+                    color: stat.color,
+                    resolution: TEXT_RES,
+                }).setOrigin(0.5);
+            });
+
+            const buttonY = panelY + panelH - 42;
+            const btnSpread = 90;
+            this.createButton(col2X - btnSpread, buttonY, 'PLAY AGAIN', () => {
+                this.cameras.main.fadeOut(300);
+                this.time.delayedCall(300, () => {
+                    this.scene.start('GameScene');
+                    this.scene.launch('UIScene');
+                });
+            }, false, 140, 42);
+
+            this.createButton(col2X + btnSpread, buttonY, 'MENU', () => {
+                this.cameras.main.fadeOut(300);
+                this.time.delayedCall(300, () => {
+                    this.scene.start('MenuScene');
+                });
+            }, true, 120, 42);
+
+            return;
+        }
+
         const panelW = Math.min(580, width - 30);
         const panelH = Math.min(680, height - 30);
         const panelX = width / 2 - panelW / 2;
@@ -143,10 +258,10 @@ export class GameOverScene extends Phaser.Scene {
         }, true);
     }
 
-    createButton(x, y, text, callback, isSecondary = false) {
-        const compact = this.scale.width < 600;
-        const btnW = compact ? 160 : 200;
-        const btnH = compact ? 48 : 58;
+    createButton(x, y, text, callback, isSecondary = false, customW = null, customH = null) {
+        const compact = this.scale.height <= 520 || this.scale.width < 600;
+        const btnW = customW || (compact ? 160 : 200);
+        const btnH = customH || (compact ? 48 : 58);
 
         const bg = this.add.graphics();
         if (isSecondary) {
@@ -158,7 +273,7 @@ export class GameOverScene extends Phaser.Scene {
 
         this.add.text(x, y, text, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '18px' : '24px',
+            fontSize: compact ? '16px' : '24px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,

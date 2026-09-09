@@ -83,6 +83,11 @@ export class Harrier extends Phaser.GameObjects.Container {
             case 'dive':
                 this.dive(delta);
                 break;
+            case 'catch':
+                break;
+            case 'carry':
+                this.carry(delta);
+                break;
             case 'recovery':
                 this.recovery(delta);
                 break;
@@ -92,17 +97,14 @@ export class Harrier extends Phaser.GameObjects.Container {
     glide(delta) {
         this.glideTime += delta * 0.001;
 
-        // Serpentine ground track around the marsh midline
         this.x += this.speed * this.glideDirection * (delta / 1000);
         this.verticalOffset = Math.sin(this.glideTime * 2) * 50;
         this.midY = (this.minY + this.maxY) / 2;
         this.y = Phaser.Math.Clamp(this.midY + this.verticalOffset, this.minY, this.maxY);
 
-        // Gentle bob at altitude; shadow breathes on the ground below
         this.bird.y = -CRUISE_ALTITUDE + Math.sin(this.glideTime * 3) * 8;
         this.groundShadow.alpha = 0.28 + Math.sin(this.glideTime * 3) * 0.05;
 
-        // Bounce at edges
         if (this.x >= this.maxX) {
             this.glideDirection = -1;
             this.bird.setFlipX(true);
@@ -111,7 +113,6 @@ export class Harrier extends Phaser.GameObjects.Container {
             this.bird.setFlipX(false);
         }
 
-        // Hold cruise size
         this.bird.setScale(this.cruiseScale);
     }
 
@@ -121,11 +122,9 @@ export class Harrier extends Phaser.GameObjects.Container {
         const exposedRail = rails.children.entries.find(rail => {
             if (!rail.isAlive || !rail.isDetectable) return false;
 
-            // The hunt shadow marks the search zone: rails under it are seen
             const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
             if (distance > SEARCH_RADIUS) return false;
 
-            // Check if rail is protected by a plant (roof coverage)
             if (plants && plants.children) {
                 const isUnderPlant = plants.children.entries.some(plant => {
                     const plantDist = Phaser.Math.Distance.Between(plant.x, plant.y, rail.x, rail.y);
@@ -145,114 +144,128 @@ export class Harrier extends Phaser.GameObjects.Container {
     startDive(rail) {
         this.state = 'dive';
         this.target = rail;
-        this.diveTimer = 0;
+        this.diveStartX = this.x;
+        this.diveStartY = this.y;
+        this.diveTargetX = rail.x;
+        this.diveTargetY = rail.y;
+        this.diveProgress = 0;
 
-        // Stoop: the bird drops from the sky onto the ground point
+        const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
+        this.diveDuration = Phaser.Math.Clamp((distance / this.diveSpeed) * 1000, 350, 650);
+
+        this.bird.setFlipX(rail.x < this.x);
+        this.glideDirection = rail.x < this.x ? -1 : 1;
+
         this.bird.setTexture('harrier_dive');
         this.scene.tweens.killTweensOf(this.bird);
-        this.scene.tweens.add({
-            targets: this.bird,
-            y: 0,
-            scaleX: this.diveScale,
-            scaleY: this.diveScale,
-            duration: 280,
-            ease: 'Quad.easeIn',
-        });
-        // Hunt ring flares as the strike lands
+        this.scene.tweens.killTweensOf(this.huntRing);
+
         this.scene.tweens.add({
             targets: this.huntRing,
-            alpha: 0.3,
-            duration: 280,
+            alpha: 0.35,
+            duration: this.diveDuration,
         });
 
-        // Make it face the target during dive
-        if (this.target.x < this.x) {
-            this.bird.setFlipX(true);
-        } else {
-            this.bird.setFlipX(false);
-        }
-
-        // Trigger panic on the Rail - shows surprised sprite with exclamation
         if (rail.panic) {
             rail.panic();
         }
-
-        // Warning indicator for player
-        const warning = this.scene.add.circle(rail.x, rail.y, 40, 0xff0000, 0.3);
-        this.scene.tweens.add({
-            targets: warning,
-            scale: 1.5,
-            alpha: 0,
-            duration: 500,
-            onComplete: () => warning.destroy(),
-        });
     }
 
     dive(delta) {
-        this.diveTimer += delta;
+        this.diveProgress += delta / this.diveDuration;
+        const progress = Math.min(1, this.diveProgress);
+        const easeT = Phaser.Math.Easing.Quadratic.In(progress);
 
-        if (!this.target || !this.target.isAlive) {
-            this.startRecovery();
-            return;
+        if (this.target && this.target.isAlive) {
+            this.diveTargetX = this.target.x;
+            this.diveTargetY = this.target.y;
         }
 
-        // Quick movement toward target (ground track chases the rail)
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
-        this.x += Math.cos(angle) * this.diveSpeed * (delta / 1000);
-        this.y += Math.sin(angle) * this.diveSpeed * (delta / 1000);
+        this.x = Phaser.Math.Linear(this.diveStartX, this.diveTargetX, easeT);
+        this.y = Phaser.Math.Linear(this.diveStartY, this.diveTargetY, easeT);
 
-        // Face the target
-        this.bird.setFlipX(this.target.x < this.x);
+        this.bird.y = Phaser.Math.Linear(-CRUISE_ALTITUDE, 0, easeT);
+        const currentScale = Phaser.Math.Linear(this.cruiseScale, this.diveScale, easeT);
+        this.bird.setScale(currentScale);
 
-        // Check if caught
-        const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
-
-        // If target became safe, abort
-        if (!this.target.isDetectable) {
-            this.startRecovery();
-            return;
-        }
-
-        if (distance < 25) {
-            this.catchPrey();
-        }
-
-        // Max dive time
-        if (this.diveTimer > 1000) {
-            this.startRecovery();
+        if (progress >= 1) {
+            if (this.target && this.target.isAlive && this.target.isDetectable) {
+                this.catchPrey();
+            } else {
+                this.missPrey();
+            }
         }
     }
 
     catchPrey() {
+        this.state = 'catch';
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
             this.scene.events.emit('railCaught', this.target);
-
-            // Switch to kill pose (carrying prey)
-            this.bird.setTexture('harrier_kill');
         }
 
-        // Impact effect
-        const impact = this.scene.add.circle(this.x, this.y, 20, 0xffff00, 0.8);
-        this.scene.tweens.add({
-            targets: impact,
-            scale: 3,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => impact.destroy(),
+        this.bird.setTexture('harrier_catch');
+        this.bird.setScale(this.diveScale);
+        this.bird.y = 0;
+
+        if (this.scene.particleManager) {
+            this.scene.particleManager.emitDirt(this.x, this.y);
+        }
+        this.scene.cameras.main.shake(120, 0.006);
+
+        this.scene.time.delayedCall(220, () => {
+            if (this.active) {
+                this.startCarry();
+            }
         });
+    }
 
-        this.scene.cameras.main.shake(150, 0.01);
+    startCarry() {
+        this.state = 'carry';
+        this.carryTimer = 2200;
+        this.target = null;
+        this.bird.setTexture('harrier_kill');
 
+        this.scene.tweens.killTweensOf(this.bird);
+        this.scene.tweens.killTweensOf(this.huntRing);
+
+        this.scene.tweens.add({
+            targets: this.bird,
+            y: -CRUISE_ALTITUDE,
+            scaleX: this.cruiseScale * 1.1,
+            scaleY: this.cruiseScale * 1.1,
+            duration: 1000,
+            ease: 'Sine.easeOut',
+        });
+        this.scene.tweens.add({
+            targets: this.huntRing,
+            alpha: 0.05,
+            duration: 1000,
+        });
+    }
+
+    carry(delta) {
+        this.carryTimer -= delta;
+        this.x += 120 * this.glideDirection * (delta / 1000);
+
+        if (this.carryTimer <= 0) {
+            this.startRecovery();
+        }
+    }
+
+    missPrey() {
+        this.target = null;
+        if (this.scene.particleManager) {
+            this.scene.particleManager.emitDirt(this.x, this.y);
+        }
         this.startRecovery();
     }
 
     startRecovery() {
         this.state = 'recovery';
-        this.cooldownTimer = 3000;
+        this.cooldownTimer = 2200;
         this.target = null;
 
-        // Climb back to cruising altitude and shrink with distance
         this.scene.tweens.killTweensOf(this.bird);
         this.scene.tweens.killTweensOf(this.huntRing);
         this.scene.tweens.add({
@@ -260,21 +273,27 @@ export class Harrier extends Phaser.GameObjects.Container {
             y: -CRUISE_ALTITUDE,
             scaleX: this.cruiseScale,
             scaleY: this.cruiseScale,
-            duration: 900,
+            duration: 800,
             ease: 'Sine.easeOut',
         });
         this.scene.tweens.add({
             targets: this.huntRing,
             alpha: 0.05,
-            duration: 900,
+            duration: 800,
         });
     }
 
     recovery(delta) {
         this.cooldownTimer -= delta;
+        this.x += 60 * this.glideDirection * (delta / 1000);
 
-        // Slowly glide while recovering
-        this.x += 30 * this.glideDirection * (delta / 1000);
+        if (this.x >= this.maxX) {
+            this.glideDirection = -1;
+            this.bird.setFlipX(true);
+        } else if (this.x <= this.minX) {
+            this.glideDirection = 1;
+            this.bird.setFlipX(false);
+        }
 
         if (this.cooldownTimer <= 0) {
             this.state = 'glide';

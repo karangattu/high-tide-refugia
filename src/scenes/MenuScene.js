@@ -16,8 +16,7 @@ export class MenuScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
-        // Tablet-first breakpoints (landscape tablets are the primary target)
-        this.compact = width < 700;
+        this.compact = height <= 520 || width < 700;
         this.portrait = height > width;
         this.horizonY = height * (this.portrait ? 0.34 : 0.40);
         this.marshY = height * (this.portrait ? 0.52 : 0.56);
@@ -259,10 +258,11 @@ export class MenuScene extends Phaser.Scene {
 
     createTitle(width, height) {
         const compact = this.compact;
-        const titleY = height * (compact ? 0.15 : 0.16);
-        const titleSize = compact ? '56px' : (this.portrait ? '84px' : '100px');
-        const subSize = compact ? '20px' : '26px';
-        const eyebrowSize = compact ? '14px' : '18px';
+        const veryShort = height <= 420;
+        const titleY = height * (veryShort ? 0.13 : (compact ? 0.15 : 0.16));
+        const titleSize = veryShort ? '42px' : (compact ? '56px' : (this.portrait ? '84px' : '100px'));
+        const subSize = veryShort ? '14px' : (compact ? '20px' : '26px');
+        const eyebrowSize = veryShort ? '11px' : (compact ? '14px' : '18px');
 
         this.add.text(width / 2, titleY - (compact ? 38 : 60),
             'A  M A R S H  C O N S E R V A T I O N  G A M E', {
@@ -341,16 +341,16 @@ export class MenuScene extends Phaser.Scene {
 
     createButtonTextures() {
         const { compact } = this;
-        this.btnW = compact ? 330 : 390;
-        this.btnPrimaryH = compact ? 76 : 96;
-        this.btnSecondaryH = compact ? 62 : 78;
-        const radius = compact ? 16 : 20;
+        const veryShort = this.scale.height <= 420;
+        this.btnW = compact ? (veryShort ? 270 : 330) : 390;
+        this.btnPrimaryH = compact ? (veryShort ? 54 : 76) : 96;
+        this.btnSecondaryH = compact ? (veryShort ? 44 : 62) : 78;
+        const radius = compact ? 14 : 20;
 
         const make = (key, w, h, primary, hover) => {
             if (this.textures.exists(key)) this.textures.remove(key);
             const g = this.make.graphics({ x: 0, y: 0, add: false });
             if (primary) {
-                // Layered solid fills (generateTexture drops gradient fills)
                 g.fillStyle(hover ? 0xd8880f : 0xc8760a, 1);
                 g.fillRoundedRect(0, 0, w, h, radius);
                 g.fillStyle(hover ? 0xffc14d : 0xf2a62e, 1);
@@ -378,27 +378,28 @@ export class MenuScene extends Phaser.Scene {
     createButtons(width, height) {
         this.createButtonTextures();
         const { compact, portrait } = this;
+        const veryShort = height <= 420;
 
-        const spacing = compact ? 16 : 22;
+        const spacing = veryShort ? 10 : (compact ? 16 : 22);
         const totalStack = this.btnPrimaryH + 2 * this.btnSecondaryH + 2 * spacing;
-        const footerReserve = compact ? 70 : 92;
+        const footerReserve = compact ? 50 : 92;
         const startY = Math.min(
             height * (compact ? 0.40 : (portrait ? 0.52 : 0.48)),
             height - footerReserve - totalStack
         );
 
         const primaryY = startY + this.btnPrimaryH / 2;
-        this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', '36px', '#2b1c07', () => {
+        this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', veryShort ? '26px' : '36px', '#2b1c07', () => {
             this.cameras.main.fadeOut(500);
             this.time.delayedCall(500, () => this.scene.start('IntroScene'));
         });
 
         let y = primaryY + this.btnPrimaryH / 2 + spacing;
         this.createButton(width / 2, y + this.btnSecondaryH / 2, 'HOW TO PLAY', 'menu_btn_secondary',
-            compact ? '21px' : '26px', '#eef7f2', () => this.showTutorial());
+            veryShort ? '16px' : (compact ? '21px' : '26px'), '#eef7f2', () => this.showTutorial());
         y += this.btnSecondaryH + spacing;
         this.createButton(width / 2, y + this.btnSecondaryH / 2, 'CREDITS', 'menu_btn_secondary',
-            compact ? '21px' : '26px', '#eef7f2', () => this.showCredits());
+            veryShort ? '16px' : (compact ? '21px' : '26px'), '#eef7f2', () => this.showCredits());
 
         this.stackBottom = y + this.btnSecondaryH;
     }

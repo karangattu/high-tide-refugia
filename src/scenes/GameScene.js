@@ -81,11 +81,13 @@ export class GameScene extends Phaser.Scene {
         // Sky 0..horizonY, static bay water horizonY..marshY, marsh marshY..height.
         // All gameplay (rails, plants, predators, tide flood) lives in the marsh strip.
         const portrait = height > width;
-        this.horizonY = height * (portrait ? 0.34 : 0.40);
-        this.marshY = height * (portrait ? 0.52 : 0.56);
+        const isMobileLandscape = height <= 520 || (width < 768 && height < 600);
+        this.horizonY = height * (portrait ? 0.34 : (isMobileLandscape ? 0.22 : 0.40));
+        this.marshY = height * (portrait ? 0.52 : (isMobileLandscape ? 0.38 : 0.56));
         const { horizonY, marshY } = this;
-        this.marshTop = marshY + 30;
-        this.marshBottom = height - 30;
+        const footerH = isMobileLandscape ? 34 : 50;
+        this.marshTop = marshY + (isMobileLandscape ? 24 : 30);
+        this.marshBottom = height - footerH - 45;
 
         const sky = this.add.graphics().setDepth(-30);
         sky.fillGradientStyle(0x1976d2, 0x1976d2, 0xffd54f, 0xffd54f, 1, 1, 1, 1);
@@ -470,7 +472,7 @@ export class GameScene extends Phaser.Scene {
 
     showLevelStart(config) {
         const { width, height } = this.scale;
-        const compact = width < 600;
+        const compact = height <= 520 || width < 650;
         const bandY = (this.marshY + height) / 2;
 
         const levelText = this.add.text(width / 2, bandY - 60,
@@ -519,7 +521,7 @@ export class GameScene extends Phaser.Scene {
     startTutorial() {
         this.tutorialActive = true;
         const { width, height } = this.scale;
-        const compact = width < 600;
+        const compact = height <= 520 || width < 650;
 
         this.spawnRail();
 
@@ -830,7 +832,7 @@ export class GameScene extends Phaser.Scene {
 
     showMarshFact(fact, onComplete) {
         const { width, height } = this.scale;
-        const compact = width < 600;
+        const compact = height <= 520 || width < 650;
         this.isPaused = true;
 
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)

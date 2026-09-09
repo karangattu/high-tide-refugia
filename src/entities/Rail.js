@@ -78,8 +78,12 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         // Apply tweened horizontal speed
         this.body.setVelocityX(this._speedX);
 
-        // Smooth sine-wave vertical bob (replaces erratic random snaps)
-        const targetVY = Math.sin(time * this.wobbleFreq + this.wobbleOffset) * this.wobbleAmp;
+        let targetVY = Math.sin(time * this.wobbleFreq + this.wobbleOffset) * this.wobbleAmp;
+        if (this.scene.marshBottom && this.y > this.scene.marshBottom && targetVY > 0) {
+            targetVY = -Math.abs(targetVY);
+        } else if (this.scene.marshTop && this.y < this.scene.marshTop && targetVY < 0) {
+            targetVY = Math.abs(targetVY);
+        }
         this.body.setVelocityY(targetVY);
 
         // Dynamic lean: tilt toward vertical velocity for a natural run feel
@@ -294,13 +298,10 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
                 onComplete: () => this.destroy()
             });
         } else {
-            // Caught by predator - shrink away
             this.scene.tweens.add({
                 targets: this,
-                scaleX: 0,
-                scaleY: 0,
                 alpha: 0,
-                duration: 300,
+                duration: 120,
                 onComplete: () => this.destroy()
             });
         }
