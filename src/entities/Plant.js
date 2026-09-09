@@ -34,9 +34,9 @@ export class Plant extends Phaser.Physics.Arcade.Sprite {
         this.plantType = plantType;
         this.growthStage = 1;
 
-        // Normalise display size so species read correctly against rails
         this.baseScale = plantTargetWidth(plantType) / this.width;
         this.setScale(this.baseScale);
+        this.setDepth(2);
 
         this.updateBody();
 
@@ -132,6 +132,7 @@ export class PlantPreview extends Phaser.GameObjects.Sprite {
         this.setAlpha(0.5);
         this.setTint(0x00ff00);
         this.setScale(plantTargetWidth('gumplant') / this.width);
+        this.setDepth(10);
         this.setVisible(false);
     }
 

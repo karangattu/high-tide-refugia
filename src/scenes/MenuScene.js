@@ -172,7 +172,7 @@ export class MenuScene extends Phaser.Scene {
             this.add.image(x, y, 'gumplant')
                 .setScale(Phaser.Math.FloatBetween(0.18, 0.28))
                 .setAlpha(0.92)
-                .setDepth(marshY + (y - marshY));
+                .setDepth(-20);
         }
 
         // Safe-zone hint on the right (upland glow, mirrors the game)
@@ -184,7 +184,7 @@ export class MenuScene extends Phaser.Scene {
 
     startRailRunner(width, height) {
         const groundY = this.marshY + (height - this.marshY) * 0.30;
-        const scale = this.compact ? 0.17 : 0.22;
+        const scale = this.compact ? 0.11 : 0.13;
 
         const makeRunner = (startDelay, yOff, scl, duration) => {
             const rail = this.add.sprite(-140, groundY + yOff, 'rail_running_1')

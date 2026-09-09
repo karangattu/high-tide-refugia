@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 
-const HARRIER_BASE_SCALE = 0.4;
+const HARRIER_BASE_SCALE = 0.46;
 // Cruising altitude (px above the ground point) and cruise size.
 // Smaller + higher reads as altitude; the ground shadow marks the hunt zone.
 const CRUISE_ALTITUDE = 150;
@@ -11,11 +11,11 @@ export class Harrier extends Phaser.GameObjects.Container {
         super(scene, x, y);
 
         scene.add.existing(this);
-        this.setDepth(6);
+        this.setDepth(8);
 
         this.baseScale = HARRIER_BASE_SCALE;
-        this.cruiseScale = HARRIER_BASE_SCALE * 0.8;
-        this.diveScale = HARRIER_BASE_SCALE * 1.3;
+        this.cruiseScale = HARRIER_BASE_SCALE * 0.82;
+        this.diveScale = HARRIER_BASE_SCALE * 1.45;
 
         // Ground hunt-shadow: dark ellipse + faint search-radius ring.
         // This sits on the marsh and tells the player where the harrier

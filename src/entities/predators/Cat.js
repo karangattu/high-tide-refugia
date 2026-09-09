@@ -1,15 +1,14 @@
 import * as Phaser from 'phaser';
 
-const CAT_BASE_SCALE = 0.26;
-const CAT_CHASE_SCALE = 0.29;
-const CAT_ALERT_SCALE = 0.32;
-const CAT_ATTACK_SCALE_X = 0.32;
-const CAT_ATTACK_SCALE_Y = 0.27;
+const CAT_BASE_SCALE = 0.28;
+const CAT_CHASE_SCALE = 0.31;
+const CAT_ALERT_SCALE = 0.34;
+const CAT_ATTACK_SCALE_X = 0.35;
+const CAT_ATTACK_SCALE_Y = 0.29;
 
 // Shared ground-predator behaviour (patrol / chase / attack / cooldown).
 class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, patrolMinX, patrolMaxX, texture) {
-        // Start with walking pose 1 (frame 0)
         super(scene, x, y, texture, 0);
 
         scene.add.existing(this);
@@ -21,8 +20,8 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.attackScaleX = CAT_ATTACK_SCALE_X;
         this.attackScaleY = CAT_ATTACK_SCALE_Y;
 
-        // Scale down the sprites (they're large images)
         this.setScale(this.baseScale);
+        this.setDepth(4);
 
         // Physics properties - adjust for scaled sprite
         this.body.setSize(200, 200);

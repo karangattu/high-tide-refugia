@@ -1,21 +1,19 @@
 import * as Phaser from 'phaser';
 
-const RAIL_BASE_SCALE = 0.16;
-const RAIL_BOOST_SCALE = 0.195;
-const RAIL_CELEBRATION_SCALE = 0.215;
+const RAIL_BASE_SCALE = 0.11;
+const RAIL_BOOST_SCALE = 0.13;
+const RAIL_CELEBRATION_SCALE = 0.145;
 
 export class Rail extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, speedMultiplier = 1) {
-        // Start with running pose 1
         super(scene, x, y, 'rail_running_1');
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
         this.baseScale = RAIL_BASE_SCALE;
-
-        // Scale down the sprites (they're large images)
         this.setScale(this.baseScale);
+        this.setDepth(3);
 
         // Physics properties - adjust for scaled sprite
         this.body.setSize(520, 380);
