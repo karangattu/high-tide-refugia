@@ -41,8 +41,8 @@ export class GameScene extends Phaser.Scene {
         // Create entity groups
         this.createEntityGroups();
 
-        // Water system
-        this.waterSystem = new WaterSystem(this, 50);
+        // Water system (flood covers the marsh strip only, like the intro's shoreline)
+        this.waterSystem = new WaterSystem(this, 50, this.marshTop, this.marshBottom);
 
         // Setup input
         this.setupInput(width, height);
@@ -50,8 +50,8 @@ export class GameScene extends Phaser.Scene {
         // Setup collisions
         this.setupCollisions();
 
-        // Start first level
-        this.startLevel(1);
+        // Start the single tide event
+        this.startLevel();
 
         // Spawn timer
         this.spawnTimer = 0;
@@ -65,87 +65,146 @@ export class GameScene extends Phaser.Scene {
     }
 
     createEnvironment(width, height) {
-        const uplandX = width - 150;
+        // ── Same banded composition as the menu/intro page ──
+        // Sky 0..horizonY, static bay water horizonY..marshY, marsh marshY..height.
+        // All gameplay (rails, plants, predators, tide flood) lives in the marsh strip.
+        const portrait = height > width;
+        this.horizonY = height * (portrait ? 0.34 : 0.40);
+        this.marshY = height * (portrait ? 0.52 : 0.56);
+        const { horizonY, marshY } = this;
+        this.marshTop = marshY + 30;
+        this.marshBottom = height - 30;
 
-        // ── Marsh floor: wet mud (left) drying toward olive upland (right) ──
-        const marsh = this.add.graphics().setDepth(-30);
-        marsh.fillGradientStyle(0x413d31, 0x4c5a33, 0x37352a, 0x3e4a29, 1, 1, 1, 1);
-        marsh.fillRect(0, 0, width, height);
+        // ── Sky: cool dusk gradient warming toward the horizon ──
+        const sky = this.add.graphics().setDepth(-30);
+        sky.fillGradientStyle(0x0b2545, 0x0b2545, 0x1d5c86, 0x1d5c86, 1, 1, 1, 1);
+        sky.fillRect(0, 0, width, horizonY + 2);
 
-        // ── Organic mud texture: speckles + tidal wrack lines ──
-        const detail = this.add.graphics().setDepth(-29);
-        const speckles = Math.round((width * height) / 9000);
-        for (let i = 0; i < speckles; i++) {
-            const x = Math.random() * width;
-            const y = Math.random() * height;
-            const dark = Math.random() < 0.6;
-            detail.fillStyle(dark ? 0x2e2b22 : 0x6a6148, Phaser.Math.FloatBetween(0.15, 0.4));
-            detail.fillEllipse(x, y, Phaser.Math.Between(4, 14), Phaser.Math.Between(2, 6));
+        // Low sun with soft radial glow (right of centre, like the menu)
+        const sunX = width * 0.72;
+        const sunY = horizonY * 0.78;
+        const sun = this.add.graphics().setDepth(-29);
+        sun.setBlendMode(Phaser.BlendModes.ADD);
+        sun.fillStyle(0xf39c12, 0.10);
+        sun.fillCircle(sunX, sunY, horizonY * 0.42);
+        sun.fillStyle(0xffd27a, 0.16);
+        sun.fillCircle(sunX, sunY, horizonY * 0.26);
+        sun.fillStyle(0xffe9b8, 0.55);
+        sun.fillCircle(sunX, sunY, horizonY * 0.13);
+
+        // ── Static bay water band under the sky ──
+        const water = this.add.graphics().setDepth(-29);
+        water.fillGradientStyle(0x1b4965, 0x1b4965, 0x0a2f49, 0x0a2f49, 1, 1, 1, 1);
+        water.fillRect(0, horizonY, width, marshY - horizonY + 2);
+
+        // Sun reflection: amber streaks fading with depth
+        const refl = this.add.graphics().setDepth(-28);
+        refl.setBlendMode(Phaser.BlendModes.ADD);
+        for (let i = 0; i < 7; i++) {
+            const t = i / 6;
+            const y = horizonY + 6 + t * (marshY - horizonY - 12);
+            const w = (1 - t) * 130 + 24;
+            refl.fillStyle(0xffd27a, 0.20 * (1 - t) + 0.05);
+            refl.fillEllipse(
+                sunX + Phaser.Math.Between(-14, 14), y,
+                w, Phaser.Math.Between(2, 4)
+            );
         }
-        for (let i = 0; i < 12; i++) {
-            const x = Math.random() * width * 0.8;
-            const y = Math.random() * height;
-            const len = Phaser.Math.Between(40, 130);
-            detail.lineStyle(1, 0x2e2b22, 0.22);
-            detail.beginPath();
-            detail.moveTo(x, y);
-            detail.lineTo(x + len, y + Phaser.Math.Between(-3, 3));
-            detail.strokePath();
+
+        // Shimmer lines across the static water
+        for (let i = 0; i < 14; i++) {
+            const y = Phaser.Math.Between(horizonY + 8, marshY - 8);
+            const line = this.add.rectangle(
+                Phaser.Math.Between(0, width), y,
+                Phaser.Math.Between(24, 90), 2,
+                0x9fd8e8, Phaser.Math.FloatBetween(0.10, 0.28)
+            ).setDepth(-28);
+            this.tweens.add({
+                targets: line,
+                alpha: { from: line.alpha, to: 0.02 },
+                duration: Phaser.Math.Between(1200, 2600),
+                yoyo: true,
+                repeat: -1,
+                delay: Phaser.Math.Between(0, 2000),
+            });
         }
 
-        // ── Sparse reed clusters (background dressing) ──
-        const reeds = this.add.graphics().setDepth(-28);
-        const clusters = Math.round(width / 260);
+        // ── Marsh: mud waterline shading into upland green ──
+        const marsh = this.add.graphics().setDepth(-27);
+        marsh.fillStyle(0x5d4e37, 1);
+        marsh.fillRect(0, marshY, width, 30);
+        marsh.fillGradientStyle(0x4a5d33, 0x4a5d33, 0x22331b, 0x22331b, 1, 1, 1, 1);
+        marsh.fillRect(0, marshY + 24, width, height - marshY - 24);
+
+        // Waterline foam
+        const foam = this.add.graphics().setDepth(-26);
+        foam.lineStyle(2, 0xffffff, 0.28);
+        foam.beginPath();
+        foam.moveTo(0, marshY + 2);
+        for (let x = 0; x <= width; x += 24) {
+            foam.lineTo(x, marshY + 2 + Math.sin(x * 0.045) * 2.2);
+        }
+        foam.strokePath();
+
+        // ── Perspective reed clusters in the marsh (taller toward foreground) ──
+        const reeds = this.add.graphics().setDepth(-25);
+        const clusters = Math.round(width / 130);
         for (let i = 0; i < clusters; i++) {
-            const x = Phaser.Math.Between(30, width - 30);
-            const y = Phaser.Math.Between(40, height - 30);
-            const blades = Phaser.Math.Between(3, 5);
+            const x = Phaser.Math.Between(10, width - 10);
+            const depth = Phaser.Math.FloatBetween(0.15, 1);
+            const y = marshY + 30 + depth * (height - marshY - 55);
+            const h = 12 + depth * 30;
+            const blades = Phaser.Math.Between(4, 6);
             for (let b = 0; b < blades; b++) {
-                const bx = x + (b - blades / 2) * 6;
-                const lean = Phaser.Math.Between(-6, 6);
-                const h = Phaser.Math.Between(14, 26);
-                reeds.lineStyle(1.5, 0x2a3d1c, 0.7);
+                const bx = x + (b - blades / 2) * (5 + depth * 4);
+                const lean = Phaser.Math.Between(-8, 8);
+                const p0x = bx, p0y = y;
+                const p1x = bx + lean * 0.4, p1y = y - h * 0.6;
+                const p2x = bx + lean, p2y = y - h;
+                reeds.lineStyle(1.5 + depth, 0x1e3d1a, 0.85);
                 reeds.beginPath();
-                reeds.moveTo(bx, y);
-                for (let s = 1; s <= 5; s++) {
-                    const t = s / 5;
+                reeds.moveTo(p0x, p0y);
+                for (let s = 1; s <= 6; s++) {
+                    const t = s / 6;
                     const mt = 1 - t;
                     reeds.lineTo(
-                        mt * mt * bx + 2 * mt * t * (bx + lean * 0.5) + t * t * (bx + lean),
-                        mt * mt * y + 2 * mt * t * (y - h * 0.6) + t * t * (y - h)
+                        mt * mt * p0x + 2 * mt * t * p1x + t * t * p2x,
+                        mt * mt * p0y + 2 * mt * t * p1y + t * t * p2y
                     );
                 }
                 reeds.strokePath();
             }
         }
 
-        // ── Upland / safe zone strip ──
-        const upland = this.add.graphics().setDepth(-27);
-        upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x2f4a1d, 0x2f4a1d, 1, 1, 1, 1);
-        upland.fillRect(uplandX, 0, width - uplandX, height);
-        // Soft seam blending marsh into upland
-        upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0, 0.85, 0, 0.85);
-        upland.fillRect(uplandX - 70, 0, 100, height);
-        // Grass blade silhouettes scattered over the upland
-        const tufts = Math.round((width - uplandX) / 10);
-        for (let i = 0; i < tufts; i++) {
-            const x = Phaser.Math.Between(uplandX, width - 8);
-            const y = Phaser.Math.Between(10, height - 10);
-            const h = Phaser.Math.Between(8, 20);
-            upland.fillStyle(0x2a4a16, Phaser.Math.FloatBetween(0.5, 0.9));
-            upland.fillTriangle(x, y, x + 3, y - h, x + 6, y);
+        // Gumplant dressing along the waterline (kept clear of gameplay UI)
+        const uplandX = width - 150;
+        const clumps = Math.max(4, Math.round(width / 260));
+        for (let i = 0; i < clumps; i++) {
+            const x = Phaser.Math.Between(30, uplandX - 60);
+            const y = marshY + Phaser.Math.Between(24, 60);
+            this.add.image(x, y, 'gumplant')
+                .setScale(Phaser.Math.FloatBetween(1.2, 2.0))
+                .setAlpha(0.55)
+                .setDepth(-24);
         }
+
+        // ── Upland / safe zone strip (right edge) ──
+        const upland = this.add.graphics().setDepth(-24);
+        upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x2f4a1d, 0x2f4a1d, 1, 1, 1, 1);
+        upland.fillRect(uplandX, marshY, width - uplandX, height - marshY);
+        upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0, 0.85, 0, 0.85);
+        upland.fillRect(uplandX - 70, marshY, 100, height - marshY);
 
         // Safe zone indicator
         const safeZoneGlow = this.add.rectangle(
-            width - 75, height / 2,
-            150, height,
+            width - 75, (marshY + height) / 2,
+            150, height - marshY,
             0x27ae60, 0.15
         );
         safeZoneGlow.setDepth(1);
 
         // Zone labels
-        const safeLabel = this.add.text(width - 75, 30, 'SAFE ZONE', {
+        this.add.text(width - 75, marshY + 18, 'SAFE ZONE', {
             fontFamily: 'Outfit',
             fontSize: '14px',
             color: '#27ae60',
@@ -159,7 +218,7 @@ export class GameScene extends Phaser.Scene {
         vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.28, 0.28);
         vignette.fillRect(0, height * 0.93, width, height * 0.07);
 
-        // Floating seed particles
+        // Floating seed particles over the marsh
         this.particleManager.createFloatingSeeds(width, height);
     }
 
@@ -230,13 +289,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     canPlantAt(x, y) {
-        const { width, height } = this.scale;
+        const { width } = this.scale;
         const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
 
-        // Must be in transition zone
+        // Must be in the marsh strip (below the intro-style waterline)
         if (x < waterX + 30) return false;
         if (x > width - 150) return false;
-        if (y < 50 || y > height - 50) return false;
+        if (y < this.marshTop || y > this.marshBottom) return false;
 
         // Check if too close to another plant
         const tooClose = this.plants.children.entries.some(plant => {
@@ -277,8 +336,8 @@ export class GameScene extends Phaser.Scene {
         // Sound effect would go here
     }
 
-    startLevel(levelNumber) {
-        const config = this.levelManager.startLevel(levelNumber);
+    startLevel() {
+        const config = this.levelManager.startLevel();
 
         // Reset water
         if (this.waterSystem) {
@@ -310,8 +369,9 @@ export class GameScene extends Phaser.Scene {
         // Show level start
         this.showLevelStart(config);
 
-        // For Level 1, show interactive tutorial before starting waves
-        if (levelNumber === 1 && !this.tutorialComplete) {
+        // Single level: interactive tutorial only on first-ever play,
+        // then straight into the wave sequence.
+        if (!this.tutorialComplete) {
             // Tutorial will call startNextWave() when done
             this.time.delayedCall(2800, () => {
                 this.startTutorial();
@@ -323,16 +383,18 @@ export class GameScene extends Phaser.Scene {
     }
 
     spawnPredators(config) {
-        const { width, height } = this.scale;
+        const { width } = this.scale;
         const zoneStart = 200;
         const zoneEnd = width - 200;
         const zoneWidth = zoneEnd - zoneStart;
+        const top = this.marshTop + 10;
+        const bottom = this.marshBottom - 10;
 
         // Spawn foxes
         for (let i = 0; i < config.foxCount; i++) {
             const patrolStart = zoneStart + (zoneWidth / config.foxCount) * i;
             const patrolEnd = patrolStart + (zoneWidth / config.foxCount);
-            const y = 150 + (i % 3) * 180;
+            const y = top + ((bottom - top) * ((i % 3) + 0.5)) / 3;
 
             const fox = new Fox(
                 this,
@@ -348,7 +410,7 @@ export class GameScene extends Phaser.Scene {
         for (let i = 0; i < config.catCount; i++) {
             const patrolStart = zoneStart + 50 + (zoneWidth / config.catCount) * i;
             const patrolEnd = patrolStart + (zoneWidth / config.catCount) - 50;
-            const y = 250 + (i % 2) * 200;
+            const y = top + ((bottom - top) * ((i % 2) + 0.5)) / 2;
 
             const cat = new Cat(
                 this,
@@ -362,7 +424,9 @@ export class GameScene extends Phaser.Scene {
 
         // Spawn harriers
         for (let i = 0; i < config.harrierCount; i++) {
-            const harrier = new Harrier(this, 200 + i * 300, 200 + i * 100);
+            const harrier = new Harrier(this, 200 + i * 300, (top + bottom) / 2);
+            harrier.minY = top;
+            harrier.maxY = bottom;
             this.harriers.add(harrier);
         }
     }
@@ -370,9 +434,10 @@ export class GameScene extends Phaser.Scene {
     showLevelStart(config) {
         const { width, height } = this.scale;
         const compact = width < 600;
+        const bandY = (this.marshY + height) / 2;
 
-        const levelText = this.add.text(width / 2, height / 2 - 50,
-            `LEVEL ${config.level}`, {
+        const levelText = this.add.text(width / 2, bandY - 50,
+            config.name.toUpperCase(), {
             fontFamily: 'Outfit',
             fontSize: compact ? '42px' : '64px',
             fontStyle: 'bold',
@@ -382,8 +447,8 @@ export class GameScene extends Phaser.Scene {
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
-        const nameText = this.add.text(width / 2, height / 2 + 20,
-            config.name, {
+        const nameText = this.add.text(width / 2, bandY + 20,
+            'Survive the rising tide', {
             fontFamily: 'Outfit',
             fontSize: compact ? '22px' : '32px',
             color: '#ffffff',
@@ -422,7 +487,7 @@ export class GameScene extends Phaser.Scene {
         this.spawnRail();
 
         const panelX = width / 2;
-        const panelY = height / 2 - 30;
+        const panelY = (this.marshY + height) / 2 - 40;
         const panelW = Math.min(360, width - 40);
         const panel = this.add.graphics().setDepth(90);
         panel.fillStyle(0x000000, 0.7);
@@ -479,9 +544,10 @@ export class GameScene extends Phaser.Scene {
         this.tutorialElements = [];
 
         const { width, height } = this.scale;
+        const msgY = (this.marshY + height) / 2 - 40;
 
         // Step 2 — success message
-        const msg1 = this.add.text(width / 2, height / 2 - 30, 'Nice! Rails hide in plants to stay safe.', {
+        const msg1 = this.add.text(width / 2, msgY, 'Nice! Rails hide in plants to stay safe.', {
             fontFamily: 'Outfit',
             fontSize: '22px',
             fontStyle: 'bold',
@@ -505,7 +571,7 @@ export class GameScene extends Phaser.Scene {
                         msg1.destroy();
 
                         // Step 3 — corridor hint
-                        const msg2 = this.add.text(width / 2, height / 2 - 30,
+                        const msg2 = this.add.text(width / 2, msgY,
                             'Plant more to create a corridor to the safe zone  →', {
                             fontFamily: 'Outfit',
                             fontSize: '20px',
@@ -549,8 +615,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     spawnRail() {
-        const { height } = this.scale;
-        const y = Phaser.Math.Between(80, height - 80);
+        const y = Phaser.Math.Between(this.marshTop, this.marshBottom);
         const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
         const speedMul = this.levelManager.getCurrentConfig().railSpeedMultiplier || 1;
 
@@ -689,15 +754,9 @@ export class GameScene extends Phaser.Scene {
     completeLevel() {
         const config = this.levelManager.getCurrentConfig();
 
-        // Show marsh fact
+        // Single level: surviving all waves wins the game.
         this.showMarshFact(config.marshFact, () => {
-            // Advance to next level or win
-            if (this.levelManager.currentLevel < 3) {
-                this.startLevel(this.levelManager.currentLevel + 1);
-            } else {
-                // Game Won
-                this.gameWon();
-            }
+            this.gameWon();
         });
     }
 

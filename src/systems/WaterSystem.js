@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 
 export class WaterSystem {
-    constructor(scene, startX = 0) {
+    constructor(scene, startX = 0, topY = 0, bottomY = null) {
         this.scene = scene;
         this.startX = startX;
         this.currentX = startX;
@@ -10,22 +10,28 @@ export class WaterSystem {
         this.isKingTide = false;
         this.elapsed = 0;
 
-        const { width, height } = scene.scale;
+        const { height } = scene.scale;
+        // Flood water only covers the marsh strip (menu-style bands keep
+        // the sky + bay water above it untouched).
+        this.topY = topY || 0;
+        this.bottomY = bottomY || height;
+        this.stripH = this.bottomY - this.topY;
+        this.centerY = (this.topY + this.bottomY) / 2;
 
         // ── Water body (animated tile fill) ─────────────
         this.waterSprite = scene.add.tileSprite(
             startX / 2,
-            height / 2,
+            this.centerY,
             startX,
-            height,
+            this.stripH,
             'water'
         );
         this.waterSprite.setOrigin(0.5, 0.5);
         this.waterSprite.setDepth(5);
 
         // ── Vertical depth shade (darkens toward the bottom) ──
-        this.waterShade = scene.add.image(startX / 2, height / 2, 'water_shade');
-        this.waterShade.setScale(Math.max(startX, 1), height / 64);
+        this.waterShade = scene.add.image(startX / 2, this.centerY, 'water_shade');
+        this.waterShade.setScale(Math.max(startX, 1), this.stripH / 64);
         this.waterShade.setDepth(5);
 
         // ── Shimmer streaks drifting inside the water ──
@@ -33,7 +39,7 @@ export class WaterSystem {
         for (let i = 0; i < 10; i++) {
             const line = scene.add.rectangle(
                 0,
-                Phaser.Math.Between(10, height - 10),
+                Phaser.Math.Between(this.topY + 10, this.bottomY - 10),
                 Phaser.Math.Between(30, 110),
                 2,
                 0x9fd8e8,
@@ -46,15 +52,15 @@ export class WaterSystem {
         }
 
         // ── Wet sand band soaking the marsh just ahead of the edge ──
-        this.wetBand = scene.add.rectangle(startX + 13, height / 2, 26, height, 0x2b2a20, 0.5);
+        this.wetBand = scene.add.rectangle(startX + 13, this.centerY, 26, this.stripH, 0x2b2a20, 0.5);
         this.wetBand.setDepth(4);
 
         // ── Bright waterline ──
         this.waterEdge = scene.add.rectangle(
             startX,
-            height / 2,
+            this.centerY,
             3,
-            height,
+            this.stripH,
             0xbfeaf6,
             0.8
         );
@@ -65,7 +71,7 @@ export class WaterSystem {
         for (let i = 0; i < 12; i++) {
             const blob = scene.add.ellipse(
                 startX,
-                Phaser.Math.Between(8, height - 8),
+                Phaser.Math.Between(this.topY + 8, this.bottomY - 8),
                 Phaser.Math.Between(7, 16),
                 Phaser.Math.Between(4, 8),
                 0xffffff,
@@ -78,7 +84,7 @@ export class WaterSystem {
 
         // ── Foam particles at the edge ──
         this.foamEmitter = scene.add.particles(startX, 0, 'seed', {
-            y: { min: 0, max: height },
+            y: { min: this.topY, max: this.bottomY },
             speedX: { min: 6, max: 20 },
             speedY: { min: -8, max: 8 },
             lifespan: 2000,
@@ -97,18 +103,17 @@ export class WaterSystem {
         const movement = this.currentSpeed * (delta / 1000);
         this.currentX += movement;
 
-        const h = this.scene.scale.height;
         const t = this.currentX;
 
         // Update water body width / position and drift the tiles
-        this.waterSprite.setPosition(t / 2, h / 2);
+        this.waterSprite.setPosition(t / 2, this.centerY);
         this.waterSprite.width = t;
         this.waterSprite.tilePositionX += 0.5;
         this.waterSprite.tilePositionY += 0.18;
 
         // Stretch the depth shade to match
-        this.waterShade.setPosition(t / 2, h / 2);
-        this.waterShade.setScale(Math.max(t, 1), h / 64);
+        this.waterShade.setPosition(t / 2, this.centerY);
+        this.waterShade.setScale(Math.max(t, 1), this.stripH / 64);
 
         // Shimmer streaks spread across the water surface
         this.shimmers.forEach((line) => {
@@ -118,8 +123,8 @@ export class WaterSystem {
         });
 
         // Wet band, bright waterline and bobbing foam follow the edge
-        this.wetBand.setPosition(t + 13, h / 2);
-        this.waterEdge.setPosition(t, h / 2);
+        this.wetBand.setPosition(t + 13, this.centerY);
+        this.waterEdge.setPosition(t, this.centerY);
         this.foamBlobs.forEach((blob) => {
             blob.x = t + 2 + Math.sin(this.elapsed * 0.002 + blob.phase) * 3;
             blob.alpha = blob.baseAlpha * (0.7 + 0.3 * Math.sin(this.elapsed * 0.003 + blob.phase * 2));
@@ -186,13 +191,11 @@ export class WaterSystem {
         this.currentSpeed = this.baseSpeed;
         this.isKingTide = false;
 
-        const h = this.scene.scale.height;
-
-        this.waterSprite.setPosition(this.startX / 2, h / 2);
+        this.waterSprite.setPosition(this.startX / 2, this.centerY);
         this.waterSprite.width = this.startX;
-        this.waterShade.setPosition(this.startX / 2, h / 2);
-        this.waterShade.setScale(Math.max(this.startX, 1), h / 64);
-        this.wetBand.setPosition(this.startX + 13, h / 2);
-        this.waterEdge.setPosition(this.startX, h / 2);
+        this.waterShade.setPosition(this.startX / 2, this.centerY);
+        this.waterShade.setScale(Math.max(this.startX, 1), this.stripH / 64);
+        this.wetBand.setPosition(this.startX + 13, this.centerY);
+        this.waterEdge.setPosition(this.startX, this.centerY);
     }
 }

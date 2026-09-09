@@ -42,6 +42,7 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.maxX = scene.scale.width - 100;
         this.minY = 100;
         this.maxY = scene.scale.height - 100;
+        this.midY = (this.minY + this.maxY) / 2;
     }
 
     update(time, delta, rails, plants) {
@@ -73,10 +74,11 @@ export class Harrier extends Phaser.GameObjects.Container {
     glide(delta) {
         this.glideTime += delta * 0.001;
 
-        // Serpentine glide pattern
+        // Serpentine glide pattern around the marsh midline
         this.x += this.speed * this.glideDirection * (delta / 1000);
         this.verticalOffset = Math.sin(this.glideTime * 2) * 50;
-        this.y = 300 + this.verticalOffset;
+        this.midY = (this.minY + this.maxY) / 2;
+        this.y = Phaser.Math.Clamp(this.midY + this.verticalOffset, this.minY, this.maxY);
 
         // Bounce at edges
         if (this.x >= this.maxX) {

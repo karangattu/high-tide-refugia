@@ -75,7 +75,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     createLevelLabel(cx, y, compact) {
-        this.levelText = this.add.text(cx, y + (compact ? 20 : 26), 'LEVEL 1', {
+        this.levelText = this.add.text(cx, y + (compact ? 20 : 26), 'HIGH TIDE RISING', {
             fontFamily: 'Outfit',
             fontSize: compact ? '11px' : '14px',
             fontStyle: 'bold',
@@ -207,7 +207,7 @@ export class UIScene extends Phaser.Scene {
         const gameScene = this.scene.get('GameScene');
         if (gameScene && gameScene.levelManager) {
             const progress = gameScene.levelManager.getLevelProgress();
-            this.levelText.setText(`LEVEL ${progress.level} \u2013 ${progress.levelName}`);
+            this.levelText.setText(`WAVE ${progress.wave}/${progress.totalWaves}`);
         }
     }
 
