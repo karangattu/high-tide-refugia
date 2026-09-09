@@ -399,8 +399,8 @@ export class MenuScene extends Phaser.Scene {
         this.createButton(width / 2, y + this.btnSecondaryH / 2, 'HOW TO PLAY', 'menu_btn_secondary',
             veryShort ? '16px' : (compact ? '21px' : '26px'), '#eef7f2', () => this.showTutorial());
         y += this.btnSecondaryH + spacing;
-        this.createButton(width / 2, y + this.btnSecondaryH / 2, 'CREDITS', 'menu_btn_secondary',
-            veryShort ? '16px' : (compact ? '21px' : '26px'), '#eef7f2', () => this.showCredits());
+        this.createButton(width / 2, y + this.btnSecondaryH / 2, 'SFBBO & VOLUNTEER', 'menu_btn_secondary',
+            veryShort ? '14px' : (compact ? '18px' : '22px'), '#eef7f2', () => this.showSFBBOInfo());
 
         this.stackBottom = y + this.btnSecondaryH;
     }
@@ -465,14 +465,18 @@ export class MenuScene extends Phaser.Scene {
             alpha: 0.65,
         }).setOrigin(0.5).setDepth(6);
 
-        this.add.text(width / 2, footerY + lineGap,
+        const sfbboFooter = this.add.text(width / 2, footerY + lineGap,
             'A project with the San Francisco Bay Bird Observatory  •  sfbbo.org', {
             fontFamily: 'Outfit',
             fontSize: compact ? '13px' : '17px',
             color: TEAL_STR,
             resolution: TEXT_RES,
-            alpha: 0.55,
-        }).setOrigin(0.5).setDepth(6);
+            alpha: 0.7,
+        }).setOrigin(0.5).setDepth(6).setInteractive({ useHandCursor: true });
+
+        sfbboFooter.on('pointerdown', () => this.showSFBBOInfo());
+        sfbboFooter.on('pointerover', () => sfbboFooter.setColor('#ffffff'));
+        sfbboFooter.on('pointerout', () => sfbboFooter.setColor(TEAL_STR));
     }
 
     // ─── MODALS ──────────────────────────────────────────────────
@@ -494,9 +498,9 @@ export class MenuScene extends Phaser.Scene {
         panel.lineStyle(1.5, AMBER, 0.5);
         panel.strokeRoundedRect(left, top, panelW, panelH, 20);
 
-        const titleText = this.add.text(width / 2, top + (compact ? 42 : 56), title, {
+        const titleText = this.add.text(width / 2, top + (compact ? (title.length > 18 ? 34 : 42) : 54), title, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '28px' : '40px',
+            fontSize: compact ? (title.length > 18 ? '21px' : '28px') : (title.length > 18 ? '32px' : '40px'),
             fontStyle: '900',
             color: AMBER_STR,
             resolution: TEXT_RES,
@@ -507,10 +511,10 @@ export class MenuScene extends Phaser.Scene {
 
     buildModalClose(shell, onClose) {
         const { left, top, panelW, panelH, compact } = shell;
-        const bw = compact ? 200 : 250;
-        const bh = compact ? 56 : 68;
+        const bw = compact ? (panelH < 390 ? 170 : 200) : 250;
+        const bh = compact ? (panelH < 390 ? 38 : 48) : 62;
         const cx = left + panelW / 2;
-        const cy = top + panelH - bh / 2 - (compact ? 20 : 28);
+        const cy = top + panelH - bh / 2 - (compact ? 16 : 24);
 
         if (this.textures.exists('modal_close_btn')) this.textures.remove('modal_close_btn');
         const g = this.make.graphics({ x: 0, y: 0, add: false });
@@ -526,7 +530,7 @@ export class MenuScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true });
         const label = this.add.text(cx, cy, 'GOT IT', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '20px' : '26px',
+            fontSize: compact ? (panelH < 390 ? '16px' : '20px') : '26px',
             fontStyle: 'bold',
             color: '#9be29b',
             resolution: TEXT_RES,
@@ -544,6 +548,47 @@ export class MenuScene extends Phaser.Scene {
         shell.overlay.on('pointerdown', destroyModal);
 
         return destroyModal;
+    }
+
+    createModalLinkButton(x, y, w, h, label, url, strokeColor, fillColor) {
+        const bg = this.add.graphics().setDepth(93);
+        const radius = Math.min(h / 2, 10);
+        const draw = (hover) => {
+            bg.clear();
+            bg.fillStyle(hover ? 0x274a36 : fillColor, 0.95);
+            bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, radius);
+            bg.lineStyle(1.5, hover ? 0xffffff : strokeColor, hover ? 1 : 0.85);
+            bg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, radius);
+        };
+        draw(false);
+
+        const txt = this.add.text(x, y, label, {
+            fontFamily: 'Outfit',
+            fontSize: this.compact ? '12px' : '15px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(94);
+
+        const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0)
+            .setInteractive({ useHandCursor: true })
+            .setDepth(95);
+
+        hit.on('pointerover', () => {
+            draw(true);
+            this.tweens.add({ targets: txt, scaleX: 1.04, scaleY: 1.04, duration: 80 });
+        });
+        hit.on('pointerout', () => {
+            draw(false);
+            this.tweens.add({ targets: txt, scaleX: 1, scaleY: 1, duration: 80 });
+        });
+        hit.on('pointerdown', () => {
+            if (typeof window !== 'undefined') {
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        });
+
+        return [bg, txt, hit];
     }
 
     showTutorial() {
@@ -583,35 +628,84 @@ export class MenuScene extends Phaser.Scene {
         this.buildModalClose(shell);
     }
 
-    showCredits() {
+    showSFBBOInfo() {
         const { width, height } = this.scale;
-        const shell = this.buildModalShell(width, height, 'CREDITS');
+        const shell = this.buildModalShell(width, height, 'SFBBO TIDAL MARSH PROGRAM');
         const { left, top, panelW, compact } = shell;
 
-        const lines = [
-            { text: 'RAIL REFUGE: High Tide Rising', size: compact ? '20px' : '28px', color: '#bfe8f2', bold: true },
-            { text: "A game about conservation and protecting\nthe endangered Ridgway's Rail.", size: compact ? '17px' : '22px', color: '#ffffff' },
-            { text: 'Made in partnership with the\nSan Francisco Bay Bird Observatory', size: compact ? '17px' : '22px', color: '#ffffff' },
-            { text: 'sfbbo.org', size: compact ? '19px' : '26px', color: AMBER_STR, bold: true },
-            { text: 'Built with Phaser', size: compact ? '14px' : '18px', color: '#8fa8a0' },
-        ];
-
         shell.items = [];
-        let y = top + (compact ? 104 : 140);
-        const spacing = compact ? 54 : 70;
-        lines.forEach((line) => {
-            const txt = this.add.text(left + panelW / 2, y, line.text, {
-                fontFamily: 'Outfit',
-                fontSize: line.size,
-                fontStyle: line.bold ? 'bold' : '400',
-                color: line.color,
-                resolution: TEXT_RES,
-                align: 'center',
-                lineSpacing: 6,
-            }).setOrigin(0.5).setDepth(92);
-            shell.items.push(txt);
-            y += spacing;
-        });
+
+        const titleY = top + (compact ? 32 : 48);
+        shell.titleText.setY(titleY);
+
+        const sub = this.add.text(width / 2, titleY + (compact ? 22 : 32), 'San Francisco Bay Bird Observatory', {
+            fontFamily: 'Outfit',
+            fontSize: compact ? '12px' : '16px',
+            fontStyle: 'bold',
+            color: TEAL_STR,
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(92);
+        shell.items.push(sub);
+
+        const contentW = panelW - (compact ? 40 : 72);
+        const textStartY = titleY + (compact ? 42 : 62);
+
+        const missionText = "Over 90% of SF Bay's historic tidal wetlands have been lost or degraded. SFBBO's Tidal Marsh Program researches and restores vital transition zones—the ecotones between marsh plains and uplands.\n\nBy planting native species like Gumplant, Cordgrass, and Saltgrass, SFBBO builds high-tide refugia: life-saving escape cover where endangered Ridgway's Rails and salt marsh harvest mice find food, shelter, and safety during extreme king tides.";
+
+        const p1 = this.add.text(left + panelW / 2, textStartY, missionText, {
+            fontFamily: 'Outfit',
+            fontSize: compact ? '12px' : '15.5px',
+            color: '#eef7f2',
+            resolution: TEXT_RES,
+            align: 'center',
+            lineSpacing: compact ? 2.5 : 5,
+            wordWrap: { width: contentW },
+        }).setOrigin(0.5, 0).setDepth(92);
+        shell.items.push(p1);
+
+        const volunteerStartY = textStartY + p1.height + (compact ? 8 : 14);
+        const volunteerText = "Want to get involved? Volunteers propagate native plants in nurseries, restore marsh habitat corridors, remove invasive weeds, and support bird conservation!";
+
+        const p2 = this.add.text(left + panelW / 2, volunteerStartY, volunteerText, {
+            fontFamily: 'Outfit',
+            fontSize: compact ? '12px' : '15px',
+            fontStyle: 'bold',
+            color: '#ffd166',
+            resolution: TEXT_RES,
+            align: 'center',
+            lineSpacing: compact ? 2 : 4,
+            wordWrap: { width: contentW },
+        }).setOrigin(0.5, 0).setDepth(92);
+        shell.items.push(p2);
+
+        const btnY = volunteerStartY + p2.height + (compact ? 16 : 24);
+        const btnW = compact ? Math.min(240, (contentW - 12) / 2) : 310;
+        const btnH = compact ? 36 : 46;
+        const btnSpread = compact ? btnW / 2 + 6 : btnW / 2 + 14;
+
+        const link1 = this.createModalLinkButton(
+            width / 2 - btnSpread,
+            btnY,
+            btnW,
+            btnH,
+            '🌿 sfbbo.org/tidalmarsh',
+            'https://www.sfbbo.org/tidalmarsh/',
+            0xf39c12,
+            0x1c2b1e
+        );
+        shell.items.push(...link1);
+
+        const link2 = this.createModalLinkButton(
+            width / 2 + btnSpread,
+            btnY,
+            btnW,
+            btnH,
+            '🌱 sfbbo.org/volunteer',
+            'https://www.sfbbo.org/volunteer/',
+            0x2ecc71,
+            0x143322
+        );
+        shell.items.push(...link2);
 
         this.buildModalClose(shell);
     }
