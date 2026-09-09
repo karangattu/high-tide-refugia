@@ -35,7 +35,10 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
         this.patrolSpeed = 115;
         this.chaseSpeed = 295;
-        this.visionRange = 145;
+        this.visionRange = 180;
+        // Foxes also hunt by sound/smell: within this radius they notice prey
+        // in any direction, even outside their forward line of sight.
+        this.senseRadius = 95;
         this.catchDistance = 32 * entityScale;
 
         this.patrolDirX = Math.random() < 0.5 ? -1 : 1;
@@ -193,6 +196,10 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
         if (distance > this.visionRange) return false;
 
+        // Close-range scent/hearing: notice prey in any direction.
+        if (distance <= this.senseRadius) return true;
+
+        // Beyond that, the rail must be in the fox's forward line of sight.
         const facingRight = !this.flipX;
         const railIsRight = rail.x > this.x;
 
