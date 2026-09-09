@@ -10,10 +10,17 @@
     "test": "node --test",
     "lint": "npx eslint src"
   },
-  "keywords": ["phaser", "game", "conservation", "rails", "tower-defense"],
+  "keywords": [
+    "phaser",
+    "game",
+    "conservation",
+    "rails",
+    "tower-defense"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "lucide": "^1.43.0",
     "phaser": "^3.70.0"
   },
   "devDependencies": {

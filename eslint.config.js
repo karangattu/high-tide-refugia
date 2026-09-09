@@ -13,6 +13,7 @@ export default [
                 clearInterval: "readonly",
                 console: "readonly",
                 ImageData: "readonly",
+                Path2D: "readonly",
                 Uint8Array: "readonly",
                 Int32Array: "readonly",
             }

@@ -174,11 +174,16 @@ export class UIScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScale(width / 960, footerH / 44);
 
-        const brand = compact
-            ? '🌿 SF BAY REFUGE'
-            : "🌿 SAN FRANCISCO BAY ESTUARY · RIDGWAY'S RAIL REFUGE";
+        const leafX = compact ? 12 : 24;
+        this.add.image(leafX, cy, 'icon_leaf')
+            .setScale(compact ? 0.6 : 0.75)
+            .setOrigin(0, 0.5);
 
-        this.add.text(compact ? 12 : 26, cy, brand, {
+        const brand = compact
+            ? 'SF BAY REFUGE'
+            : "SAN FRANCISCO BAY ESTUARY · RIDGWAY'S RAIL REFUGE";
+
+        this.add.text(leafX + (compact ? 22 : 28), cy, brand, {
             fontFamily: 'Outfit',
             fontSize: compact ? '13px' : '16px',
             fontStyle: 'bold',
@@ -187,17 +192,12 @@ export class UIScene extends Phaser.Scene {
         }).setOrigin(0, 0.5);
 
         if (compact) {
-            const fsBtn = this.add.text(width - 10, cy, '⛶', {
-                fontFamily: 'Outfit',
-                fontSize: '15px',
-                color: '#eef7f2',
-                backgroundColor: '#1b4332',
-                padding: { x: 5, y: 2 },
-                resolution: TEXT_RES,
-            }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
+            const fsBtn = this.add.image(width - 18, cy, 'icon_maximize')
+                .setScale(0.65)
+                .setInteractive({ useHandCursor: true });
             fsBtn.on('pointerdown', () => toggleFullscreen());
 
-            this.footerTipText = this.add.text(width - 38, cy, 'Plant cover to save Rails', {
+            this.footerTipText = this.add.text(width - 40, cy, 'Plant cover to save Rails', {
                 fontFamily: 'Outfit',
                 fontSize: '12px',
                 color: '#b0c4b1',
@@ -212,13 +212,17 @@ export class UIScene extends Phaser.Scene {
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
 
-            const fsBtn = this.add.text(width - 120, cy, '⛶ FULLSCREEN', {
+            const fsContainer = this.add.container(width - 145, cy);
+            const fsIcon = this.add.image(-48, 0, 'icon_maximize').setScale(0.6);
+            const fsText = this.add.text(-34, 0, 'FULLSCREEN', {
                 fontFamily: 'Outfit',
                 fontSize: '13px',
                 color: '#9fd8e8',
                 resolution: TEXT_RES,
-            }).setOrigin(1, 0.5).setInteractive({ useHandCursor: true });
-            fsBtn.on('pointerdown', () => toggleFullscreen());
+            }).setOrigin(0, 0.5);
+            fsContainer.add([fsIcon, fsText]);
+            fsContainer.setSize(110, 24).setInteractive({ useHandCursor: true });
+            fsContainer.on('pointerdown', () => toggleFullscreen());
 
             this.add.text(width - 26, cy, '[ESC] PAUSE', {
                 fontFamily: 'Outfit',

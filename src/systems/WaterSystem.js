@@ -201,7 +201,7 @@ export class WaterSystem {
         const warning = this.scene.add.text(
             this.scene.scale.width / 2,
             100,
-            '⚠️ KING TIDE! ⚠️',
+            'KING TIDE!',
             {
                 fontFamily: 'Outfit',
                 fontSize: '64px',
@@ -209,16 +209,25 @@ export class WaterSystem {
                 color: '#ff6b6b',
                 stroke: '#000000',
                 strokeThickness: 7,
-                resolution: window.devicePixelRatio || 2,
+                resolution: (typeof window !== 'undefined' && window.devicePixelRatio) || 2,
             }
         ).setOrigin(0.5).setDepth(100);
 
+        const halfW = warning.width / 2;
+        const alertL = this.scene.textures && this.scene.textures.exists('icon_alert')
+            ? this.scene.add.image(this.scene.scale.width / 2 - halfW - 36, 100, 'icon_alert').setScale(1.8).setDepth(100)
+            : null;
+        const alertR = this.scene.textures && this.scene.textures.exists('icon_alert')
+            ? this.scene.add.image(this.scene.scale.width / 2 + halfW + 36, 100, 'icon_alert').setScale(1.8).setDepth(100)
+            : null;
+
+        const targets = [warning, alertL, alertR].filter(Boolean);
         this.scene.tweens.add({
-            targets: warning,
+            targets,
             scale: { from: 0.5, to: 1.2 },
             alpha: { from: 1, to: 0 },
             duration: 2000,
-            onComplete: () => warning.destroy(),
+            onComplete: () => targets.forEach(t => t.destroy()),
         });
     }
 

@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { registerLucideIconTextures } from '../utils/icons.js';
 
 export class BootScene extends Phaser.Scene {
     constructor() {
@@ -292,17 +293,11 @@ export class BootScene extends Phaser.Scene {
         scorePanelGraphics.generateTexture('score_panel', 200, 120);
         scorePanelGraphics.destroy();
 
-        // ── HUD ICON TEXTURES (replacing emojis) ────────────
-        this.createIconTextures();
+        registerLucideIconTextures(this);
 
-        // ── Apply NEAREST filtering to all generated sprite textures ──
-        // This keeps pixel art crisp while text stays smooth (LINEAR default).
         this.applyNearestFilter();
     }
 
-    /** Set NEAREST filtering on pixel-art sprite textures so they stay
-     *  crisp at any zoom. Plant growth stages are photographic art and
-     *  intentionally keep LINEAR filtering; text keeps LINEAR too. */
     applyNearestFilter() {
         const spriteKeys = [
             'cat',
@@ -313,14 +308,9 @@ export class BootScene extends Phaser.Scene {
             'button', 'button_hover',
             'seedbank_bg', 'score_panel',
             'hud_panel', 'hud_panel_wide', 'hud_panel_bottom',
-            // Rail sheet slices
             'rail_running_1', 'rail_running_2', 'rail_running_3', 'rail_running_4',
             'rail_sprint_1', 'rail_sprint_2', 'rail_sprint_3', 'rail_sprint_4',
             'rail_hiding', 'rail_calling', 'rail_surprised',
-            // Icon textures (emoji replacements)
-            'icon_trophy', 'icon_heart_green', 'icon_heart_broken',
-            'icon_leaf', 'icon_flame', 'icon_wave',
-            'icon_paw', 'icon_bolt', 'icon_target',             'icon_star',
             'cat_sheet',
         ];
         spriteKeys.forEach(key => {
@@ -657,189 +647,4 @@ export class BootScene extends Phaser.Scene {
 
     // ─── HARRIER TEXTURE GENERATORS (Northern Harrier / Marsh Hawk) ───
 
-    // ─── ICON TEXTURES (emoji replacements) ──────────────────
-
-    createIconTextures() {
-        const S = 20; // icon size
-
-        // Trophy (replaces 🏆)
-        this._makeIcon('icon_trophy', S, (g) => {
-            // Cup
-            g.fillStyle(0xf1c40f);
-            g.fillRoundedRect(5, 3, 10, 8, 2);
-            // Handles
-            g.lineStyle(2, 0xf1c40f);
-            g.beginPath();
-            g.arc(4, 7, 3, Math.PI * 0.5, Math.PI * 1.5, false);
-            g.stroke();
-            g.beginPath();
-            g.arc(16, 7, 3, -Math.PI * 0.5, Math.PI * 0.5, false);
-            g.stroke();
-            // Stem
-            g.fillStyle(0xd4ac0d);
-            g.fillRect(8, 11, 4, 3);
-            // Base
-            g.fillStyle(0xf1c40f);
-            g.fillRoundedRect(6, 14, 8, 3, 1);
-        });
-
-        // Green heart / check-heart (replaces 💚)
-        this._makeIcon('icon_heart_green', S, (g) => {
-            g.fillStyle(0x27ae60);
-            g.fillCircle(7, 7, 4);
-            g.fillCircle(13, 7, 4);
-            g.fillTriangle(3, 9, 10, 17, 17, 9);
-        });
-
-        // Broken heart (replaces 💔)
-        this._makeIcon('icon_heart_broken', S, (g) => {
-            g.fillStyle(0xe74c3c);
-            g.fillCircle(7, 7, 4);
-            g.fillCircle(13, 7, 4);
-            g.fillTriangle(3, 9, 10, 17, 17, 9);
-            // Crack line
-            g.lineStyle(1.5, 0x1a1a1a, 0.8);
-            g.beginPath();
-            g.moveTo(10, 5);
-            g.lineTo(8, 9);
-            g.lineTo(12, 11);
-            g.lineTo(10, 16);
-            g.stroke();
-        });
-
-        // Leaf (replaces 🌿)
-        this._makeIcon('icon_leaf', S, (g) => {
-            // Leaf shape
-            g.fillStyle(0x27ae60);
-            g.beginPath();
-            g.moveTo(10, 2);
-            g.lineTo(17, 8);
-            g.lineTo(14, 14);
-            g.lineTo(10, 16);
-            g.lineTo(6, 14);
-            g.lineTo(3, 8);
-            g.closePath();
-            g.fill();
-            // Vein
-            g.lineStyle(1, 0x1a5c1a, 0.6);
-            g.beginPath();
-            g.moveTo(10, 3);
-            g.lineTo(10, 15);
-            g.stroke();
-            g.beginPath();
-            g.moveTo(10, 7);
-            g.lineTo(7, 10);
-            g.stroke();
-            g.beginPath();
-            g.moveTo(10, 9);
-            g.lineTo(13, 12);
-            g.stroke();
-        });
-
-        // Flame (replaces 🔥)
-        this._makeIcon('icon_flame', S, (g) => {
-            g.fillStyle(0xe67e22);
-            g.beginPath();
-            g.moveTo(10, 2);
-            g.lineTo(14, 8);
-            g.lineTo(16, 14);
-            g.lineTo(13, 18);
-            g.lineTo(7, 18);
-            g.lineTo(4, 14);
-            g.lineTo(6, 8);
-            g.closePath();
-            g.fill();
-            // Inner flame
-            g.fillStyle(0xf39c12);
-            g.beginPath();
-            g.moveTo(10, 6);
-            g.lineTo(13, 11);
-            g.lineTo(12, 16);
-            g.lineTo(8, 16);
-            g.lineTo(7, 11);
-            g.closePath();
-            g.fill();
-            // Core
-            g.fillStyle(0xf1c40f);
-            g.fillEllipse(10, 14, 4, 5);
-        });
-
-        // Wave (replaces 🌊)
-        this._makeIcon('icon_wave', S, (g) => {
-            g.lineStyle(2.5, 0x3498db);
-            g.beginPath();
-            g.moveTo(1, 10);
-            for (let x = 0; x <= S; x += 1) {
-                g.lineTo(x, 10 + Math.sin(x * 0.6) * 3);
-            }
-            g.stroke();
-            g.lineStyle(2, 0x2980b9, 0.6);
-            g.beginPath();
-            g.moveTo(1, 15);
-            for (let x = 0; x <= S; x += 1) {
-                g.lineTo(x, 15 + Math.sin((x + 4) * 0.6) * 2);
-            }
-            g.stroke();
-        });
-
-        // Paw print (replaces 🦊 as predator icon)
-        this._makeIcon('icon_paw', S, (g) => {
-            g.fillStyle(0xd4ac0d);
-            // Pad
-            g.fillEllipse(10, 13, 8, 6);
-            // Toes
-            g.fillCircle(5, 7, 2.5);
-            g.fillCircle(9, 5, 2.5);
-            g.fillCircle(13, 5.5, 2.5);
-            g.fillCircle(16, 8, 2.5);
-        });
-
-        // Lightning bolt (replaces ⚡)
-        this._makeIcon('icon_bolt', S, (g) => {
-            g.fillStyle(0xf1c40f);
-            g.beginPath();
-            g.moveTo(12, 1);
-            g.lineTo(5, 10);
-            g.lineTo(9, 10);
-            g.lineTo(7, 19);
-            g.lineTo(15, 9);
-            g.lineTo(11, 9);
-            g.closePath();
-            g.fill();
-        });
-
-        // Target / crosshair (replaces 🎯)
-        this._makeIcon('icon_target', S, (g) => {
-            g.lineStyle(2, 0xe74c3c);
-            g.strokeCircle(10, 10, 7);
-            g.strokeCircle(10, 10, 3);
-            g.fillStyle(0xe74c3c);
-            g.fillCircle(10, 10, 1.5);
-        });
-
-        // Star (generic reward icon)
-        this._makeIcon('icon_star', S, (g) => {
-            g.fillStyle(0xf1c40f);
-            const cx = 10, cy = 10, spikes = 5, outer = 8, inner = 4;
-            g.beginPath();
-            for (let i = 0; i < spikes * 2; i++) {
-                const r = i % 2 === 0 ? outer : inner;
-                const angle = (i * Math.PI / spikes) - Math.PI / 2;
-                const px = cx + Math.cos(angle) * r;
-                const py = cy + Math.sin(angle) * r;
-                if (i === 0) g.moveTo(px, py);
-                else g.lineTo(px, py);
-            }
-            g.closePath();
-            g.fill();
-        });
-    }
-
-    /** Helper to create a small icon texture */
-    _makeIcon(key, size, drawFn) {
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        drawFn(g);
-        g.generateTexture(key, size, size);
-        g.destroy();
-    }
 }

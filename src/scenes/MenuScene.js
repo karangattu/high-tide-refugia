@@ -568,7 +568,7 @@ export class MenuScene extends Phaser.Scene {
         return destroyModal;
     }
 
-    createModalLinkButton(x, y, w, h, label, url, strokeColor, fillColor) {
+    createModalLinkButton(x, y, w, h, label, url, strokeColor, fillColor, iconKey = null) {
         const bg = this.add.graphics().setDepth(93);
         const radius = Math.min(h / 2, 10);
         const draw = (hover) => {
@@ -580,6 +580,23 @@ export class MenuScene extends Phaser.Scene {
         };
         draw(false);
 
+        const items = [bg];
+        let icon = null;
+        if (iconKey && this.textures && this.textures.exists(iconKey)) {
+            icon = this.add.image(x - w / 2 + (this.compact ? 18 : 24), y, iconKey)
+                .setScale(this.compact ? 0.55 : 0.7)
+                .setDepth(94);
+            items.push(icon);
+        }
+
+        let extIcon = null;
+        if (this.textures && this.textures.exists('icon_external_link')) {
+            extIcon = this.add.image(x + w / 2 - (this.compact ? 18 : 24), y, 'icon_external_link')
+                .setScale(this.compact ? 0.45 : 0.6)
+                .setDepth(94);
+            items.push(extIcon);
+        }
+
         const txt = this.add.text(x, y, label, {
             fontFamily: 'Outfit',
             fontSize: this.compact ? '12px' : '15px',
@@ -587,18 +604,23 @@ export class MenuScene extends Phaser.Scene {
             color: '#ffffff',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(94);
+        items.push(txt);
 
         const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0)
             .setInteractive({ useHandCursor: true })
             .setDepth(95);
+        items.push(hit);
 
+        const animTargets = [txt, icon, extIcon].filter(Boolean);
         hit.on('pointerover', () => {
             draw(true);
-            this.tweens.add({ targets: txt, scaleX: 1.04, scaleY: 1.04, duration: 80 });
+            this.tweens.add({ targets: animTargets, scaleX: '*=1.05', scaleY: '*=1.05', duration: 80 });
         });
         hit.on('pointerout', () => {
             draw(false);
-            this.tweens.add({ targets: txt, scaleX: 1, scaleY: 1, duration: 80 });
+            if (icon) icon.setScale(this.compact ? 0.55 : 0.7);
+            if (extIcon) extIcon.setScale(this.compact ? 0.45 : 0.6);
+            txt.setScale(1);
         });
         hit.on('pointerdown', () => {
             if (typeof window !== 'undefined') {
@@ -606,7 +628,7 @@ export class MenuScene extends Phaser.Scene {
             }
         });
 
-        return [bg, txt, hit];
+        return items;
     }
 
     showTutorial() {
@@ -706,10 +728,11 @@ export class MenuScene extends Phaser.Scene {
             btnY,
             btnW,
             btnH,
-            '🌿 sfbbo.org/tidalmarsh',
+            'sfbbo.org/tidalmarsh',
             'https://www.sfbbo.org/tidalmarsh/',
             0xf39c12,
-            0x1c2b1e
+            0x1c2b1e,
+            'icon_leaf'
         );
         shell.items.push(...link1);
 
@@ -718,10 +741,11 @@ export class MenuScene extends Phaser.Scene {
             btnY,
             btnW,
             btnH,
-            '🌱 sfbbo.org/volunteer',
+            'sfbbo.org/volunteer',
             'https://www.sfbbo.org/volunteer/',
             0x2ecc71,
-            0x143322
+            0x143322,
+            'icon_sprout'
         );
         shell.items.push(...link2);
 
