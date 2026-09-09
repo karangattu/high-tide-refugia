@@ -17,10 +17,11 @@ export class MenuScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
-        this.compact = height <= 520 || width < 700;
+        const compact = height <= 520 || width < 700;
+        this.compact = compact;
         this.portrait = height > width;
-        this.horizonY = height * (this.portrait ? 0.34 : 0.40);
-        this.marshY = height * (this.portrait ? 0.52 : 0.56);
+        this.horizonY = Math.round(height * (this.portrait ? 0.20 : (compact ? 0.16 : 0.40)));
+        this.marshY = Math.round(height * (this.portrait ? 0.36 : (compact ? 0.28 : 0.56)));
 
         this.createBackground(width, height);
         this.createMarshDetail(width, height);
@@ -37,33 +38,44 @@ export class MenuScene extends Phaser.Scene {
 
     createBackground(width, height) {
         const { horizonY, marshY } = this;
+        const isCompact = this.compact;
 
         const sky = this.add.graphics().setDepth(-30);
         sky.fillGradientStyle(0x1976d2, 0x1976d2, 0xffd54f, 0xffd54f, 1, 1, 1, 1);
         sky.fillRect(0, 0, width, horizonY + 2);
 
         const sunX = width * 0.72;
-        const sunY = horizonY * 0.46;
+        const sunY = isCompact ? horizonY * 0.60 : horizonY * 0.46;
         const sun = this.add.graphics().setDepth(-29);
         sun.setBlendMode(Phaser.BlendModes.ADD);
-        sun.fillStyle(0xffa726, 0.20);
-        sun.fillCircle(sunX, sunY, horizonY * 0.48);
-        sun.fillStyle(0xffca28, 0.42);
-        sun.fillCircle(sunX, sunY, horizonY * 0.28);
-        sun.fillStyle(0xfff59d, 0.85);
-        sun.fillCircle(sunX, sunY, horizonY * 0.15);
-        sun.fillStyle(0xffffff, 0.98);
-        sun.fillCircle(sunX, sunY, horizonY * 0.08);
 
-        sun.lineStyle(2, 0xffeb3b, 0.35);
-        for (let i = 0; i < 8; i++) {
-            const angle = (i * Math.PI) / 4;
-            const r1 = horizonY * 0.18;
-            const r2 = horizonY * 0.44;
-            sun.beginPath();
-            sun.moveTo(sunX + Math.cos(angle) * r1, sunY + Math.sin(angle) * r1);
-            sun.lineTo(sunX + Math.cos(angle) * r2, sunY + Math.sin(angle) * r2);
-            sun.strokePath();
+        if (isCompact) {
+            sun.fillStyle(0xffa726, 0.25);
+            sun.fillCircle(sunX, sunY, horizonY * 0.44);
+            sun.fillStyle(0xfff59d, 0.75);
+            sun.fillCircle(sunX, sunY, horizonY * 0.22);
+            sun.fillStyle(0xffffff, 0.95);
+            sun.fillCircle(sunX, sunY, horizonY * 0.10);
+        } else {
+            sun.fillStyle(0xffa726, 0.20);
+            sun.fillCircle(sunX, sunY, horizonY * 0.48);
+            sun.fillStyle(0xffca28, 0.42);
+            sun.fillCircle(sunX, sunY, horizonY * 0.28);
+            sun.fillStyle(0xfff59d, 0.85);
+            sun.fillCircle(sunX, sunY, horizonY * 0.15);
+            sun.fillStyle(0xffffff, 0.98);
+            sun.fillCircle(sunX, sunY, horizonY * 0.08);
+
+            sun.lineStyle(2, 0xffeb3b, 0.35);
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4;
+                const r1 = horizonY * 0.18;
+                const r2 = horizonY * 0.44;
+                sun.beginPath();
+                sun.moveTo(sunX + Math.cos(angle) * r1, sunY + Math.sin(angle) * r1);
+                sun.lineTo(sunX + Math.cos(angle) * r2, sunY + Math.sin(angle) * r2);
+                sun.strokePath();
+            }
         }
 
         const water = this.add.graphics().setDepth(-29);
@@ -72,23 +84,25 @@ export class MenuScene extends Phaser.Scene {
 
         const refl = this.add.graphics().setDepth(-28);
         refl.setBlendMode(Phaser.BlendModes.ADD);
-        for (let i = 0; i < 8; i++) {
-            const t = i / 7;
-            const y = horizonY + 6 + t * (marshY - horizonY - 12);
-            const w = (1 - t) * 140 + 28;
+        const reflCount = isCompact ? 4 : 8;
+        for (let i = 0; i < reflCount; i++) {
+            const t = reflCount === 1 ? 0.5 : i / (reflCount - 1);
+            const y = horizonY + 4 + t * Math.max(2, marshY - horizonY - 8);
+            const w = (1 - t) * (isCompact ? 60 : 140) + 20;
             refl.fillStyle(0xffe082, 0.32 * (1 - t) + 0.08);
             refl.fillEllipse(
-                sunX + Phaser.Math.Between(-12, 12), y,
+                sunX + Phaser.Math.Between(-8, 8), y,
                 w, Phaser.Math.Between(2, 4)
             );
         }
 
         // Shimmer lines across the water (twinkle via tweens)
-        for (let i = 0; i < 14; i++) {
-            const y = Phaser.Math.Between(horizonY + 8, marshY - 8);
+        const shimmerCount = isCompact ? 6 : 14;
+        for (let i = 0; i < shimmerCount; i++) {
+            const y = Phaser.Math.Between(horizonY + 4, marshY - 4);
             const line = this.add.rectangle(
                 Phaser.Math.Between(0, width), y,
-                Phaser.Math.Between(24, 90), 2,
+                Phaser.Math.Between(18, isCompact ? 45 : 90), 2,
                 0x9fd8e8, Phaser.Math.FloatBetween(0.10, 0.28)
             ).setDepth(-28);
             this.tweens.add({

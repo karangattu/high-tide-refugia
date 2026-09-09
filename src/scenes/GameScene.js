@@ -82,11 +82,11 @@ export class GameScene extends Phaser.Scene {
         // All gameplay (rails, plants, predators, tide flood) lives in the marsh strip.
         const portrait = height > width;
         const isMobileLandscape = height <= 520 || (width < 768 && height < 600);
-        this.horizonY = height * (portrait ? 0.34 : (isMobileLandscape ? 0.22 : 0.40));
-        this.marshY = height * (portrait ? 0.52 : (isMobileLandscape ? 0.38 : 0.56));
+        this.horizonY = Math.round(height * (portrait ? 0.14 : (isMobileLandscape ? 0.08 : 0.36)));
+        this.marshY = Math.round(height * (portrait ? 0.24 : (isMobileLandscape ? 0.15 : 0.52)));
         const { horizonY, marshY } = this;
         const footerH = isMobileLandscape ? 34 : 50;
-        this.marshTop = marshY + (isMobileLandscape ? 24 : 30);
+        this.marshTop = marshY + (isMobileLandscape ? 12 : 30);
         this.marshBottom = height - footerH - 45;
 
         const sky = this.add.graphics().setDepth(-30);
@@ -94,27 +94,37 @@ export class GameScene extends Phaser.Scene {
         sky.fillRect(0, 0, width, horizonY + 2);
 
         const sunX = width * 0.72;
-        const sunY = horizonY * 0.46;
+        const sunY = isMobileLandscape ? horizonY * 0.65 : horizonY * 0.46;
         const sun = this.add.graphics().setDepth(-29);
         sun.setBlendMode(Phaser.BlendModes.ADD);
-        sun.fillStyle(0xffa726, 0.20);
-        sun.fillCircle(sunX, sunY, horizonY * 0.48);
-        sun.fillStyle(0xffca28, 0.42);
-        sun.fillCircle(sunX, sunY, horizonY * 0.28);
-        sun.fillStyle(0xfff59d, 0.85);
-        sun.fillCircle(sunX, sunY, horizonY * 0.15);
-        sun.fillStyle(0xffffff, 0.98);
-        sun.fillCircle(sunX, sunY, horizonY * 0.08);
 
-        sun.lineStyle(2, 0xffeb3b, 0.35);
-        for (let i = 0; i < 8; i++) {
-            const angle = (i * Math.PI) / 4;
-            const r1 = horizonY * 0.18;
-            const r2 = horizonY * 0.44;
-            sun.beginPath();
-            sun.moveTo(sunX + Math.cos(angle) * r1, sunY + Math.sin(angle) * r1);
-            sun.lineTo(sunX + Math.cos(angle) * r2, sunY + Math.sin(angle) * r2);
-            sun.strokePath();
+        if (isMobileLandscape) {
+            sun.fillStyle(0xffa726, 0.25);
+            sun.fillCircle(sunX, sunY, horizonY * 0.42);
+            sun.fillStyle(0xfff59d, 0.75);
+            sun.fillCircle(sunX, sunY, horizonY * 0.22);
+            sun.fillStyle(0xffffff, 0.95);
+            sun.fillCircle(sunX, sunY, horizonY * 0.10);
+        } else {
+            sun.fillStyle(0xffa726, 0.20);
+            sun.fillCircle(sunX, sunY, horizonY * 0.48);
+            sun.fillStyle(0xffca28, 0.42);
+            sun.fillCircle(sunX, sunY, horizonY * 0.28);
+            sun.fillStyle(0xfff59d, 0.85);
+            sun.fillCircle(sunX, sunY, horizonY * 0.15);
+            sun.fillStyle(0xffffff, 0.98);
+            sun.fillCircle(sunX, sunY, horizonY * 0.08);
+
+            sun.lineStyle(2, 0xffeb3b, 0.35);
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI) / 4;
+                const r1 = horizonY * 0.18;
+                const r2 = horizonY * 0.44;
+                sun.beginPath();
+                sun.moveTo(sunX + Math.cos(angle) * r1, sunY + Math.sin(angle) * r1);
+                sun.lineTo(sunX + Math.cos(angle) * r2, sunY + Math.sin(angle) * r2);
+                sun.strokePath();
+            }
         }
 
         const water = this.add.graphics().setDepth(-29);
@@ -123,23 +133,25 @@ export class GameScene extends Phaser.Scene {
 
         const refl = this.add.graphics().setDepth(-28);
         refl.setBlendMode(Phaser.BlendModes.ADD);
-        for (let i = 0; i < 8; i++) {
-            const t = i / 7;
-            const y = horizonY + 6 + t * (marshY - horizonY - 12);
-            const w = (1 - t) * 140 + 28;
-            refl.fillStyle(0xffe082, 0.32 * (1 - t) + 0.08);
+        const reflCount = isMobileLandscape ? 3 : 8;
+        for (let i = 0; i < reflCount; i++) {
+            const t = reflCount === 1 ? 0.5 : i / (reflCount - 1);
+            const y = horizonY + 3 + t * Math.max(2, marshY - horizonY - 6);
+            const w = (1 - t) * (isMobileLandscape ? 50 : 140) + 16;
+            refl.fillStyle(0xffe082, 0.30 * (1 - t) + 0.08);
             refl.fillEllipse(
-                sunX + Phaser.Math.Between(-12, 12), y,
-                w, Phaser.Math.Between(2, 4)
+                sunX + Phaser.Math.Between(-8, 8), y,
+                w, Phaser.Math.Between(2, 3)
             );
         }
 
-        for (let i = 0; i < 14; i++) {
-            const y = Phaser.Math.Between(horizonY + 8, marshY - 8);
+        const shimmerCount = isMobileLandscape ? 4 : 14;
+        for (let i = 0; i < shimmerCount; i++) {
+            const y = Phaser.Math.Between(horizonY + 3, marshY - 3);
             const line = this.add.rectangle(
                 Phaser.Math.Between(0, width), y,
-                Phaser.Math.Between(24, 90), 2,
-                0x9fd8e8, Phaser.Math.FloatBetween(0.12, 0.32)
+                Phaser.Math.Between(16, isMobileLandscape ? 40 : 90), 2,
+                0x9fd8e8, Phaser.Math.FloatBetween(0.10, 0.25)
             ).setDepth(-28);
             this.tweens.add({
                 targets: line,
