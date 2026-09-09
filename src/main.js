@@ -6,7 +6,7 @@ import { UIScene } from './scenes/UIScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { IntroScene } from './scenes/IntroScene.js';
 
-const MOBILE_PHONE_MAX_DIMENSION = 768;
+const MOBILE_PHONE_MAX_DIMENSION = 600;
 const GAMEPLAY_SCENES = ['GameScene', 'UIScene'];
 
 // Game configuration
