@@ -3,7 +3,6 @@ import * as Phaser from 'phaser';
 const TEXT_RES = window.devicePixelRatio || 2;
 
 const AMBER = 0xf39c12;
-const AMBER_LIGHT = 0xffd27a;
 const AMBER_STR = '#f39c12';
 const TEAL_STR = '#9fd8e8';
 const TEAL_LIGHT = 0x7fd4e8;
@@ -39,38 +38,47 @@ export class MenuScene extends Phaser.Scene {
     createBackground(width, height) {
         const { horizonY, marshY } = this;
 
-        // Sky: cool dusk gradient warming toward the horizon
         const sky = this.add.graphics().setDepth(-30);
-        sky.fillGradientStyle(0x0b2545, 0x0b2545, 0x1d5c86, 0x1d5c86, 1, 1, 1, 1);
+        sky.fillGradientStyle(0x1976d2, 0x1976d2, 0xffd54f, 0xffd54f, 1, 1, 1, 1);
         sky.fillRect(0, 0, width, horizonY + 2);
 
-        // Low sun with soft radial glow (right of centre)
         const sunX = width * 0.72;
-        const sunY = horizonY * 0.78;
+        const sunY = horizonY * 0.46;
         const sun = this.add.graphics().setDepth(-29);
         sun.setBlendMode(Phaser.BlendModes.ADD);
-        sun.fillStyle(AMBER, 0.10);
-        sun.fillCircle(sunX, sunY, horizonY * 0.42);
-        sun.fillStyle(AMBER_LIGHT, 0.16);
-        sun.fillCircle(sunX, sunY, horizonY * 0.26);
-        sun.fillStyle(0xffe9b8, 0.55);
-        sun.fillCircle(sunX, sunY, horizonY * 0.13);
+        sun.fillStyle(0xffa726, 0.20);
+        sun.fillCircle(sunX, sunY, horizonY * 0.48);
+        sun.fillStyle(0xffca28, 0.42);
+        sun.fillCircle(sunX, sunY, horizonY * 0.28);
+        sun.fillStyle(0xfff59d, 0.85);
+        sun.fillCircle(sunX, sunY, horizonY * 0.15);
+        sun.fillStyle(0xffffff, 0.98);
+        sun.fillCircle(sunX, sunY, horizonY * 0.08);
 
-        // Water: deep teal band under the sky
+        sun.lineStyle(2, 0xffeb3b, 0.35);
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * Math.PI) / 4;
+            const r1 = horizonY * 0.18;
+            const r2 = horizonY * 0.44;
+            sun.beginPath();
+            sun.moveTo(sunX + Math.cos(angle) * r1, sunY + Math.sin(angle) * r1);
+            sun.lineTo(sunX + Math.cos(angle) * r2, sunY + Math.sin(angle) * r2);
+            sun.strokePath();
+        }
+
         const water = this.add.graphics().setDepth(-29);
-        water.fillGradientStyle(0x1b4965, 0x1b4965, 0x0a2f49, 0x0a2f49, 1, 1, 1, 1);
+        water.fillGradientStyle(0x1565c0, 0x1565c0, 0x00838f, 0x00838f, 1, 1, 1, 1);
         water.fillRect(0, horizonY, width, marshY - horizonY + 2);
 
-        // Sun reflection: amber streaks fading with depth
         const refl = this.add.graphics().setDepth(-28);
         refl.setBlendMode(Phaser.BlendModes.ADD);
-        for (let i = 0; i < 7; i++) {
-            const t = i / 6;
+        for (let i = 0; i < 8; i++) {
+            const t = i / 7;
             const y = horizonY + 6 + t * (marshY - horizonY - 12);
-            const w = (1 - t) * 130 + 24;
-            refl.fillStyle(AMBER_LIGHT, 0.20 * (1 - t) + 0.05);
+            const w = (1 - t) * 140 + 28;
+            refl.fillStyle(0xffe082, 0.32 * (1 - t) + 0.08);
             refl.fillEllipse(
-                sunX + Phaser.Math.Between(-14, 14), y,
+                sunX + Phaser.Math.Between(-12, 12), y,
                 w, Phaser.Math.Between(2, 4)
             );
         }
@@ -218,7 +226,7 @@ export class MenuScene extends Phaser.Scene {
 
     // ─── PARTICLES ───────────────────────────────────────────────
 
-    createParticles(width, height) {
+    createParticles(width, _height) {
         // Drifting seeds across the whole scene
         this.add.particles(0, 0, 'seed', {
             x: { min: 0, max: width },
@@ -256,7 +264,7 @@ export class MenuScene extends Phaser.Scene {
         const subSize = compact ? '15px' : '20px';
         const eyebrowSize = compact ? '11px' : '14px';
 
-        const eyebrow = this.add.text(width / 2, titleY - (compact ? 30 : 48),
+        this.add.text(width / 2, titleY - (compact ? 30 : 48),
             'A  M A R S H  C O N S E R V A T I O N  G A M E', {
             fontFamily: 'Outfit',
             fontSize: eyebrowSize,
@@ -272,7 +280,7 @@ export class MenuScene extends Phaser.Scene {
             resolution: TEXT_RES,
         }).setOrigin(0.5).setAlpha(0.35).setBlendMode(Phaser.BlendModes.ADD);
 
-        const title = this.add.text(width / 2, titleY, 'RAIL REFUGE', {
+        this.add.text(width / 2, titleY, 'RAIL REFUGE', {
             fontFamily: 'Outfit',
             fontSize: titleSize,
             fontStyle: '900',
@@ -536,7 +544,7 @@ export class MenuScene extends Phaser.Scene {
     showTutorial() {
         const { width, height } = this.scale;
         const shell = this.buildModalShell(width, height, 'HOW TO PLAY');
-        const { panelW, panelH, left, top, compact } = shell;
+        const { panelW, left, top, compact } = shell;
 
         const instructions = [
             { icon: 'icon_wave', text: 'The tide is rising! Rails flee from left to right.' },

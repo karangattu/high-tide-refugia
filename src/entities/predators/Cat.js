@@ -105,7 +105,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    patrol(delta) {
+    patrol(_delta) {
         // Get current water level to adjust patrol boundary
         const waterX = this.scene.waterSystem ? this.scene.waterSystem.getWaterX() : 0;
         const currentPatrolMinX = Math.max(this.patrolMinX, waterX + 40);
@@ -189,7 +189,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    chase(delta) {
+    chase(_delta) {
         if (!this.target || !this.target.isAlive) {
             this.endChase();
             return;
@@ -257,7 +257,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    attack(delta) {
+    attack(_delta) {
         // Attack state is brief and handled by tween in catchPrey
         // Just wait for tween to complete and transition to cooldown
     }

@@ -64,7 +64,7 @@ export class ParticleManager {
         });
     }
 
-    createFloatingSeeds(width, height) {
+    createFloatingSeeds(width, _height) {
         return this.scene.add.particles(0, 0, 'seed', {
             x: { min: 0, max: width },
             y: { min: -20, max: 0 },

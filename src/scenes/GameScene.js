@@ -41,11 +41,9 @@ export class GameScene extends Phaser.Scene {
         // Create entity groups
         this.createEntityGroups();
 
-        // Water system (flood covers the marsh strip only, like the intro's shoreline)
-        this.waterSystem = new WaterSystem(this, 50, this.marshTop, this.marshBottom);
+        this.waterSystem = new WaterSystem(this, 50, this.marshY, height);
 
-        // Setup input
-        this.setupInput(width, height);
+        this.setupInput();
 
         // Setup collisions
         this.setupCollisions();
@@ -59,6 +57,20 @@ export class GameScene extends Phaser.Scene {
 
         // Connect UI scene
         this.connectUI();
+
+        if (this.cache.audio.exists('rail_call')) {
+            this.railCallBgm = this.sound.get('rail_call') || this.sound.add('rail_call', { loop: true, volume: 0.35 });
+            this.railCallBgm.setVolume(0.35);
+            if (!this.railCallBgm.isPlaying) {
+                this.railCallBgm.play();
+            }
+        }
+
+        this.events.once('shutdown', () => {
+            if (this.railCallBgm) {
+                this.railCallBgm.stop();
+            }
+        });
 
         // Fade in
         this.cameras.main.fadeIn(500);
@@ -75,49 +87,57 @@ export class GameScene extends Phaser.Scene {
         this.marshTop = marshY + 30;
         this.marshBottom = height - 30;
 
-        // ── Sky: cool dusk gradient warming toward the horizon ──
         const sky = this.add.graphics().setDepth(-30);
-        sky.fillGradientStyle(0x0b2545, 0x0b2545, 0x1d5c86, 0x1d5c86, 1, 1, 1, 1);
+        sky.fillGradientStyle(0x1976d2, 0x1976d2, 0xffd54f, 0xffd54f, 1, 1, 1, 1);
         sky.fillRect(0, 0, width, horizonY + 2);
 
-        // Low sun with soft radial glow (right of centre, like the menu)
         const sunX = width * 0.72;
-        const sunY = horizonY * 0.78;
+        const sunY = horizonY * 0.46;
         const sun = this.add.graphics().setDepth(-29);
         sun.setBlendMode(Phaser.BlendModes.ADD);
-        sun.fillStyle(0xf39c12, 0.10);
-        sun.fillCircle(sunX, sunY, horizonY * 0.42);
-        sun.fillStyle(0xffd27a, 0.16);
-        sun.fillCircle(sunX, sunY, horizonY * 0.26);
-        sun.fillStyle(0xffe9b8, 0.55);
-        sun.fillCircle(sunX, sunY, horizonY * 0.13);
+        sun.fillStyle(0xffa726, 0.20);
+        sun.fillCircle(sunX, sunY, horizonY * 0.48);
+        sun.fillStyle(0xffca28, 0.42);
+        sun.fillCircle(sunX, sunY, horizonY * 0.28);
+        sun.fillStyle(0xfff59d, 0.85);
+        sun.fillCircle(sunX, sunY, horizonY * 0.15);
+        sun.fillStyle(0xffffff, 0.98);
+        sun.fillCircle(sunX, sunY, horizonY * 0.08);
 
-        // ── Static bay water band under the sky ──
+        sun.lineStyle(2, 0xffeb3b, 0.35);
+        for (let i = 0; i < 8; i++) {
+            const angle = (i * Math.PI) / 4;
+            const r1 = horizonY * 0.18;
+            const r2 = horizonY * 0.44;
+            sun.beginPath();
+            sun.moveTo(sunX + Math.cos(angle) * r1, sunY + Math.sin(angle) * r1);
+            sun.lineTo(sunX + Math.cos(angle) * r2, sunY + Math.sin(angle) * r2);
+            sun.strokePath();
+        }
+
         const water = this.add.graphics().setDepth(-29);
-        water.fillGradientStyle(0x1b4965, 0x1b4965, 0x0a2f49, 0x0a2f49, 1, 1, 1, 1);
+        water.fillGradientStyle(0x1565c0, 0x1565c0, 0x00838f, 0x00838f, 1, 1, 1, 1);
         water.fillRect(0, horizonY, width, marshY - horizonY + 2);
 
-        // Sun reflection: amber streaks fading with depth
         const refl = this.add.graphics().setDepth(-28);
         refl.setBlendMode(Phaser.BlendModes.ADD);
-        for (let i = 0; i < 7; i++) {
-            const t = i / 6;
+        for (let i = 0; i < 8; i++) {
+            const t = i / 7;
             const y = horizonY + 6 + t * (marshY - horizonY - 12);
-            const w = (1 - t) * 130 + 24;
-            refl.fillStyle(0xffd27a, 0.20 * (1 - t) + 0.05);
+            const w = (1 - t) * 140 + 28;
+            refl.fillStyle(0xffe082, 0.32 * (1 - t) + 0.08);
             refl.fillEllipse(
-                sunX + Phaser.Math.Between(-14, 14), y,
+                sunX + Phaser.Math.Between(-12, 12), y,
                 w, Phaser.Math.Between(2, 4)
             );
         }
 
-        // Shimmer lines across the static water
         for (let i = 0; i < 14; i++) {
             const y = Phaser.Math.Between(horizonY + 8, marshY - 8);
             const line = this.add.rectangle(
                 Phaser.Math.Between(0, width), y,
                 Phaser.Math.Between(24, 90), 2,
-                0x9fd8e8, Phaser.Math.FloatBetween(0.10, 0.28)
+                0x9fd8e8, Phaser.Math.FloatBetween(0.12, 0.32)
             ).setDepth(-28);
             this.tweens.add({
                 targets: line,
@@ -129,14 +149,12 @@ export class GameScene extends Phaser.Scene {
             });
         }
 
-        // ── Marsh: mud waterline shading into upland green ──
         const marsh = this.add.graphics().setDepth(-27);
         marsh.fillStyle(0x5d4e37, 1);
         marsh.fillRect(0, marshY, width, 30);
         marsh.fillGradientStyle(0x4a5d33, 0x4a5d33, 0x22331b, 0x22331b, 1, 1, 1, 1);
         marsh.fillRect(0, marshY + 24, width, height - marshY - 24);
 
-        // Waterline foam
         const foam = this.add.graphics().setDepth(-26);
         foam.lineStyle(2, 0xffffff, 0.28);
         foam.beginPath();
@@ -146,7 +164,6 @@ export class GameScene extends Phaser.Scene {
         }
         foam.strokePath();
 
-        // ── Perspective reed clusters in the marsh (taller toward foreground) ──
         const reeds = this.add.graphics().setDepth(-25);
         const clusters = Math.round(width / 130);
         for (let i = 0; i < clusters; i++) {
@@ -176,7 +193,6 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // Gumplant dressing along the waterline (kept clear of gameplay UI)
         const uplandX = width - 150;
         const clumps = Math.max(4, Math.round(width / 260));
         for (let i = 0; i < clumps; i++) {
@@ -188,35 +204,72 @@ export class GameScene extends Phaser.Scene {
                 .setDepth(-24);
         }
 
-        // ── Upland / safe zone strip (right edge) ──
+        const cordgrassCount = Math.round((height - this.marshY) / 20);
+        for (let i = 0; i <= cordgrassCount; i++) {
+            const y = this.marshY + 10 + i * 20 + Phaser.Math.Between(-6, 6);
+            const x = Phaser.Math.Between(15, 80);
+            const scale = Phaser.Math.FloatBetween(0.24, 0.32);
+            const cg = this.add.image(x, y, 'cordgrass_8')
+                .setScale(scale)
+                .setDepth(6);
+            this.tweens.add({
+                targets: cg,
+                rotation: { from: -0.04, to: 0.04 },
+                duration: Phaser.Math.Between(2200, 3600),
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+                delay: Phaser.Math.Between(0, 1500),
+            });
+        }
+
         const upland = this.add.graphics().setDepth(-24);
         upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x2f4a1d, 0x2f4a1d, 1, 1, 1, 1);
         upland.fillRect(uplandX, marshY, width - uplandX, height - marshY);
         upland.fillGradientStyle(0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0x4a6b2e, 0, 0.85, 0, 0.85);
         upland.fillRect(uplandX - 70, marshY, 100, height - marshY);
 
-        // Safe zone indicator
+        const gumplantCount = Math.round((this.marshBottom - this.marshTop) / 20);
+        for (let i = 0; i <= gumplantCount; i++) {
+            const y = this.marshTop + i * 20 + Phaser.Math.Between(-8, 8);
+            const x = uplandX + Phaser.Math.Between(10, 100);
+            const scale = Phaser.Math.FloatBetween(0.26, 0.34);
+            const gp = this.add.image(x, y, 'gumplant_8')
+                .setScale(scale)
+                .setDepth(2);
+            this.tweens.add({
+                targets: gp,
+                scaleX: scale * 1.04,
+                duration: Phaser.Math.Between(2400, 3800),
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+                delay: Phaser.Math.Between(0, 1800),
+            });
+        }
+
         const safeZoneGlow = this.add.rectangle(
             width - 75, (marshY + height) / 2,
             150, height - marshY,
-            0x27ae60, 0.15
+            0x27ae60, 0.12
         );
         safeZoneGlow.setDepth(1);
 
-        // Zone labels
-        this.add.text(width - 75, marshY + 18, 'SAFE ZONE', {
+        this.add.text(width - 75, marshY + 18, 'SAFE REFUGE', {
             fontFamily: 'Outfit',
             fontSize: '14px',
-            color: '#27ae60',
+            fontStyle: 'bold',
+            color: '#2ecc71',
+            stroke: '#0c1a0c',
+            strokeThickness: 3,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(10);
 
-        // Vignette to seat the composition
         const vignette = this.add.graphics().setDepth(8);
-        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.3, 0.3, 0, 0);
-        vignette.fillRect(0, 0, width, height * 0.09);
-        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.28, 0.28);
-        vignette.fillRect(0, height * 0.93, width, height * 0.07);
+        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0.25, 0.25, 0, 0);
+        vignette.fillRect(0, 0, width, height * 0.08);
+        vignette.fillGradientStyle(0x000000, 0x000000, 0x000000, 0x000000, 0, 0, 0.25, 0.25);
+        vignette.fillRect(0, height * 0.94, width, height * 0.06);
 
         // Floating seed particles over the marsh
         this.particleManager.createFloatingSeeds(width, height);
@@ -244,7 +297,7 @@ export class GameScene extends Phaser.Scene {
         this.plantPreview.setPlantType(PLANT_TYPES[0].key);
     }
 
-    setupInput(width, height) {
+    setupInput() {
         // Mouse/touch for planting
         this.input.on('pointermove', (pointer) => {
             if (this.isPaused || this.isGameOver) return;
@@ -600,11 +653,16 @@ export class GameScene extends Phaser.Scene {
 
     spawnRail() {
         const y = Phaser.Math.Between(this.marshTop, this.marshBottom);
-        const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
+        const waterX = this.waterSystem ? this.waterSystem.getWaterX(y) : 50;
         const speedMul = this.levelManager.getCurrentConfig().railSpeedMultiplier || 1;
+        const spawnX = Math.max(35, waterX + 35);
 
-        const rail = new Rail(this, waterX + 40, y, speedMul);
+        const rail = new Rail(this, spawnX, y, speedMul);
         this.rails.add(rail);
+
+        if (this.particleManager) {
+            this.particleManager.emitDirt(spawnX - 10, y);
+        }
 
         return rail;
     }
@@ -612,11 +670,9 @@ export class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isPaused || this.isGameOver) return;
 
-        // Update systems
         this.waterSystem.update(delta);
         this.seedBank.update(delta);
 
-        // Update predators
         this.groundPredators.children.entries.forEach(predator => {
             predator.update(time, delta, this.rails);
         });
@@ -625,30 +681,26 @@ export class GameScene extends Phaser.Scene {
             harrier.update(time, delta, this.rails, this.plants);
         });
 
-        // Check rails against water
         this.checkWaterCollisions();
 
-        // Check rails reaching safety
         this.checkSafeZone();
 
-        // Check rail-plant overlaps (continuous)
         this.updateRailPlantOverlaps();
 
-        // Spawn rails
         this.updateSpawning(delta);
 
-        // Check win/lose conditions
         this.checkGameState();
     }
 
     checkWaterCollisions() {
-        const waterX = this.waterSystem.getWaterX();
-
         this.rails.children.entries.forEach(rail => {
-            if (rail.isAlive && rail.x < waterX + 20) {
-                rail.die('water');
-                this.scoreManager.railLost(rail, 'water');
-                this.particleManager.emitWaterSplash(rail.x, rail.y);
+            if (rail.isAlive) {
+                const waterXAtY = this.waterSystem.getWaterX(rail.y);
+                if (rail.x < waterXAtY + 12) {
+                    rail.die('water');
+                    this.scoreManager.railLost(rail, 'water');
+                    this.particleManager.emitWaterSplash(rail.x, rail.y);
+                }
             }
         });
     }
@@ -656,7 +708,7 @@ export class GameScene extends Phaser.Scene {
     checkSafeZone() {
         this.rails.children.entries.forEach(rail => {
             if (rail.isAlive && !rail.hasReachedSafety && rail.x >= this.safeZoneX) {
-                const isPerfect = rail.reachSafety();
+                rail.reachSafety();
                 this.scoreManager.railSaved(rail);
             }
         });
@@ -722,7 +774,6 @@ export class GameScene extends Phaser.Scene {
 
         const waterX = this.waterSystem.getWaterX();
         const stats = this.scoreManager.getStats();
-        const { width } = this.scale;
 
         // Game over if too many rails are lost
         if (stats.railsLost > 5) {
@@ -748,6 +799,19 @@ export class GameScene extends Phaser.Scene {
     gameWon() {
         if (this.isGameOver) return;
         this.isGameOver = true;
+
+        if (this.railCallBgm && this.railCallBgm.isPlaying) {
+            this.tweens.add({
+                targets: this.railCallBgm,
+                volume: 0,
+                duration: 450,
+                onComplete: () => {
+                    if (this.railCallBgm) {
+                        this.railCallBgm.stop();
+                    }
+                }
+            });
+        }
 
         const stats = this.scoreManager.getStats();
 
@@ -826,6 +890,19 @@ export class GameScene extends Phaser.Scene {
         if (this.isGameOver) return;
         this.isGameOver = true;
 
+        if (this.railCallBgm && this.railCallBgm.isPlaying) {
+            this.tweens.add({
+                targets: this.railCallBgm,
+                volume: 0,
+                duration: 450,
+                onComplete: () => {
+                    if (this.railCallBgm) {
+                        this.railCallBgm.stop();
+                    }
+                }
+            });
+        }
+
         const stats = this.scoreManager.getStats();
 
         // Transition to game over scene
@@ -845,8 +922,14 @@ export class GameScene extends Phaser.Scene {
 
         if (this.isPaused) {
             this.physics.pause();
+            if (this.railCallBgm && this.railCallBgm.isPlaying) {
+                this.railCallBgm.pause();
+            }
         } else {
             this.physics.resume();
+            if (this.railCallBgm && this.railCallBgm.isPaused) {
+                this.railCallBgm.resume();
+            }
         }
 
         // Notify UI
@@ -854,9 +937,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     connectUI() {
-        const uiScene = this.scene.get('UIScene');
-
-        // Connect seed bank
         this.seedBank.onUpdate = (current, max) => {
             this.events.emit('seedsUpdate', current, max);
         };

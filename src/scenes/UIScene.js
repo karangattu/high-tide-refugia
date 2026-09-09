@@ -15,9 +15,9 @@ export class UIScene extends Phaser.Scene {
         const PAD = compact ? 6 : 12;
 
         this.createSeedPanel(PAD, PAD, compact);
-        this.createLevelLabel(width / 2, PAD, compact);
+        this.createHeaderStatus(width / 2, PAD, compact);
         this.createScorePanel(width - PAD, PAD, compact);
-        this.createStatsBar(width / 2, height - PAD, compact);
+        this.createFooter(width, height, compact);
 
         gameScene.events.on('seedsUpdate', this.updateSeedBank, this);
         gameScene.events.on('scoreUpdate', this.updateScore, this);
@@ -33,8 +33,8 @@ export class UIScene extends Phaser.Scene {
     }
 
     createSeedPanel(x, y, compact) {
-        const panelW = compact ? 160 : 260;
-        const panelH = compact ? 40 : 52;
+        const panelW = compact ? 160 : 250;
+        const panelH = compact ? 42 : 52;
         const cx = x + panelW / 2;
         const cy = y + panelH / 2;
 
@@ -42,30 +42,30 @@ export class UIScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScale(panelW / 260, panelH / 52);
 
-        this.add.image(x + (compact ? 12 : 18), cy, 'seed').setScale(compact ? 0.8 : 1.2);
+        this.add.image(x + (compact ? 14 : 20), cy, 'seed').setScale(compact ? 0.9 : 1.25);
 
-        this.add.text(x + (compact ? 26 : 34), y + (compact ? 4 : 8), 'SEEDS', {
+        this.add.text(x + (compact ? 28 : 38), y + (compact ? 5 : 8), 'SEEDS', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '8px' : '10px',
+            fontSize: compact ? '9px' : '11px',
             fontStyle: 'bold',
             color: '#f39c12',
             resolution: TEXT_RES,
         });
 
-        this.seedsText = this.add.text(x + (compact ? 26 : 34), y + (compact ? 14 : 22), '8 / 10', {
+        this.seedsText = this.add.text(x + (compact ? 28 : 38), y + (compact ? 16 : 22), '8 / 10', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '12px' : '16px',
+            fontSize: compact ? '13px' : '17px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
         });
 
-        const barX = x + (compact ? 70 : 100);
-        const barW = compact ? 80 : 140;
-        const barH = compact ? 6 : 8;
-        this.seedBarBg = this.add.rectangle(barX + barW / 2, cy, barW, barH, 0x1a1a1a)
+        const barX = x + (compact ? 78 : 108);
+        const barW = compact ? 72 : 126;
+        const barH = compact ? 7 : 9;
+        this.seedBarBg = this.add.rectangle(barX + barW / 2, cy, barW, barH, 0x141414)
             .setOrigin(0.5);
-        this.add.rectangle(barX + barW / 2, cy, barW + 2, barH + 2, 0x333333)
+        this.add.rectangle(barX + barW / 2, cy, barW + 2, barH + 2, 0x2d3a24)
             .setOrigin(0.5).setDepth(-1);
 
         this.seedBarFill = this.add.rectangle(barX, cy, barW, barH, 0xf39c12)
@@ -74,79 +74,136 @@ export class UIScene extends Phaser.Scene {
         this._seedBarW = barW;
     }
 
-    createLevelLabel(cx, y, compact) {
-        this.levelText = this.add.text(cx, y + (compact ? 20 : 26), 'HIGH TIDE RISING', {
+    createHeaderStatus(cx, y, compact) {
+        const panelW = compact ? 170 : 230;
+        const panelH = compact ? 36 : 44;
+        const cy = y + (compact ? 21 : 26);
+
+        this.add.image(cx, cy, 'hud_flock_panel')
+            .setOrigin(0.5)
+            .setScale(panelW / 240, panelH / 44);
+
+        const spread = compact ? 46 : 64;
+
+        this.waveText = this.add.text(cx - spread, cy, 'WAVE 1/3', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '11px' : '14px',
+            fontSize: compact ? '10px' : '12px',
             fontStyle: 'bold',
-            color: '#ffffff',
-            stroke: '#000000',
-            strokeThickness: 3,
+            color: '#f1c40f',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
+
+        this.add.text(cx - spread / 3, cy, '·', {
+            fontFamily: 'Outfit',
+            fontSize: '14px',
+            color: '#445544',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5);
+
+        this.add.image(cx - 2, cy, 'icon_heart_green').setScale(compact ? 0.55 : 0.7);
+        this.savedText = this.add.text(cx + (compact ? 10 : 13), cy, '0', {
+            fontFamily: 'Outfit',
+            fontSize: compact ? '11px' : '13px',
+            fontStyle: 'bold',
+            color: '#2ecc71',
+            resolution: TEXT_RES,
+        }).setOrigin(0, 0.5);
+
+        this.add.text(cx + spread / 3 + 4, cy, '·', {
+            fontFamily: 'Outfit',
+            fontSize: '14px',
+            color: '#445544',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5);
+
+        this.add.image(cx + spread - (compact ? 16 : 22), cy, 'icon_heart_broken').setScale(compact ? 0.55 : 0.7);
+        this.lostText = this.add.text(cx + spread - (compact ? 5 : 8), cy, '0/5', {
+            fontFamily: 'Outfit',
+            fontSize: compact ? '11px' : '13px',
+            fontStyle: 'bold',
+            color: '#e74c3c',
+            resolution: TEXT_RES,
+        }).setOrigin(0, 0.5);
     }
 
     createScorePanel(right, y, compact) {
-        const pw = compact ? 140 : 220;
-        const ph = compact ? 40 : 52;
+        const pw = compact ? 150 : 210;
+        const ph = compact ? 42 : 52;
         const cx = right - pw / 2;
         const cy = y + ph / 2;
+
         this.add.image(cx, cy, 'hud_panel')
             .setOrigin(0.5)
             .setScale(pw / 220, ph / 52);
 
-        this.add.image(cx - (compact ? 58 : 96), cy, 'icon_trophy').setScale(compact ? 0.7 : 0.9);
+        this.add.image(cx - (compact ? 58 : 84), cy, 'icon_trophy').setScale(compact ? 0.8 : 1.05);
 
-        this.scoreText = this.add.text(cx - (compact ? 42 : 74), cy, '0', {
+        this.add.text(cx - (compact ? 42 : 62), y + (compact ? 5 : 8), 'POINTS', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '14px' : '20px',
+            fontSize: compact ? '8px' : '10px',
+            fontStyle: 'bold',
+            color: '#f1c40f',
+            resolution: TEXT_RES,
+        });
+
+        this.scoreText = this.add.text(cx - (compact ? 42 : 62), y + (compact ? 15 : 21), '0', {
+            fontFamily: 'Outfit',
+            fontSize: compact ? '14px' : '19px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
-        }).setOrigin(0, 0.5);
+        }).setOrigin(0, 0);
 
-        this.comboText = this.add.text(cx + (compact ? 30 : 50), cy, 'x1.0', {
+        this.comboText = this.add.text(cx + (compact ? 36 : 56), cy, 'x1.0', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '10px' : '13px',
+            fontSize: compact ? '10px' : '12px',
             fontStyle: 'bold',
             color: '#f1c40f',
-            backgroundColor: '#1a1a1a80',
-            padding: { x: 4, y: 2 },
+            backgroundColor: '#1a1a1a90',
+            padding: { x: 5, y: 3 },
             resolution: TEXT_RES,
         }).setOrigin(0.5).setAlpha(0.4);
     }
 
-    createStatsBar(cx, bottom, compact) {
-        const BY = bottom - (compact ? 14 : 18);
-        const barScale = compact ? 0.7 : 1;
-        this.add.image(cx, BY, 'hud_panel_bottom')
+    createFooter(width, height, compact) {
+        const footerH = compact ? 30 : 38;
+        const cy = height - footerH / 2;
+
+        this.add.image(width / 2, cy, 'hud_footer_bar')
             .setOrigin(0.5)
-            .setScale(barScale);
+            .setScale(width / 960, footerH / 44);
 
-        const spread = compact ? 80 : 120;
+        const brand = compact
+            ? '🌿 SF BAY REFUGE'
+            : "🌿 SAN FRANCISCO BAY ESTUARY · RIDGWAY'S RAIL REFUGE";
 
-        this.add.image(cx - spread, BY, 'icon_heart_green').setScale(compact ? 0.6 : 0.8);
-        this.savedText = this.add.text(cx - spread + 16, BY, '0 saved', {
+        this.add.text(compact ? 10 : 20, cy, brand, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '10px' : '13px',
-            color: '#27ae60',
+            fontSize: compact ? '10px' : '12px',
+            fontStyle: 'bold',
+            color: '#2ecc71',
             resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
 
-        this.add.text(cx - (compact ? 12 : 20), BY, '·', {
+        const tip = compact
+            ? 'Plant refugia to save Rails'
+            : 'Rising King Tide · Plant Gumplant & Cordgrass corridors to guide Rails to safety';
+
+        this.footerTipText = this.add.text(width / 2 + (compact ? 30 : 40), cy, tip, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '12px' : '16px',
-            color: '#555555',
+            fontSize: compact ? '9px' : '11px',
+            color: '#b0c4b1',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.image(cx + (compact ? 6 : 10), BY, 'icon_heart_broken').setScale(compact ? 0.6 : 0.8);
-        this.lostText = this.add.text(cx + (compact ? 22 : 28), BY, '0 lost', {
-            fontFamily: 'Outfit',
-            fontSize: compact ? '10px' : '13px',
-            color: '#e74c3c',
-            resolution: TEXT_RES,
-        }).setOrigin(0, 0.5);
+        if (!compact) {
+            this.add.text(width - 20, cy, '[ESC] PAUSE', {
+                fontFamily: 'Outfit',
+                fontSize: '11px',
+                color: '#65806e',
+                resolution: TEXT_RES,
+            }).setOrigin(1, 0.5);
+        }
     }
 
     updateSeedBank(current, max) {
@@ -201,13 +258,13 @@ export class UIScene extends Phaser.Scene {
     }
 
     updateStats(stats) {
-        this.savedText.setText(`${stats.railsSaved} saved`);
-        this.lostText.setText(`${stats.railsLost} lost`);
+        if (this.savedText) this.savedText.setText(`${stats.railsSaved}`);
+        if (this.lostText) this.lostText.setText(`${stats.railsLost}/5`);
 
         const gameScene = this.scene.get('GameScene');
-        if (gameScene && gameScene.levelManager) {
+        if (gameScene && gameScene.levelManager && this.waveText) {
             const progress = gameScene.levelManager.getLevelProgress();
-            this.levelText.setText(`WAVE ${progress.wave}/${progress.totalWaves}`);
+            this.waveText.setText(`WAVE ${progress.wave}/${progress.totalWaves}`);
         }
     }
 

@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test",
+    "lint": "npx eslint src"
   },
   "keywords": ["phaser", "game", "conservation", "rails", "tower-defense"],
   "author": "",

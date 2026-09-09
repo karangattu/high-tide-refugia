@@ -48,6 +48,8 @@ export class BootScene extends Phaser.Scene {
         // Load Intro Video
         this.load.video('intro_video', 'assets/title_movie.mp4');
 
+        this.load.audio('rail_call', 'assets/sprites/ridgways_rail_call.mp3');
+
         // Create placeholder graphics for other assets
         this.createPlaceholderAssets();
     }
@@ -221,25 +223,50 @@ export class BootScene extends Phaser.Scene {
         buttonHoverGraphics.destroy();
 
         // ── HUD panel texture (reused for all panels) ──
-        // Compact top-bar panel 220×52
         const hPnl = this.make.graphics({ x: 0, y: 0, add: false });
-        hPnl.fillStyle(0x0c1a0c, 0.82);
-        hPnl.fillRoundedRect(0, 0, 220, 52, 10);
-        hPnl.lineStyle(1, 0x3ddc84, 0.35);
-        hPnl.strokeRoundedRect(0, 0, 220, 52, 10);
+        hPnl.fillStyle(0x0a160e, 0.88);
+        hPnl.fillRoundedRect(0, 0, 220, 52, 12);
+        hPnl.lineStyle(1.5, 0x3ddc84, 0.45);
+        hPnl.strokeRoundedRect(0, 0, 220, 52, 12);
+        hPnl.lineStyle(1, 0xffffff, 0.12);
+        hPnl.strokeRoundedRect(2, 2, 216, 48, 10);
         hPnl.generateTexture('hud_panel', 220, 52);
         hPnl.destroy();
 
-        // Wide panel for seed bar 260×52
         const hPnlW = this.make.graphics({ x: 0, y: 0, add: false });
-        hPnlW.fillStyle(0x0c1a0c, 0.82);
-        hPnlW.fillRoundedRect(0, 0, 260, 52, 10);
-        hPnlW.lineStyle(1, 0xf39c12, 0.35);
-        hPnlW.strokeRoundedRect(0, 0, 260, 52, 10);
+        hPnlW.fillStyle(0x0a160e, 0.88);
+        hPnlW.fillRoundedRect(0, 0, 260, 52, 12);
+        hPnlW.lineStyle(1.5, 0xf39c12, 0.45);
+        hPnlW.strokeRoundedRect(0, 0, 260, 52, 12);
+        hPnlW.lineStyle(1, 0xffffff, 0.12);
+        hPnlW.strokeRoundedRect(2, 2, 256, 48, 10);
         hPnlW.generateTexture('hud_panel_wide', 260, 52);
         hPnlW.destroy();
 
-        // Bottom stats bar full-width 480×40
+        const hPnlF = this.make.graphics({ x: 0, y: 0, add: false });
+        hPnlF.fillStyle(0x08140c, 0.88);
+        hPnlF.fillRoundedRect(0, 0, 240, 44, 22);
+        hPnlF.lineStyle(1.5, 0x3ddc84, 0.4);
+        hPnlF.strokeRoundedRect(0, 0, 240, 44, 22);
+        hPnlF.generateTexture('hud_flock_panel', 240, 44);
+        hPnlF.destroy();
+
+        const hPnlFooter = this.make.graphics({ x: 0, y: 0, add: false });
+        hPnlFooter.fillStyle(0x07120a, 0.92);
+        hPnlFooter.fillRect(0, 0, 960, 44);
+        hPnlFooter.lineStyle(1.5, 0x3ddc84, 0.45);
+        hPnlFooter.beginPath();
+        hPnlFooter.moveTo(0, 1);
+        hPnlFooter.lineTo(960, 1);
+        hPnlFooter.strokePath();
+        hPnlFooter.lineStyle(1, 0xffffff, 0.1);
+        hPnlFooter.beginPath();
+        hPnlFooter.moveTo(0, 3);
+        hPnlFooter.lineTo(960, 3);
+        hPnlFooter.strokePath();
+        hPnlFooter.generateTexture('hud_footer_bar', 960, 44);
+        hPnlFooter.destroy();
+
         const hPnlB = this.make.graphics({ x: 0, y: 0, add: false });
         hPnlB.fillStyle(0x0c1a0c, 0.72);
         hPnlB.fillRoundedRect(0, 0, 480, 36, 8);
@@ -401,56 +428,93 @@ export class BootScene extends Phaser.Scene {
      *  Generates `{key}_1..{key}_8` plus a `{key}` mature alias
      *  (and the legacy `plant` alias for gumplant). */
     slicePlantSheets() {
+        const PLANT_STAGE_BOUNDS = {
+            gumplant: [
+                { x: 172, y: 291, w: 141, h: 109 },
+                { x: 517, y: 238, w: 203, h: 162 },
+                { x: 876, y: 180, w: 262, h: 222 },
+                { x: 1280, y: 110, w: 366, h: 292 },
+                { x: 24, y: 513, w: 374, h: 311 },
+                { x: 413, y: 503, w: 376, h: 326 },
+                { x: 801, y: 469, w: 418, h: 362 },
+                { x: 1240, y: 456, w: 522, h: 376 },
+            ],
+            cordgrass: [
+                { x: 147, y: 233, w: 114, h: 149 },
+                { x: 497, y: 159, w: 236, h: 224 },
+                { x: 906, y: 78, w: 325, h: 305 },
+                { x: 1346, y: 19, w: 376, h: 364 },
+                { x: 30, y: 454, w: 368, h: 385 },
+                { x: 434, y: 430, w: 401, h: 409 },
+                { x: 838, y: 420, w: 445, h: 419 },
+                { x: 1287, y: 420, w: 475, h: 423 },
+            ],
+            pickleweed: [
+                { x: 166, y: 192, w: 121, h: 176 },
+                { x: 551, y: 118, w: 187, h: 265 },
+                { x: 886, y: 72, w: 330, h: 325 },
+                { x: 1322, y: 17, w: 407, h: 392 },
+                { x: 32, y: 482, w: 373, h: 348 },
+                { x: 448, y: 476, w: 378, h: 358 },
+                { x: 848, y: 473, w: 417, h: 375 },
+                { x: 1289, y: 433, w: 468, h: 420 },
+            ],
+            saltgrass: [
+                { x: 154, y: 229, w: 114, h: 154 },
+                { x: 477, y: 198, w: 204, h: 186 },
+                { x: 832, y: 88, w: 286, h: 296 },
+                { x: 1259, y: 28, w: 370, h: 356 },
+                { x: 44, y: 511, w: 338, h: 316 },
+                { x: 395, y: 443, w: 398, h: 386 },
+                { x: 800, y: 427, w: 427, h: 404 },
+                { x: 1240, y: 420, w: 516, h: 415 },
+            ],
+            jaumea: [
+                { x: 134, y: 202, w: 164, h: 151 },
+                { x: 514, y: 123, w: 230, h: 240 },
+                { x: 904, y: 79, w: 274, h: 287 },
+                { x: 1361, y: 50, w: 332, h: 319 },
+                { x: 25, y: 495, w: 344, h: 324 },
+                { x: 400, y: 478, w: 407, h: 345 },
+                { x: 813, y: 450, w: 412, h: 376 },
+                { x: 1240, y: 436, w: 515, h: 404 },
+            ],
+        };
+
         const KEYS = ['gumplant', 'saltgrass', 'pickleweed', 'cordgrass', 'jaumea'];
-        const COLS = 4, ROWS = 2, INSET = 6;
         KEYS.forEach((key) => {
             const sheetKey = `${key}_sheet`;
             if (!this.textures.exists(sheetKey)) return;
             const src = this.textures.get(sheetKey).source[0].image;
-            const cw = src.width / COLS;
-            const ch = src.height / ROWS;
+            const stageBounds = PLANT_STAGE_BOUNDS[key];
+            if (!stageBounds) return;
 
-            const stages = [];
             let maxW = 1, maxH = 1;
-            for (let i = 0; i < COLS * ROWS; i++) {
-                const cx = i % COLS, cy = Math.floor(i / COLS);
-                const sx = Math.round(cx * cw + INSET);
-                const sy = Math.round(cy * ch + INSET);
-                const sw = Math.round(cw - INSET * 2);
-                const sh = Math.round(ch - INSET * 2);
-                const trimmed = this._trimLargestBlob(src, sx, sy, sw, sh);
-                if (trimmed) {
-                    maxW = Math.max(maxW, trimmed.w);
-                    maxH = Math.max(maxH, trimmed.h);
-                }
-                stages.push(trimmed);
-            }
+            stageBounds.forEach((b) => {
+                maxW = Math.max(maxW, b.w);
+                maxH = Math.max(maxH, b.h);
+            });
 
-            const paint = (texKey, stage) => {
+            const paint = (texKey, b) => {
                 if (this.textures.exists(texKey)) this.textures.remove(texKey);
                 const tex = this.textures.createCanvas(texKey, maxW, maxH);
                 if (!tex) return;
                 const ctx = tex.getContext();
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
-                if (stage) {
-                    ctx.drawImage(
-                        stage.canvas, stage.x, stage.y, stage.w, stage.h,
-                        Math.round((maxW - stage.w) / 2), maxH - stage.h,
-                        stage.w, stage.h
-                    );
-                }
+                const dx = Math.round((maxW - b.w) / 2);
+                const dy = maxH - b.h;
+                ctx.drawImage(src, b.x, b.y, b.w, b.h, dx, dy, b.w, b.h);
                 tex.refresh();
             };
 
-            for (let i = 0; i < stages.length; i++) {
-                paint(`${key}_${i + 1}`, stages[i]);
+            for (let i = 0; i < stageBounds.length; i++) {
+                paint(`${key}_${i + 1}`, stageBounds[i]);
             }
-            // Mature-stage aliases keep existing references working
-            paint(key, stages[stages.length - 1]);
-            if (key === 'gumplant') paint('plant', stages[stages.length - 1]);
+            const mature = stageBounds[stageBounds.length - 1];
+            paint(key, mature);
+            if (key === 'gumplant') paint('plant', mature);
 
-            // Free the sheet — stages now hold their own pixels
             this.textures.remove(sheetKey);
         });
     }

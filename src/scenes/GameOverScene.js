@@ -156,7 +156,7 @@ export class GameOverScene extends Phaser.Scene {
         }
         bg.fillRoundedRect(x - btnW / 2, y - btnH / 2, btnW, btnH, 10);
 
-        const buttonText = this.add.text(x, y, text, {
+        this.add.text(x, y, text, {
             fontFamily: 'Outfit',
             fontSize: compact ? '14px' : '18px',
             fontStyle: 'bold',
