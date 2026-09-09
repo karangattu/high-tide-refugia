@@ -6,7 +6,6 @@ const CAT_ALERT_SCALE = 0.34;
 const CAT_ATTACK_SCALE_X = 0.35;
 const CAT_ATTACK_SCALE_Y = 0.29;
 
-// Shared ground-predator behaviour (patrol / chase / attack / cooldown).
 class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, patrolMinX, patrolMaxX, texture) {
         super(scene, x, y, texture, 0);
@@ -23,35 +22,32 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.setScale(this.baseScale);
         this.setDepth(4);
 
-        // Physics properties - adjust for scaled sprite
         this.body.setSize(200, 200);
-        // Center the body horizontally, push down vertically for the feet
         this.body.setOffset(150, 200);
 
-        // Patrol boundaries
+        this.initialPatrolMinX = patrolMinX;
+        this.initialPatrolMaxX = patrolMaxX;
         this.patrolMinX = patrolMinX;
         this.patrolMaxX = patrolMaxX;
+        this.patrolSpan = Math.max(100, patrolMaxX - patrolMinX);
+        this.homeY = y;
         this.patrolSpeed = 90;
         this.chaseSpeed = 280;
 
-        // State
-        this.state = 'patrol'; // patrol, chase, attack, cooldown
+        this.state = 'patrol';
         this.target = null;
         this.cooldownTimer = 0;
         this.visionRange = 150;
-        this.visionAngle = Math.PI / 3; // 60 degree cone
+        this.visionAngle = Math.PI / 3;
 
-        // Animation state
         this.animationTimer = 0;
         this.currentFrame = 0;
         this.walkingFrames = [0, 1, 2, 3];
-        this.animationSpeed = 80; // ms per frame (faster for smoother look)
+        this.animationSpeed = 80;
 
-        // Start patrol
         this.body.setVelocityX(this.patrolSpeed);
         this.setFlipX(false);
 
-        // Ground contact shadow (positioned dynamically in update())
         this.shadow = scene.add.image(x, y, 'shadow')
             .setAlpha(0.3)
             .setDepth(-1);
@@ -61,22 +57,50 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
+    getWaterXAtCat() {
+        if (!this.scene || !this.scene.waterSystem) return 0;
+        return this.scene.waterSystem.getWaterX(this.y);
+    }
+
     update(time, delta, rails) {
-        // Glue the contact shadow to the body's feet and fit it to the
-        // body's world footprint (tracks scale tweens automatically)
+        if (!this.scene || !this.body) return;
+
+        const marshTop = this.scene.marshTop !== undefined ? this.scene.marshTop : 100;
+        const marshBottom = this.scene.marshBottom !== undefined ? this.scene.marshBottom : (this.scene.scale?.height || 600) - 100;
+        const minY = marshTop + 15;
+        const maxY = marshBottom - 20;
+
+        if (this.y < minY) {
+            this.y = minY;
+            if (this.body.velocity.y < 0) this.body.setVelocityY(0);
+        } else if (this.y > maxY) {
+            this.y = maxY;
+            if (this.body.velocity.y > 0) this.body.setVelocityY(0);
+        }
+
+        const waterX = this.getWaterXAtCat();
+        const safeWaterX = waterX + 45;
+        if (this.x < safeWaterX) {
+            this.x = safeWaterX;
+            if (this.state === 'chase' || this.state === 'attack' || this.state === 'cooldown') {
+                this.endChase();
+            }
+            this.setFlipX(false);
+            this.body.setVelocityX(Math.max(this.patrolSpeed, this.body.velocity.x));
+        }
+
         if (this.shadow && this.body) {
             const worldW = this.body.width * Math.abs(this.scaleX);
             const worldH = this.body.height * Math.abs(this.scaleY);
             this.shadow.setPosition(this.x, this.y + worldH / 2 + 4);
             this.shadow.setScale(worldW / 128, (worldW / 128) * 0.35);
         }
-        // Animate walking/running
+
         this.animationTimer += delta;
         if (this.animationTimer >= this.animationSpeed) {
             this.animationTimer = 0;
             this.currentFrame = (this.currentFrame + 1) % this.walkingFrames.length;
 
-            // Update texture based on state
             if (this.state === 'patrol' || this.state === 'chase') {
                 const frameSrc = this.walkingFrames[this.currentFrame];
                 if (typeof frameSrc === 'number') {
@@ -105,25 +129,40 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     }
 
     patrol(_delta) {
-        // Get current water level to adjust patrol boundary
-        const waterX = this.scene.waterSystem ? this.scene.waterSystem.getWaterX() : 0;
-        const currentPatrolMinX = Math.max(this.patrolMinX, waterX + 40);
+        const waterX = this.getWaterXAtCat();
+        const safeWaterX = waterX + 45;
 
-        // Bounce at patrol boundaries
-        if (this.x >= this.patrolMaxX) {
+        const currentPatrolMinX = Math.max(this.initialPatrolMinX, safeWaterX);
+        const maxMarshX = (this.scene.scale?.width || 1000) - 80;
+        const currentPatrolMaxX = Math.max(
+            this.initialPatrolMaxX,
+            Math.min(maxMarshX, currentPatrolMinX + this.patrolSpan)
+        );
+
+        if (this.x >= currentPatrolMaxX) {
             this.body.setVelocityX(-this.patrolSpeed);
             this.setFlipX(true);
         } else if (this.x <= currentPatrolMinX) {
             this.body.setVelocityX(this.patrolSpeed);
             this.setFlipX(false);
         }
+
+        const distY = this.homeY - this.y;
+        if (Math.abs(distY) > 12) {
+            this.body.setVelocityY(Phaser.Math.Clamp(distY * 0.8, -40, 40));
+        } else {
+            this.body.setVelocityY(0);
+        }
     }
 
     searchForPrey(rails) {
         if (!rails || !rails.children) return;
 
+        const waterX = this.getWaterXAtCat();
+
         const detectedRail = rails.children.entries.find(rail => {
             if (!rail.isAlive || !rail.isDetectable) return false;
+            if (rail.x < waterX + 30) return false;
             return this.canSeeRail(rail);
         });
 
@@ -194,13 +233,19 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // If target became safe (entered plant), give up
         if (!this.target.isDetectable) {
             this.endChase();
             return;
         }
 
-        // Move towards target
+        const waterX = this.getWaterXAtCat();
+        const safeWaterX = waterX + 45;
+
+        if (this.target.x < waterX + 30 || this.x < safeWaterX) {
+            this.endChase();
+            return;
+        }
+
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
         this.body.setVelocity(
             Math.cos(angle) * this.chaseSpeed,
@@ -209,20 +254,12 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
 
         this.setFlipX(this.target.x < this.x);
 
-        // Prevent entering water during chase
-        const waterX = this.scene.waterSystem ? this.scene.waterSystem.getWaterX() : 0;
-        if (this.x < waterX + 30) {
-            this.endChase();
-            return;
-        }
-
-        // Check if caught
         const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
         if (distance < 30) {
             this.catchPrey();
+            return;
         }
 
-        // Give up if too far
         if (distance > 300) {
             this.endChase();
         }
@@ -232,17 +269,13 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.state = 'attack';
         this.body.setVelocity(0, 0);
 
-        // Switch to standing with kill pose
         this.setFrame(7);
 
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
-
-            // Emit event for scoring
             this.scene.events.emit('railCaught', this.target);
         }
 
-        // Attack animation - brief pause then cooldown
         this.scene.tweens.add({
             targets: this,
             scaleX: this.attackScaleX,
@@ -257,17 +290,21 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     }
 
     attack(_delta) {
-        // Attack state is brief and handled by tween in catchPrey
-        // Just wait for tween to complete and transition to cooldown
     }
 
     endChase() {
         this.state = 'patrol';
         this.target = null;
-        // Return to walking animation
         this.setFrame(0);
         this.setScale(this.baseScale);
-        this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
+
+        const waterX = this.getWaterXAtCat();
+        if (this.x < waterX + 65) {
+            this.setFlipX(false);
+            this.body.setVelocityX(this.patrolSpeed);
+        } else {
+            this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
+        }
         this.body.setVelocityY(0);
     }
 
@@ -275,10 +312,15 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.state = 'cooldown';
         this.cooldownTimer = 2000;
         this.target = null;
-        // Stay on standing with kill pose during cooldown
     }
 
     cooldown(delta) {
+        const waterX = this.getWaterXAtCat();
+        if (this.x < waterX + 45) {
+            this.endChase();
+            return;
+        }
+
         this.cooldownTimer -= delta;
         if (this.cooldownTimer <= 0) {
             this.endChase();
@@ -296,12 +338,10 @@ export class Cat extends GroundPredator {
         this.attackScaleX = CAT_ATTACK_SCALE_X;
         this.attackScaleY = CAT_ATTACK_SCALE_Y;
 
-        this.setScale(this.baseScale); // Scaled down more since the 500x507 frames are large
+        this.setScale(this.baseScale);
         this.body.setSize(200, 200);
-        // Center the body horizontally, push down vertically for the feet
         this.body.setOffset(150, 200);
 
-        // Smooth jumping/bounding walk cycle (top row)
         this.walkingFrames = [0, 1, 2, 3, 4, 5, 6];
         this.currentFrame = 0;
 
@@ -317,15 +357,12 @@ export class Cat extends GroundPredator {
         this.state = 'chase';
         this.target = rail;
 
-        // Use pouncing/takeoff frame
         this.setFrame(2);
 
-        // Trigger panic on the Rail
         if (rail.panic) {
             rail.panic();
         }
 
-        // Alert animation on predator
         this.scene.tweens.add({
             targets: this,
             scaleX: this.alertScale,
@@ -337,7 +374,6 @@ export class Cat extends GroundPredator {
             }
         });
 
-        // Exclamation effect
         const exclaim = this.scene.add.text(this.x, this.y - 30, '!', {
             fontFamily: 'Outfit',
             fontSize: '24px',
@@ -358,7 +394,6 @@ export class Cat extends GroundPredator {
         this.state = 'attack';
         this.body.setVelocity(0, 0);
 
-        // Use standing with kill frame (frame 12)
         this.setFrame(12);
 
         if (this.target && this.target.isAlive) {
@@ -366,7 +401,6 @@ export class Cat extends GroundPredator {
             this.scene.events.emit('railCaught', this.target);
         }
 
-        // Attack animation
         this.scene.tweens.add({
             targets: this,
             scaleX: this.attackScaleX,
@@ -378,14 +412,5 @@ export class Cat extends GroundPredator {
                 this.startCooldown();
             }
         });
-    }
-
-    endChase() {
-        this.state = 'patrol';
-        this.target = null;
-        this.setFrame(0);
-        this.setScale(this.baseScale);
-        this.body.setVelocityX(this.patrolSpeed * (this.flipX ? -1 : 1));
-        this.body.setVelocityY(0);
     }
 }
