@@ -260,11 +260,11 @@ export class MenuScene extends Phaser.Scene {
     createTitle(width, height) {
         const compact = this.compact;
         const titleY = height * (compact ? 0.15 : 0.16);
-        const titleSize = compact ? '42px' : (this.portrait ? '64px' : '76px');
-        const subSize = compact ? '15px' : '20px';
-        const eyebrowSize = compact ? '11px' : '14px';
+        const titleSize = compact ? '56px' : (this.portrait ? '84px' : '100px');
+        const subSize = compact ? '20px' : '26px';
+        const eyebrowSize = compact ? '14px' : '18px';
 
-        this.add.text(width / 2, titleY - (compact ? 30 : 48),
+        this.add.text(width / 2, titleY - (compact ? 38 : 60),
             'A  M A R S H  C O N S E R V A T I O N  G A M E', {
             fontFamily: 'Outfit',
             fontSize: eyebrowSize,
@@ -300,14 +300,14 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // Divider with centre diamond
-        const divY = titleY + (compact ? 32 : 46);
+        const divY = titleY + (compact ? 42 : 58);
         const divider = this.add.graphics();
         divider.lineStyle(1, 0xffffff, 0.35);
         divider.beginPath();
-        divider.moveTo(width / 2 - (compact ? 70 : 100), divY);
+        divider.moveTo(width / 2 - (compact ? 90 : 130), divY);
         divider.lineTo(width / 2 - 14, divY);
         divider.moveTo(width / 2 + 14, divY);
-        divider.lineTo(width / 2 + (compact ? 70 : 100), divY);
+        divider.lineTo(width / 2 + (compact ? 90 : 130), divY);
         divider.strokePath();
         divider.fillStyle(AMBER, 1);
         divider.fillTriangle(
@@ -321,7 +321,7 @@ export class MenuScene extends Phaser.Scene {
             width / 2, divY + 5
         );
 
-        const subtitle = this.add.text(width / 2, divY + (compact ? 22 : 30), 'H I G H  T I D E  R I S I N G', {
+        const subtitle = this.add.text(width / 2, divY + (compact ? 28 : 38), 'H I G H  T I D E  R I S I N G', {
             fontFamily: 'Outfit',
             fontSize: subSize,
             color: '#bfe8f2',
@@ -341,10 +341,10 @@ export class MenuScene extends Phaser.Scene {
 
     createButtonTextures() {
         const { compact } = this;
-        this.btnW = compact ? 270 : 320;
-        this.btnPrimaryH = compact ? 60 : 76;
-        this.btnSecondaryH = compact ? 48 : 62;
-        const radius = compact ? 14 : 18;
+        this.btnW = compact ? 330 : 390;
+        this.btnPrimaryH = compact ? 76 : 96;
+        this.btnSecondaryH = compact ? 62 : 78;
+        const radius = compact ? 16 : 20;
 
         const make = (key, w, h, primary, hover) => {
             if (this.textures.exists(key)) this.textures.remove(key);
@@ -379,26 +379,26 @@ export class MenuScene extends Phaser.Scene {
         this.createButtonTextures();
         const { compact, portrait } = this;
 
-        const spacing = compact ? 14 : 20;
+        const spacing = compact ? 16 : 22;
         const totalStack = this.btnPrimaryH + 2 * this.btnSecondaryH + 2 * spacing;
-        const footerReserve = compact ? 56 : 76;
+        const footerReserve = compact ? 70 : 92;
         const startY = Math.min(
             height * (compact ? 0.40 : (portrait ? 0.52 : 0.48)),
             height - footerReserve - totalStack
         );
 
         const primaryY = startY + this.btnPrimaryH / 2;
-        this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', '28px', '#2b1c07', () => {
+        this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', '36px', '#2b1c07', () => {
             this.cameras.main.fadeOut(500);
             this.time.delayedCall(500, () => this.scene.start('IntroScene'));
         });
 
         let y = primaryY + this.btnPrimaryH / 2 + spacing;
         this.createButton(width / 2, y + this.btnSecondaryH / 2, 'HOW TO PLAY', 'menu_btn_secondary',
-            compact ? '16px' : '20px', '#eef7f2', () => this.showTutorial());
+            compact ? '21px' : '26px', '#eef7f2', () => this.showTutorial());
         y += this.btnSecondaryH + spacing;
         this.createButton(width / 2, y + this.btnSecondaryH / 2, 'CREDITS', 'menu_btn_secondary',
-            compact ? '16px' : '20px', '#eef7f2', () => this.showCredits());
+            compact ? '21px' : '26px', '#eef7f2', () => this.showCredits());
 
         this.stackBottom = y + this.btnSecondaryH;
     }
@@ -446,15 +446,15 @@ export class MenuScene extends Phaser.Scene {
     createFooter(width, height) {
         const compact = this.compact;
         // Keep clear of the button stack on short viewports
-        const lineGap = compact ? 14 : 22;
+        const lineGap = compact ? 18 : 26;
         const footerY = Math.min(
-            Math.max(this.stackBottom + (compact ? 20 : 30), height - (compact ? 34 : 52)),
-            height - lineGap - (compact ? 8 : 12)
+            Math.max(this.stackBottom + (compact ? 24 : 36), height - (compact ? 42 : 64)),
+            height - lineGap - (compact ? 10 : 14)
         );
         this.add.text(width / 2, footerY,
             "Help endangered Ridgway's Rails cross the marsh before the tide rises", {
             fontFamily: 'Outfit',
-            fontSize: compact ? '11px' : '15px',
+            fontSize: compact ? '14px' : '19px',
             color: '#ffffff',
             resolution: TEXT_RES,
             alpha: 0.65,
@@ -463,7 +463,7 @@ export class MenuScene extends Phaser.Scene {
         this.add.text(width / 2, footerY + lineGap,
             'A project with the San Francisco Bay Bird Observatory  •  sfbbo.org', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '10px' : '13px',
+            fontSize: compact ? '13px' : '17px',
             color: TEAL_STR,
             resolution: TEXT_RES,
             alpha: 0.55,
@@ -474,8 +474,8 @@ export class MenuScene extends Phaser.Scene {
 
     buildModalShell(width, height, title) {
         const compact = this.compact;
-        const panelW = Math.min(compact ? 460 : 720, width - 30);
-        const panelH = Math.min(compact ? 330 : 560, height - 40);
+        const panelW = Math.min(compact ? 560 : 820, width - 30);
+        const panelH = Math.min(compact ? 430 : 660, height - 40);
         const left = width / 2 - panelW / 2;
         const top = height / 2 - panelH / 2;
 
@@ -489,9 +489,9 @@ export class MenuScene extends Phaser.Scene {
         panel.lineStyle(1.5, AMBER, 0.5);
         panel.strokeRoundedRect(left, top, panelW, panelH, 20);
 
-        const titleText = this.add.text(width / 2, top + (compact ? 34 : 46), title, {
+        const titleText = this.add.text(width / 2, top + (compact ? 42 : 56), title, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '22px' : '32px',
+            fontSize: compact ? '28px' : '40px',
             fontStyle: '900',
             color: AMBER_STR,
             resolution: TEXT_RES,
@@ -502,10 +502,10 @@ export class MenuScene extends Phaser.Scene {
 
     buildModalClose(shell, onClose) {
         const { left, top, panelW, panelH, compact } = shell;
-        const bw = compact ? 160 : 200;
-        const bh = compact ? 44 : 54;
+        const bw = compact ? 200 : 250;
+        const bh = compact ? 56 : 68;
         const cx = left + panelW / 2;
-        const cy = top + panelH - bh / 2 - (compact ? 16 : 24);
+        const cy = top + panelH - bh / 2 - (compact ? 20 : 28);
 
         if (this.textures.exists('modal_close_btn')) this.textures.remove('modal_close_btn');
         const g = this.make.graphics({ x: 0, y: 0, add: false });
@@ -521,7 +521,7 @@ export class MenuScene extends Phaser.Scene {
             .setInteractive({ useHandCursor: true });
         const label = this.add.text(cx, cy, 'GOT IT', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '16px' : '20px',
+            fontSize: compact ? '20px' : '26px',
             fontStyle: 'bold',
             color: '#9be29b',
             resolution: TEXT_RES,
@@ -555,22 +555,22 @@ export class MenuScene extends Phaser.Scene {
             { icon: 'icon_heart_green', text: 'Save as many Rails as you can before the tide rises!' },
         ];
 
-        const itemSpacing = compact ? 40 : 52;
-        const startY = top + (compact ? 78 : 106);
-        const iconX = left + (compact ? 34 : 52);
-        const textX = iconX + (compact ? 22 : 26);
+        const itemSpacing = compact ? 52 : 66;
+        const startY = top + (compact ? 96 : 128);
+        const iconX = left + (compact ? 42 : 64);
+        const textX = iconX + (compact ? 28 : 34);
 
         shell.items = [];
         instructions.forEach((item, i) => {
             const y = startY + i * itemSpacing;
             const ico = this.add.image(iconX, y, item.icon)
-                .setScale(compact ? 0.9 : 1.3).setDepth(92);
+                .setScale(compact ? 1.1 : 1.5).setDepth(92);
             const txt = this.add.text(textX, y, item.text, {
                 fontFamily: 'Outfit',
-                fontSize: compact ? '14px' : '19px',
+                fontSize: compact ? '18px' : '24px',
                 color: '#ffffff',
                 resolution: TEXT_RES,
-                wordWrap: { width: panelW - (compact ? 80 : 120) },
+                wordWrap: { width: panelW - (compact ? 100 : 140) },
             }).setOrigin(0, 0.5).setDepth(92);
             shell.items.push(ico, txt);
         });
@@ -584,16 +584,16 @@ export class MenuScene extends Phaser.Scene {
         const { left, top, panelW, compact } = shell;
 
         const lines = [
-            { text: 'RAIL REFUGE: High Tide Rising', size: compact ? '16px' : '22px', color: '#bfe8f2', bold: true },
-            { text: "A game about conservation and protecting\nthe endangered Ridgway's Rail.", size: compact ? '13px' : '17px', color: '#ffffff' },
-            { text: 'Made in partnership with the\nSan Francisco Bay Bird Observatory', size: compact ? '13px' : '17px', color: '#ffffff' },
-            { text: 'sfbbo.org', size: compact ? '15px' : '20px', color: AMBER_STR, bold: true },
-            { text: 'Built with Phaser', size: compact ? '11px' : '14px', color: '#8fa8a0' },
+            { text: 'RAIL REFUGE: High Tide Rising', size: compact ? '20px' : '28px', color: '#bfe8f2', bold: true },
+            { text: "A game about conservation and protecting\nthe endangered Ridgway's Rail.", size: compact ? '17px' : '22px', color: '#ffffff' },
+            { text: 'Made in partnership with the\nSan Francisco Bay Bird Observatory', size: compact ? '17px' : '22px', color: '#ffffff' },
+            { text: 'sfbbo.org', size: compact ? '19px' : '26px', color: AMBER_STR, bold: true },
+            { text: 'Built with Phaser', size: compact ? '14px' : '18px', color: '#8fa8a0' },
         ];
 
         shell.items = [];
-        let y = top + (compact ? 86 : 120);
-        const spacing = compact ? 42 : 58;
+        let y = top + (compact ? 104 : 140);
+        const spacing = compact ? 54 : 70;
         lines.forEach((line) => {
             const txt = this.add.text(left + panelW / 2, y, line.text, {
                 fontFamily: 'Outfit',

@@ -32,10 +32,10 @@ export class GameOverScene extends Phaser.Scene {
 
     createPanel(width, height) {
         const compact = width < 600;
-        const panelW = Math.min(500, width - 30);
-        const panelH = Math.min(560, height - 40);
+        const panelW = Math.min(580, width - 30);
+        const panelH = Math.min(680, height - 30);
         const panelX = width / 2 - panelW / 2;
-        const panelY = Math.max(20, (height - panelH) / 2);
+        const panelY = Math.max(15, (height - panelH) / 2);
 
         const panel = this.add.graphics();
         panel.fillStyle(0x1a2a1a, 0.95);
@@ -46,31 +46,31 @@ export class GameOverScene extends Phaser.Scene {
         const titleText = this.victory ? 'MARSH SAVED!' : (this.stats.railsSaved > 0 ? 'TIDE SURVIVED!' : 'SWEPT AWAY');
         const titleColor = this.victory ? '#2ecc71' : (this.stats.railsSaved > 0 ? '#27ae60' : '#e74c3c');
 
-        this.add.text(width / 2, panelY + (compact ? 40 : 50), titleText, {
+        this.add.text(width / 2, panelY + (compact ? 48 : 60), titleText, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '30px' : '42px',
+            fontSize: compact ? '40px' : '54px',
             fontStyle: 'bold',
             color: titleColor,
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, panelY + (compact ? 75 : 100), this.reason, {
+        this.add.text(width / 2, panelY + (compact ? 92 : 118), this.reason, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '16px' : '20px',
+            fontSize: compact ? '20px' : '26px',
             color: '#888888',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, panelY + (compact ? 110 : 170), 'FINAL SCORE', {
+        this.add.text(width / 2, panelY + (compact ? 132 : 192), 'FINAL SCORE', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '13px' : '16px',
+            fontSize: compact ? '16px' : '20px',
             color: '#f39c12',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        const scoreText = this.add.text(width / 2, panelY + (compact ? 145 : 215), this.stats.score?.toString() || '0', {
+        const scoreText = this.add.text(width / 2, panelY + (compact ? 172 : 248), this.stats.score?.toString() || '0', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '42px' : '64px',
+            fontSize: compact ? '54px' : '80px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
@@ -86,8 +86,8 @@ export class GameOverScene extends Phaser.Scene {
             }
         });
 
-        const statsY = panelY + (compact ? 190 : 290);
-        const statsSpacing = compact ? 30 : 40;
+        const statsY = panelY + (compact ? 228 : 330);
+        const statsSpacing = compact ? 36 : 48;
         const statsData = [
             { icon: 'icon_heart_green', label: 'Rails Saved', value: this.stats.railsSaved || 0, color: '#27ae60' },
             { icon: 'icon_heart_broken', label: 'Rails Lost', value: this.stats.railsLost || 0, color: '#e74c3c' },
@@ -98,18 +98,18 @@ export class GameOverScene extends Phaser.Scene {
         statsData.forEach((stat, i) => {
             const y = statsY + i * statsSpacing;
 
-            this.add.image(width / 2 - (compact ? 70 : 100), y, stat.icon).setScale(compact ? 0.7 : 0.9);
+            this.add.image(width / 2 - (compact ? 90 : 120), y, stat.icon).setScale(compact ? 0.85 : 1.1);
 
-            this.add.text(width / 2 - (compact ? 50 : 70), y, stat.label, {
+            this.add.text(width / 2 - (compact ? 64 : 88), y, stat.label, {
                 fontFamily: 'Outfit',
-                fontSize: compact ? '13px' : '16px',
+                fontSize: compact ? '17px' : '21px',
                 color: '#aaaaaa',
                 resolution: TEXT_RES,
             }).setOrigin(0, 0.5);
 
-            this.add.text(width / 2 + (compact ? 70 : 100), y, stat.value.toString(), {
+            this.add.text(width / 2 + (compact ? 90 : 120), y, stat.value.toString(), {
                 fontFamily: 'Outfit',
-                fontSize: compact ? '16px' : '20px',
+                fontSize: compact ? '20px' : '26px',
                 fontStyle: 'bold',
                 color: stat.color,
                 resolution: TEXT_RES,
@@ -117,15 +117,15 @@ export class GameOverScene extends Phaser.Scene {
         });
 
         const survivalRate = this.stats.survivalRate ? Math.round(this.stats.survivalRate * 100) : 0;
-        this.add.text(width / 2, panelY + panelH - (compact ? 90 : 100), `${survivalRate}% Survival Rate`, {
+        this.add.text(width / 2, panelY + panelH - (compact ? 104 : 116), `${survivalRate}% Survival Rate`, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '14px' : '18px',
+            fontSize: compact ? '18px' : '24px',
             color: survivalRate >= 50 ? '#27ae60' : '#e74c3c',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        const buttonY = panelY + panelH - (compact ? 45 : 50);
-        const btnSpread = compact ? 75 : 110;
+        const buttonY = panelY + panelH - (compact ? 50 : 58);
+        const btnSpread = compact ? 100 : 140;
 
         this.createButton(width / 2 - btnSpread, buttonY, 'PLAY AGAIN', () => {
             this.cameras.main.fadeOut(300);
@@ -145,8 +145,8 @@ export class GameOverScene extends Phaser.Scene {
 
     createButton(x, y, text, callback, isSecondary = false) {
         const compact = this.scale.width < 600;
-        const btnW = compact ? 120 : 160;
-        const btnH = compact ? 36 : 44;
+        const btnW = compact ? 160 : 200;
+        const btnH = compact ? 48 : 58;
 
         const bg = this.add.graphics();
         if (isSecondary) {
@@ -158,7 +158,7 @@ export class GameOverScene extends Phaser.Scene {
 
         this.add.text(x, y, text, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '14px' : '18px',
+            fontSize: compact ? '18px' : '24px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,

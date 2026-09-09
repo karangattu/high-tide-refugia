@@ -255,13 +255,13 @@ export class GameScene extends Phaser.Scene {
         );
         safeZoneGlow.setDepth(1);
 
-        this.add.text(width - 75, marshY + 18, 'SAFE REFUGE', {
+        this.add.text(width - 75, marshY + 22, 'SAFE REFUGE', {
             fontFamily: 'Outfit',
-            fontSize: '14px',
+            fontSize: '20px',
             fontStyle: 'bold',
             color: '#2ecc71',
             stroke: '#0c1a0c',
-            strokeThickness: 3,
+            strokeThickness: 4,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(10);
 
@@ -473,24 +473,24 @@ export class GameScene extends Phaser.Scene {
         const compact = width < 600;
         const bandY = (this.marshY + height) / 2;
 
-        const levelText = this.add.text(width / 2, bandY - 50,
+        const levelText = this.add.text(width / 2, bandY - 60,
             config.name.toUpperCase(), {
             fontFamily: 'Outfit',
-            fontSize: compact ? '42px' : '64px',
+            fontSize: compact ? '56px' : '84px',
             fontStyle: 'bold',
             color: '#f39c12',
             stroke: '#000000',
-            strokeThickness: compact ? 5 : 8,
+            strokeThickness: compact ? 6 : 9,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
-        const nameText = this.add.text(width / 2, bandY + 20,
+        const nameText = this.add.text(width / 2, bandY + 30,
             'Survive the rising tide', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '22px' : '32px',
+            fontSize: compact ? '28px' : '40px',
             color: '#ffffff',
             stroke: '#000000',
-            strokeThickness: 4,
+            strokeThickness: 5,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
@@ -525,32 +525,32 @@ export class GameScene extends Phaser.Scene {
 
         const panelX = width / 2;
         const panelY = (this.marshY + height) / 2 - 40;
-        const panelW = Math.min(360, width - 40);
+        const panelW = Math.min(480, width - 40);
         const panel = this.add.graphics().setDepth(90);
         panel.fillStyle(0x000000, 0.7);
-        panel.fillRoundedRect(panelX - panelW / 2, panelY - 50, panelW, 100, 16);
+        panel.fillRoundedRect(panelX - panelW / 2, panelY - 65, panelW, 130, 16);
 
-        const arrow = this.add.text(panelX, panelY + 60, '\u25bc', {
+        const arrow = this.add.text(panelX, panelY + 78, '\\u25bc', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '28px' : '36px',
+            fontSize: compact ? '36px' : '46px',
             color: '#f1c40f',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(91);
 
-        const hint = this.add.text(panelX, panelY - 10, 'TAP here to plant cover!', {
+        const hint = this.add.text(panelX, panelY - 16, 'TAP here to plant cover!', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '18px' : '24px',
+            fontSize: compact ? '24px' : '32px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(91);
 
-        const subHint = this.add.text(panelX, panelY + 22, 'Rails need vegetation to hide from predators', {
+        const subHint = this.add.text(panelX, panelY + 30, 'Rails need vegetation to hide from predators', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '11px' : '14px',
+            fontSize: compact ? '15px' : '19px',
             color: '#aaaaaa',
             resolution: TEXT_RES,
-            wordWrap: { width: panelW - 20 },
+            wordWrap: { width: panelW - 30 },
             align: 'center',
         }).setOrigin(0.5).setDepth(91);
 
@@ -586,7 +586,7 @@ export class GameScene extends Phaser.Scene {
         // Step 2 — success message
         const msg1 = this.add.text(width / 2, msgY, 'Nice! Rails hide in plants to stay safe.', {
             fontFamily: 'Outfit',
-            fontSize: '22px',
+            fontSize: '30px',
             fontStyle: 'bold',
             color: '#2ecc71',
             stroke: '#000000',
@@ -611,7 +611,7 @@ export class GameScene extends Phaser.Scene {
                         const msg2 = this.add.text(width / 2, msgY,
                             'Plant more to create a corridor to the safe zone  →', {
                             fontFamily: 'Outfit',
-                            fontSize: '20px',
+                            fontSize: '28px',
                             fontStyle: 'bold',
                             color: '#f1c40f',
                             stroke: '#000000',
@@ -836,36 +836,36 @@ export class GameScene extends Phaser.Scene {
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
             .setDepth(100);
 
-        const panelW = Math.min(600, width - 40);
-        const panelH = compact ? 200 : 240;
+        const panelW = Math.min(680, width - 40);
+        const panelH = compact ? 270 : 320;
         const panel = this.add.graphics().setDepth(101);
         panel.fillStyle(0x1a2a1a, 0.95);
         panel.fillRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
         panel.lineStyle(2, 0x27ae60);
         panel.strokeRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
 
-        const leafL = this.add.image(width / 2 - (compact ? 70 : 100), height / 2 - panelH / 2 + 40, 'icon_leaf').setScale(1.2).setDepth(102);
-        const title = this.add.text(width / 2, height / 2 - panelH / 2 + 40, 'MARSH FACT', {
+        const leafL = this.add.image(width / 2 - (compact ? 100 : 140), height / 2 - panelH / 2 + 52, 'icon_leaf').setScale(1.5).setDepth(102);
+        const title = this.add.text(width / 2, height / 2 - panelH / 2 + 52, 'MARSH FACT', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '22px' : '28px',
+            fontSize: compact ? '28px' : '36px',
             fontStyle: 'bold',
             color: '#27ae60',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
-        const leafR = this.add.image(width / 2 + (compact ? 70 : 100), height / 2 - panelH / 2 + 40, 'icon_leaf').setScale(1.2).setDepth(102);
+        const leafR = this.add.image(width / 2 + (compact ? 100 : 140), height / 2 - panelH / 2 + 52, 'icon_leaf').setScale(1.5).setDepth(102);
 
-        const factText = this.add.text(width / 2, height / 2, fact, {
+        const factText = this.add.text(width / 2, height / 2 + 10, fact, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '14px' : '18px',
+            fontSize: compact ? '18px' : '24px',
             color: '#ffffff',
-            wordWrap: { width: panelW - 60 },
+            wordWrap: { width: panelW - 70 },
             align: 'center',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
 
-        const continueText = this.add.text(width / 2, height / 2 + panelH / 2 - 40, 'Tap to continue...', {
+        const continueText = this.add.text(width / 2, height / 2 + panelH / 2 - 45, 'Tap to continue...', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '13px' : '16px',
+            fontSize: compact ? '16px' : '20px',
             color: '#888888',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);

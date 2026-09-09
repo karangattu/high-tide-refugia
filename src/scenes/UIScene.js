@@ -33,8 +33,8 @@ export class UIScene extends Phaser.Scene {
     }
 
     createSeedPanel(x, y, compact) {
-        const panelW = compact ? 160 : 250;
-        const panelH = compact ? 42 : 52;
+        const panelW = compact ? 210 : 320;
+        const panelH = compact ? 56 : 68;
         const cx = x + panelW / 2;
         const cy = y + panelH / 2;
 
@@ -42,27 +42,27 @@ export class UIScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScale(panelW / 260, panelH / 52);
 
-        this.add.image(x + (compact ? 14 : 20), cy, 'seed').setScale(compact ? 0.9 : 1.25);
+        this.add.image(x + (compact ? 18 : 26), cy, 'seed').setScale(compact ? 1.15 : 1.5);
 
-        this.add.text(x + (compact ? 28 : 38), y + (compact ? 5 : 8), 'SEEDS', {
+        this.add.text(x + (compact ? 34 : 46), y + (compact ? 7 : 10), 'SEEDS', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '9px' : '11px',
+            fontSize: compact ? '13px' : '15px',
             fontStyle: 'bold',
             color: '#f39c12',
             resolution: TEXT_RES,
         });
 
-        this.seedsText = this.add.text(x + (compact ? 28 : 38), y + (compact ? 16 : 22), '8 / 10', {
+        this.seedsText = this.add.text(x + (compact ? 34 : 46), y + (compact ? 21 : 28), '8 / 10', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '13px' : '17px',
+            fontSize: compact ? '18px' : '24px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
         });
 
-        const barX = x + (compact ? 78 : 108);
-        const barW = compact ? 72 : 126;
-        const barH = compact ? 7 : 9;
+        const barX = x + (compact ? 100 : 140);
+        const barW = compact ? 96 : 160;
+        const barH = compact ? 9 : 11;
         this.seedBarBg = this.add.rectangle(barX + barW / 2, cy, barW, barH, 0x141414)
             .setOrigin(0.5);
         this.add.rectangle(barX + barW / 2, cy, barW + 2, barH + 2, 0x2d3a24)
@@ -75,19 +75,19 @@ export class UIScene extends Phaser.Scene {
     }
 
     createHeaderStatus(cx, y, compact) {
-        const panelW = compact ? 170 : 230;
-        const panelH = compact ? 36 : 44;
-        const cy = y + (compact ? 21 : 26);
+        const panelW = compact ? 230 : 300;
+        const panelH = compact ? 48 : 58;
+        const cy = y + (compact ? 27 : 33);
 
         this.add.image(cx, cy, 'hud_flock_panel')
             .setOrigin(0.5)
             .setScale(panelW / 240, panelH / 44);
 
-        const spread = compact ? 46 : 64;
+        const spread = compact ? 62 : 84;
 
         this.waveText = this.add.text(cx - spread, cy, 'WAVE 1/3', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '10px' : '12px',
+            fontSize: compact ? '14px' : '16px',
             fontStyle: 'bold',
             color: '#f1c40f',
             resolution: TEXT_RES,
@@ -95,15 +95,15 @@ export class UIScene extends Phaser.Scene {
 
         this.add.text(cx - spread / 3, cy, '·', {
             fontFamily: 'Outfit',
-            fontSize: '14px',
+            fontSize: '18px',
             color: '#445544',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.image(cx - 2, cy, 'icon_heart_green').setScale(compact ? 0.55 : 0.7);
-        this.savedText = this.add.text(cx + (compact ? 10 : 13), cy, '0', {
+        this.add.image(cx - 3, cy, 'icon_heart_green').setScale(compact ? 0.7 : 0.9);
+        this.savedText = this.add.text(cx + (compact ? 13 : 17), cy, '0', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '11px' : '13px',
+            fontSize: compact ? '15px' : '18px',
             fontStyle: 'bold',
             color: '#2ecc71',
             resolution: TEXT_RES,
@@ -111,15 +111,15 @@ export class UIScene extends Phaser.Scene {
 
         this.add.text(cx + spread / 3 + 4, cy, '·', {
             fontFamily: 'Outfit',
-            fontSize: '14px',
+            fontSize: '18px',
             color: '#445544',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.image(cx + spread - (compact ? 16 : 22), cy, 'icon_heart_broken').setScale(compact ? 0.55 : 0.7);
-        this.lostText = this.add.text(cx + spread - (compact ? 5 : 8), cy, '0/5', {
+        this.add.image(cx + spread - (compact ? 20 : 28), cy, 'icon_heart_broken').setScale(compact ? 0.7 : 0.9);
+        this.lostText = this.add.text(cx + spread - (compact ? 7 : 10), cy, '0/5', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '11px' : '13px',
+            fontSize: compact ? '15px' : '18px',
             fontStyle: 'bold',
             color: '#e74c3c',
             resolution: TEXT_RES,
@@ -127,8 +127,8 @@ export class UIScene extends Phaser.Scene {
     }
 
     createScorePanel(right, y, compact) {
-        const pw = compact ? 150 : 210;
-        const ph = compact ? 42 : 52;
+        const pw = compact ? 200 : 270;
+        const ph = compact ? 56 : 68;
         const cx = right - pw / 2;
         const cy = y + ph / 2;
 
@@ -136,37 +136,37 @@ export class UIScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScale(pw / 220, ph / 52);
 
-        this.add.image(cx - (compact ? 58 : 84), cy, 'icon_trophy').setScale(compact ? 0.8 : 1.05);
+        this.add.image(cx - (compact ? 74 : 104), cy, 'icon_trophy').setScale(compact ? 1.0 : 1.3);
 
-        this.add.text(cx - (compact ? 42 : 62), y + (compact ? 5 : 8), 'POINTS', {
+        this.add.text(cx - (compact ? 54 : 78), y + (compact ? 7 : 10), 'POINTS', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '8px' : '10px',
+            fontSize: compact ? '12px' : '14px',
             fontStyle: 'bold',
             color: '#f1c40f',
             resolution: TEXT_RES,
         });
 
-        this.scoreText = this.add.text(cx - (compact ? 42 : 62), y + (compact ? 15 : 21), '0', {
+        this.scoreText = this.add.text(cx - (compact ? 54 : 78), y + (compact ? 20 : 27), '0', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '14px' : '19px',
+            fontSize: compact ? '19px' : '26px',
             fontStyle: 'bold',
             color: '#ffffff',
             resolution: TEXT_RES,
         }).setOrigin(0, 0);
 
-        this.comboText = this.add.text(cx + (compact ? 36 : 56), cy, 'x1.0', {
+        this.comboText = this.add.text(cx + (compact ? 48 : 72), cy, 'x1.0', {
             fontFamily: 'Outfit',
-            fontSize: compact ? '10px' : '12px',
+            fontSize: compact ? '14px' : '17px',
             fontStyle: 'bold',
             color: '#f1c40f',
             backgroundColor: '#1a1a1a90',
-            padding: { x: 5, y: 3 },
+            padding: { x: 6, y: 4 },
             resolution: TEXT_RES,
         }).setOrigin(0.5).setAlpha(0.4);
     }
 
     createFooter(width, height, compact) {
-        const footerH = compact ? 30 : 38;
+        const footerH = compact ? 40 : 50;
         const cy = height - footerH / 2;
 
         this.add.image(width / 2, cy, 'hud_footer_bar')
@@ -177,9 +177,9 @@ export class UIScene extends Phaser.Scene {
             ? '🌿 SF BAY REFUGE'
             : "🌿 SAN FRANCISCO BAY ESTUARY · RIDGWAY'S RAIL REFUGE";
 
-        this.add.text(compact ? 10 : 20, cy, brand, {
+        this.add.text(compact ? 14 : 26, cy, brand, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '10px' : '12px',
+            fontSize: compact ? '14px' : '16px',
             fontStyle: 'bold',
             color: '#2ecc71',
             resolution: TEXT_RES,
@@ -189,17 +189,17 @@ export class UIScene extends Phaser.Scene {
             ? 'Plant refugia to save Rails'
             : 'Rising King Tide · Plant Gumplant & Cordgrass corridors to guide Rails to safety';
 
-        this.footerTipText = this.add.text(width / 2 + (compact ? 30 : 40), cy, tip, {
+        this.footerTipText = this.add.text(width / 2 + (compact ? 40 : 50), cy, tip, {
             fontFamily: 'Outfit',
-            fontSize: compact ? '9px' : '11px',
+            fontSize: compact ? '13px' : '15px',
             color: '#b0c4b1',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
         if (!compact) {
-            this.add.text(width - 20, cy, '[ESC] PAUSE', {
+            this.add.text(width - 26, cy, '[ESC] PAUSE', {
                 fontFamily: 'Outfit',
-                fontSize: '11px',
+                fontSize: '15px',
                 color: '#65806e',
                 resolution: TEXT_RES,
             }).setOrigin(1, 0.5);
@@ -284,7 +284,7 @@ export class UIScene extends Phaser.Scene {
                 'PAUSED\n\nPress ESC to resume',
                 {
                     fontFamily: 'Outfit',
-                    fontSize: '36px',
+                    fontSize: '52px',
                     fontStyle: 'bold',
                     color: '#ffffff',
                     align: 'center',
