@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { getEntityScaleFactor } from '../../utils/mobile.js';
 
 const FOX_BASE_SCALE = 0.36;
 const FOX_CHASE_SCALE = 0.39;
@@ -20,9 +21,11 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.baseScale = FOX_BASE_SCALE;
-        this.chaseScale = FOX_CHASE_SCALE;
-        this.alertScale = FOX_ALERT_SCALE;
+        const entityScale = getEntityScaleFactor(scene?.scale?.width, scene?.scale?.height);
+        this.entityScale = entityScale;
+        this.baseScale = FOX_BASE_SCALE * entityScale;
+        this.chaseScale = FOX_CHASE_SCALE * entityScale;
+        this.alertScale = FOX_ALERT_SCALE * entityScale;
 
         this.setScale(this.baseScale);
         this.setDepth(4);
@@ -33,6 +36,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.patrolSpeed = 115;
         this.chaseSpeed = 295;
         this.visionRange = 145;
+        this.catchDistance = 32 * entityScale;
 
         this.patrolDirX = Math.random() < 0.5 ? -1 : 1;
         this.patrolDirY = Math.random() < 0.5 ? -1 : 1;
@@ -247,7 +251,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(this.target.x < this.x);
 
         const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
-        if (distance < 32) {
+        if (distance < this.catchDistance) {
             this.catchPrey();
             return;
         }

@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { getEntityScaleFactor } from '../../utils/mobile.js';
 
 const CAT_BASE_SCALE = 0.28;
 const CAT_CHASE_SCALE = 0.31;
@@ -13,11 +14,14 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.baseScale = CAT_BASE_SCALE;
-        this.chaseScale = CAT_CHASE_SCALE;
-        this.alertScale = CAT_ALERT_SCALE;
-        this.attackScaleX = CAT_ATTACK_SCALE_X;
-        this.attackScaleY = CAT_ATTACK_SCALE_Y;
+        const entityScale = getEntityScaleFactor(scene?.scale?.width, scene?.scale?.height);
+        this.entityScale = entityScale;
+        this.baseScale = CAT_BASE_SCALE * entityScale;
+        this.chaseScale = CAT_CHASE_SCALE * entityScale;
+        this.alertScale = CAT_ALERT_SCALE * entityScale;
+        this.attackScaleX = CAT_ATTACK_SCALE_X * entityScale;
+        this.attackScaleY = CAT_ATTACK_SCALE_Y * entityScale;
+        this.catchDistance = 30 * entityScale;
 
         this.setScale(this.baseScale);
         this.setDepth(4);
@@ -238,7 +242,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.setFlipX(this.target.x < this.x);
 
         const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
-        if (distance < 30) {
+        if (distance < this.catchDistance) {
             this.catchPrey();
             return;
         }
@@ -315,11 +319,12 @@ export class Cat extends GroundPredator {
     constructor(scene, x, y, patrolMinX, patrolMaxX) {
         super(scene, x, y, patrolMinX, patrolMaxX, 'cat_sheet');
 
-        this.baseScale = CAT_BASE_SCALE;
-        this.chaseScale = CAT_CHASE_SCALE;
-        this.alertScale = CAT_ALERT_SCALE;
-        this.attackScaleX = CAT_ATTACK_SCALE_X;
-        this.attackScaleY = CAT_ATTACK_SCALE_Y;
+        const entityScale = this.entityScale ?? getEntityScaleFactor(scene?.scale?.width, scene?.scale?.height);
+        this.baseScale = CAT_BASE_SCALE * entityScale;
+        this.chaseScale = CAT_CHASE_SCALE * entityScale;
+        this.alertScale = CAT_ALERT_SCALE * entityScale;
+        this.attackScaleX = CAT_ATTACK_SCALE_X * entityScale;
+        this.attackScaleY = CAT_ATTACK_SCALE_Y * entityScale;
 
         this.setScale(this.baseScale);
         this.body.setSize(200, 200);

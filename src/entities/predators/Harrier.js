@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { getEntityScaleFactor } from '../../utils/mobile.js';
 
 const HARRIER_BASE_SCALE = 0.46;
 // Cruising altitude (px above the ground point) and cruise size.
@@ -13,22 +14,26 @@ export class Harrier extends Phaser.GameObjects.Container {
         scene.add.existing(this);
         this.setDepth(8);
 
-        this.baseScale = HARRIER_BASE_SCALE;
-        this.cruiseScale = HARRIER_BASE_SCALE * 0.82;
-        this.diveScale = HARRIER_BASE_SCALE * 1.45;
+        const entityScale = getEntityScaleFactor(scene?.scale?.width, scene?.scale?.height);
+        this.entityScale = entityScale;
+        this.baseScale = HARRIER_BASE_SCALE * entityScale;
+        this.cruiseScale = HARRIER_BASE_SCALE * 0.82 * entityScale;
+        this.diveScale = HARRIER_BASE_SCALE * 1.45 * entityScale;
+        this.cruiseAltitude = CRUISE_ALTITUDE * entityScale;
+        this.searchRadius = SEARCH_RADIUS * entityScale;
 
         // Ground hunt-shadow: dark ellipse + faint search-radius ring.
         // This sits on the marsh and tells the player where the harrier
         // is looking; the bird itself flies high above it.
-        this.huntRing = scene.add.circle(0, 0, SEARCH_RADIUS, 0xff6b6b, 0.05);
+        this.huntRing = scene.add.circle(0, 0, this.searchRadius, 0xff6b6b, 0.05);
         this.huntRing.setStrokeStyle(1.5, 0xff6b6b, 0.28);
         this.add(this.huntRing);
 
-        this.groundShadow = scene.add.ellipse(0, 0, 90, 26, 0x000000, 0.32);
+        this.groundShadow = scene.add.ellipse(0, 0, 90 * entityScale, 26 * entityScale, 0x000000, 0.32);
         this.add(this.groundShadow);
 
         // The bird, offset upward to read as altitude
-        this.bird = scene.add.sprite(0, -CRUISE_ALTITUDE, 'harrier_glide_1');
+        this.bird = scene.add.sprite(0, -this.cruiseAltitude, 'harrier_glide_1');
         this.bird.setScale(this.cruiseScale);
         this.bird.setAlpha(0.95);
         this.add(this.bird);
@@ -102,7 +107,7 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.midY = (this.minY + this.maxY) / 2;
         this.y = Phaser.Math.Clamp(this.midY + this.verticalOffset, this.minY, this.maxY);
 
-        this.bird.y = -CRUISE_ALTITUDE + Math.sin(this.glideTime * 3) * 8;
+        this.bird.y = -this.cruiseAltitude + Math.sin(this.glideTime * 3) * 8;
         this.groundShadow.alpha = 0.28 + Math.sin(this.glideTime * 3) * 0.05;
 
         if (this.x >= this.maxX) {
@@ -123,7 +128,7 @@ export class Harrier extends Phaser.GameObjects.Container {
             if (!rail.isAlive || !rail.isDetectable) return false;
 
             const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
-            if (distance > SEARCH_RADIUS) return false;
+            if (distance > this.searchRadius) return false;
 
             if (plants && plants.children) {
                 const isUnderPlant = plants.children.entries.some(plant => {
@@ -184,7 +189,7 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.x = Phaser.Math.Linear(this.diveStartX, this.diveTargetX, easeT);
         this.y = Phaser.Math.Linear(this.diveStartY, this.diveTargetY, easeT);
 
-        this.bird.y = Phaser.Math.Linear(-CRUISE_ALTITUDE, 0, easeT);
+        this.bird.y = Phaser.Math.Linear(-this.cruiseAltitude, 0, easeT);
         const currentScale = Phaser.Math.Linear(this.cruiseScale, this.diveScale, easeT);
         this.bird.setScale(currentScale);
 
@@ -238,7 +243,7 @@ export class Harrier extends Phaser.GameObjects.Container {
 
         this.scene.tweens.add({
             targets: this.bird,
-            y: -CRUISE_ALTITUDE,
+            y: -this.cruiseAltitude,
             scaleX: this.cruiseScale * 1.1,
             scaleY: this.cruiseScale * 1.1,
             duration: 1000,
@@ -278,7 +283,7 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.scene.tweens.killTweensOf(this.huntRing);
         this.scene.tweens.add({
             targets: this.bird,
-            y: -CRUISE_ALTITUDE,
+            y: -this.cruiseAltitude,
             scaleX: this.cruiseScale,
             scaleY: this.cruiseScale,
             duration: 800,

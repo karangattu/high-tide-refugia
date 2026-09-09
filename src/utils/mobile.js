@@ -53,3 +53,18 @@ export function isPhonePortrait(maxDimension = 600) {
         && smallestSide <= maxDimension
         && window.innerHeight > window.innerWidth;
 }
+
+// Compact viewports (phones in landscape, small windows) get smaller
+// bird/predator sprites so there is more playable marsh space.
+// Matches the isMobileLandscape thresholds used in GameScene.
+export const MOBILE_ENTITY_SCALE = 0.65;
+
+export function isCompactViewport(width, height) {
+    const w = width ?? (typeof window !== 'undefined' ? window.innerWidth : 1280);
+    const h = height ?? (typeof window !== 'undefined' ? window.innerHeight : 800);
+    return h <= 520 || (w < 768 && h < 600);
+}
+
+export function getEntityScaleFactor(width, height) {
+    return isCompactViewport(width, height) ? MOBILE_ENTITY_SCALE : 1;
+}

@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { getEntityScaleFactor } from '../utils/mobile.js';
 
 const RAIL_BASE_SCALE = 0.11;
 const RAIL_BOOST_SCALE = 0.13;
@@ -11,7 +12,11 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        this.baseScale = RAIL_BASE_SCALE;
+        const entityScale = getEntityScaleFactor(scene?.scale?.width, scene?.scale?.height);
+        this.entityScale = entityScale;
+        this.baseScale = RAIL_BASE_SCALE * entityScale;
+        this.boostScale = RAIL_BOOST_SCALE * entityScale;
+        this.celebrationScale = RAIL_CELEBRATION_SCALE * entityScale;
         this.setScale(this.baseScale);
         this.setDepth(3);
 
@@ -190,8 +195,8 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.tweens) {
             this.scene.tweens.add({
                 targets: this,
-                scaleX: RAIL_BOOST_SCALE,
-                scaleY: RAIL_BOOST_SCALE,
+                scaleX: this.boostScale,
+                scaleY: this.boostScale,
                 duration: 100,
                 yoyo: true,
                 onComplete: () => {
@@ -246,8 +251,8 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
                 targets: this,
                 y: this.y - 20,
                 alpha: 0,
-                scaleX: RAIL_CELEBRATION_SCALE,
-                scaleY: RAIL_CELEBRATION_SCALE,
+                scaleX: this.celebrationScale,
+                scaleY: this.celebrationScale,
                 duration: 500,
                 ease: 'Power2',
                 onComplete: () => {
