@@ -27,8 +27,10 @@ export class GameScene extends Phaser.Scene {
 
         // Tutorial state
         this.tutorialActive = false;
+        this.tutorialAdvancing = false;
         this.tutorialComplete = localStorage.getItem('htRefugiaTutorialDone') === 'true';
         this.tutorialElements = [];
+        this.levelStartElements = [];
 
         // Initialize systems
         this.particleManager = new ParticleManager(this);
@@ -445,20 +447,14 @@ export class GameScene extends Phaser.Scene {
             });
         }
 
-        // Show level start
-        this.showLevelStart(config);
-
-        // Single level: interactive tutorial only on first-ever play,
-        // then straight into the wave sequence.
-        if (!this.tutorialComplete) {
-            // Tutorial will call startNextWave() when done
-            this.time.delayedCall(2800, () => {
+        // Show level start banner and advance to tutorial or wave sequence once dismissed
+        this.showLevelStart(config, () => {
+            if (!this.tutorialComplete) {
                 this.startTutorial();
-            });
-        } else {
-            // Start first wave immediately after level announcement
-            this.levelManager.startNextWave();
-        }
+            } else {
+                this.levelManager.startNextWave();
+            }
+        });
     }
 
     spawnPredators(config) {
@@ -502,10 +498,14 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    showLevelStart(config) {
+    showLevelStart(config, onComplete = null) {
         const { width, height } = this.scale;
         const compact = height <= 520 || width < 650;
         const bandY = (this.marshY + height) / 2;
+
+        if (this.levelStartElements) {
+            this.levelStartElements.forEach(el => el.destroy());
+        }
 
         const levelText = this.add.text(width / 2, bandY - 60,
             config.name.toUpperCase(), {
@@ -528,30 +528,40 @@ export class GameScene extends Phaser.Scene {
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(100);
 
+        this.levelStartElements = [levelText, nameText];
+
         this.tweens.add({
             targets: [levelText, nameText],
             alpha: { from: 0, to: 1 },
             scale: { from: 0.5, to: 1 },
             duration: 500,
             ease: 'Back.easeOut',
-        });
-
-        this.tweens.add({
-            targets: [levelText, nameText],
-            alpha: 0,
-            y: '-=50',
-            delay: 2000,
-            duration: 500,
             onComplete: () => {
-                levelText.destroy();
-                nameText.destroy();
+                this.tweens.add({
+                    targets: [levelText, nameText],
+                    alpha: 0,
+                    y: '-=50',
+                    delay: 1800,
+                    duration: 500,
+                    onComplete: () => {
+                        levelText.destroy();
+                        nameText.destroy();
+                        this.levelStartElements = [];
+                        if (onComplete) onComplete();
+                    }
+                });
             }
         });
     }
 
-    // ── Interactive first-play tutorial ──────────────────────────
     startTutorial() {
+        if (this.levelStartElements) {
+            this.levelStartElements.forEach(el => el.destroy());
+            this.levelStartElements = [];
+        }
+
         this.tutorialActive = true;
+        this.tutorialAdvancing = false;
         const { width, height } = this.scale;
         const compact = height <= 520 || width < 650;
 
@@ -610,48 +620,63 @@ export class GameScene extends Phaser.Scene {
     }
 
     completeTutorial() {
-        // Remove hint elements
-        this.tutorialElements.forEach(el => el.destroy());
-        this.tutorialElements = [];
+        if (this.tutorialAdvancing) return;
+        this.tutorialAdvancing = true;
+
+        if (this.tutorialElements) {
+            this.tutorialElements.forEach(el => el.destroy());
+            this.tutorialElements = [];
+        }
+
+        if (this.levelStartElements) {
+            this.levelStartElements.forEach(el => el.destroy());
+            this.levelStartElements = [];
+        }
 
         const { width, height } = this.scale;
-        const msgY = (this.marshY + height) / 2 - 40;
+        const compact = height <= 520 || width < 650;
+        const bandY = (this.marshY + height) / 2;
+        const msgY = bandY + (compact ? 24 : 36);
 
-        // Step 2 — success message
+        const cardW = Math.min(compact ? 520 : 700, width - 36);
+        const cardH = compact ? 52 : 64;
+        const card = this.add.graphics().setDepth(91).setAlpha(0);
+        card.fillStyle(0x000000, 0.78);
+        card.fillRoundedRect(width / 2 - cardW / 2, msgY - cardH / 2, cardW, cardH, 14);
+
         const msg1 = this.add.text(width / 2, msgY, 'Nice! Rails hide in plants to stay safe.', {
             fontFamily: 'Mona Sans',
-            fontSize: '30px',
+            fontSize: compact ? '20px' : '26px',
             fontStyle: 'bold',
             color: '#2ecc71',
             stroke: '#000000',
             strokeThickness: 4,
             resolution: TEXT_RES,
-        }).setOrigin(0.5).setDepth(91).setAlpha(0);
+        }).setOrigin(0.5).setDepth(92).setAlpha(0);
 
         this.tweens.add({
-            targets: msg1,
+            targets: [card, msg1],
             alpha: 1,
             duration: 400,
             onComplete: () => {
                 this.tweens.add({
                     targets: msg1,
                     alpha: 0,
-                    delay: 2000,
-                    duration: 400,
+                    delay: 1800,
+                    duration: 350,
                     onComplete: () => {
                         msg1.destroy();
 
-                        // Step 3 — corridor hint
                         const msg2 = this.add.text(width / 2, msgY,
                             'Plant more to create a corridor to the safe zone  →', {
                             fontFamily: 'Mona Sans',
-                            fontSize: '28px',
+                            fontSize: compact ? '18px' : '24px',
                             fontStyle: 'bold',
                             color: '#f1c40f',
                             stroke: '#000000',
                             strokeThickness: 4,
                             resolution: TEXT_RES,
-                        }).setOrigin(0.5).setDepth(91).setAlpha(0);
+                        }).setOrigin(0.5).setDepth(92).setAlpha(0);
 
                         this.tweens.add({
                             targets: msg2,
@@ -659,11 +684,12 @@ export class GameScene extends Phaser.Scene {
                             duration: 400,
                             onComplete: () => {
                                 this.tweens.add({
-                                    targets: msg2,
+                                    targets: [card, msg2],
                                     alpha: 0,
-                                    delay: 2000,
+                                    delay: 2200,
                                     duration: 400,
                                     onComplete: () => {
+                                        card.destroy();
                                         msg2.destroy();
                                         this.finishTutorial();
                                     }
@@ -678,10 +704,10 @@ export class GameScene extends Phaser.Scene {
 
     finishTutorial() {
         this.tutorialActive = false;
+        this.tutorialAdvancing = false;
         this.tutorialComplete = true;
-        localStorage.setItem('htRefugiaTutorialDone', 'true');
+        try { localStorage.setItem('htRefugiaTutorialDone', 'true'); } catch { /* ignore */ }
 
-        // Begin normal wave spawning
         this.levelManager.startNextWave();
     }
 
