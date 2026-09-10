@@ -77,55 +77,126 @@ export class UIScene extends Phaser.Scene {
     }
 
     createHeaderStatus(cx, y, compact) {
-        const panelW = compact ? 150 : 250;
-        const panelH = compact ? 38 : 58;
-        const cy = y + (compact ? 21 : 33);
+        const panelW = compact ? 175 : 300;
+        const panelH = compact ? 48 : 64;
+        const cy = y + panelH / 2;
 
         this.add.image(cx, cy, 'hud_flock_panel')
             .setOrigin(0.5)
             .setScale(panelW / 240, panelH / 44);
 
-        const spread = compact ? 46 : 84;
-
-        this.waveText = this.add.text(cx - spread, cy, 'WAVE 1/3', {
+        // Wave label
+        this.waveText = this.add.text(cx, y + (compact ? 11 : 15), 'WAVE 1 / 8', {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? '12px' : '16px',
+            fontSize: compact ? '12px' : '17px',
             fontStyle: 'bold',
             color: '#f1c40f',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
-        this.add.text(cx - spread / 3, cy, '·', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '14px' : '18px',
-            color: '#445544',
-            resolution: TEXT_RES,
-        }).setOrigin(0.5);
+        // Segmented wave progress bar
+        const barW = panelW - (compact ? 32 : 52);
+        const barH = compact ? 7 : 10;
+        const barY = y + (compact ? 23 : 33);
+        this._waveBar = { x: cx - barW / 2, y: barY, w: barW, h: barH };
+        this.waveBarGraphics = this.add.graphics();
 
-        this.add.image(cx - 3, cy, 'icon_heart_green').setScale(compact ? 0.55 : 0.9);
-        this.savedText = this.add.text(cx + (compact ? 9 : 17), cy, '0', {
+        // Labeled counters
+        const heartScale = compact ? 0.5 : 0.75;
+        const counterY = y + (compact ? 38 : 52);
+
+        const savedGroup = this.createHudCounter(
+            cx - panelW * 0.25, counterY, 'icon_heart_green', 'SAVED',
+            '#2ecc71', '#79c9a0', '0', compact, heartScale
+        );
+        this.savedText = savedGroup.value;
+
+        const lostGroup = this.createHudCounter(
+            cx + panelW * 0.25, counterY, 'icon_heart_broken', 'LOST',
+            '#e74c3c', '#e0918b', '0/5', compact, heartScale
+        );
+        this.lostText = lostGroup.value;
+
+        this.refreshWaveProgress();
+    }
+
+    createHudCounter(centerX, centerY, iconKey, label, valueColor, labelColor, initialValue, compact, heartScale) {
+        const gap = compact ? 4 : 7;
+        const icon = this.add.image(0, 0, iconKey).setScale(heartScale);
+        const iconHalf = icon.displayWidth / 2;
+
+        const value = this.add.text(iconHalf + gap, 0, initialValue, {
             fontFamily: 'Mona Sans',
             fontSize: compact ? '13px' : '18px',
             fontStyle: 'bold',
-            color: '#2ecc71',
+            color: valueColor,
             resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
 
-        this.add.text(cx + spread / 3 + 3, cy, '·', {
+        const caption = this.add.text(value.x + value.width + gap, 0, label, {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? '14px' : '18px',
-            color: '#445544',
-            resolution: TEXT_RES,
-        }).setOrigin(0.5);
-
-        this.add.image(cx + spread - (compact ? 16 : 28), cy, 'icon_heart_broken').setScale(compact ? 0.55 : 0.9);
-        this.lostText = this.add.text(cx + spread - (compact ? 6 : 10), cy, '0/5', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '13px' : '18px',
+            fontSize: compact ? '9px' : '11px',
             fontStyle: 'bold',
-            color: '#e74c3c',
+            color: labelColor,
             resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
+
+        const contentLeft = -iconHalf;
+        const contentRight = caption.x + caption.width;
+        const container = this.add.container(
+            centerX - (contentLeft + contentRight) / 2,
+            centerY,
+            [icon, value, caption]
+        );
+
+        return { container, value };
+    }
+
+    refreshWaveProgress() {
+        if (!this.waveBarGraphics || !this._waveBar) return;
+
+        const gameScene = this.scene.get('GameScene');
+        if (!gameScene || !gameScene.levelManager) return;
+
+        const progress = gameScene.levelManager.getLevelProgress();
+        const total = Math.max(1, progress.totalWaves || 1);
+        const wave = progress.wave || 0;
+        const spawnFrac = progress.railsToSpawn > 0
+            ? Phaser.Math.Clamp(progress.railsSpawned / progress.railsToSpawn, 0, 1)
+            : 0;
+
+        if (this.waveText) {
+            this.waveText.setText(`WAVE ${Math.min(Math.max(wave, 1), total)} / ${total}`);
+        }
+
+        const { x, y, w, h } = this._waveBar;
+        const radius = h / 2;
+        const gap = 2;
+        const segW = (w - gap * (total - 1)) / total;
+        const g = this.waveBarGraphics;
+        g.clear();
+
+        g.fillStyle(0x14301f, 1);
+        g.fillRoundedRect(x, y - h / 2, w, h, radius);
+
+        for (let i = 0; i < total; i++) {
+            const sx = x + i * (segW + gap);
+
+            g.fillStyle(0x244636, 1);
+            g.fillRoundedRect(sx, y - h / 2, segW, h, Math.min(segW, h) / 2);
+
+            let frac = 0;
+            if (i < wave - 1) frac = 1;
+            else if (i === wave - 1) frac = spawnFrac;
+
+            if (frac > 0) {
+                g.fillStyle(frac >= 1 ? 0x2ecc71 : 0xf1c40f, 1);
+                g.fillRoundedRect(sx, y - h / 2, Math.max(segW * frac, radius), h, Math.min(segW, h) / 2);
+            }
+        }
+
+        g.lineStyle(1, 0xffffff, 0.12);
+        g.strokeRoundedRect(x, y - h / 2, w, h, radius);
     }
 
     createScorePanel(right, y, compact) {
@@ -316,11 +387,7 @@ export class UIScene extends Phaser.Scene {
         if (this.savedText) this.savedText.setText(`${stats.railsSaved}`);
         if (this.lostText) this.lostText.setText(`${stats.railsLost}/5`);
 
-        const gameScene = this.scene.get('GameScene');
-        if (gameScene && gameScene.levelManager && this.waveText) {
-            const progress = gameScene.levelManager.getLevelProgress();
-            this.waveText.setText(`WAVE ${progress.wave}/${progress.totalWaves}`);
-        }
+        this.refreshWaveProgress();
     }
 
     togglePauseOverlay(isPaused) {
@@ -353,6 +420,8 @@ export class UIScene extends Phaser.Scene {
     }
 
     update(time, delta) {
+        this.refreshWaveProgress();
+
         if (this.tickerItems && this.tickerItems.length > 0) {
             const dt = delta / 1000;
             const shift = this.tickerSpeed * dt;
