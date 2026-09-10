@@ -255,7 +255,7 @@
         <div class="loading-bar-container">
           <div class="loading-bar" id="loading-bar"></div>
         </div>
-        <p class="loading-tip">Ridgway's Rails are endangered birds that depend on marshes for survival&hellip;</p>
+        <p class="loading-tip" id="loading-tip">Ridgway's Rails are endangered birds that depend on marshes for survival&hellip;</p>
       </div>
     <div id="rotate-device-overlay" aria-live="polite">
       <div class="rotate-card">
@@ -268,6 +268,55 @@
     </div>
   </div>
   <script type="module" src="/src/main.js"></script>
+  <script>
+    (function rotateLoadingFacts() {
+      var tips = [
+        "Ridgway's Rails filter seawater with special salt glands, then sneeze out the brine.",
+        "Rails weave living cordgrass into nests that float up and down with the tide.",
+        "'Thin as a rail' comes from their flat bodies, built to slip through dense marsh stems.",
+        "During king tides, rails climb tall gumplant bushes for high-tide refugia.",
+        "Cordgrass pumps oxygen down to its drowned roots through hollow, sponge-like stems.",
+        "Pickleweed stores salt in its stem tips, which glow red in autumn before dropping off.",
+        "The endangered Salt Marsh Harvest Mouse drinks salty water and lives in pickleweed.",
+        "Saltgrass blades sweat brine that dries into glittering crystals in the sun.",
+        "Over 90% of SF Bay tidal wetlands are lost. Refugia cover helps rails escape king tides."
+      ];
+
+      var el = document.getElementById('loading-tip');
+      var screen = document.getElementById('loading-screen');
+      if (!el || !screen || tips.length === 0) return;
+
+      var index = Math.floor(Math.random() * tips.length);
+      var fadeMs = 400;
+      var intervalMs = 4500;
+
+      el.style.transition = 'opacity ' + fadeMs + 'ms ease';
+      el.textContent = tips[index];
+
+      var timer = setInterval(function () {
+        var next = index;
+        while (tips.length > 1 && next === index) {
+          next = Math.floor(Math.random() * tips.length);
+        }
+        index = next;
+
+        el.style.opacity = '0';
+        setTimeout(function () {
+          el.textContent = tips[index];
+          el.style.opacity = '1';
+        }, fadeMs);
+      }, intervalMs);
+
+      // Stop rotating once the loading screen is dismissed.
+      var observer = new MutationObserver(function () {
+        if (screen.classList.contains('hidden') || screen.style.display === 'none') {
+          clearInterval(timer);
+          observer.disconnect();
+        }
+      });
+      observer.observe(screen, { attributes: true, attributeFilter: ['class', 'style'] });
+    })();
+  </script>
 </body>
 
 </html>
