@@ -369,10 +369,14 @@ export class GameScene extends Phaser.Scene {
             this
         );
 
-        // Listen for rails caught
-        this.events.on('railCaught', (rail) => {
-            this.scoreManager.railLost(rail, 'predator');
-        });
+        // Listen for rails caught. Remove any handler left over from a previous
+        // game first, since the scene EventEmitter survives scene restarts.
+        this.events.off('railCaught', this.onRailCaught, this);
+        this.events.on('railCaught', this.onRailCaught, this);
+    }
+
+    onRailCaught(rail) {
+        this.scoreManager.railLost(rail, 'predator');
     }
 
     canPlantAt(x, y) {
