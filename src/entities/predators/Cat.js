@@ -23,7 +23,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.attackScaleY = CAT_ATTACK_SCALE_Y * entityScale;
         // Floor the catch radius so lanes right against the marsh clamp
         // (up to 20px away) stay reachable on small mobile scales.
-        this.catchDistance = Math.max(26, 30 * entityScale);
+        this.catchDistance = Math.max(30, 36 * entityScale);
 
         // Smooth steering + stuck detection for chase
         this.steerRate = 11;
@@ -197,11 +197,11 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
         if (distance > this.visionRange) return false;
 
-        // Check if in vision cone (simplified - just distance for now)
+        if (this.senseRadius && distance <= this.senseRadius) return true;
+
         const facingRight = !this.flipX;
         const railIsRight = rail.x > this.x;
 
-        // Must be in the direction we're facing
         if (facingRight && !railIsRight) return false;
         if (!facingRight && railIsRight) return false;
 
@@ -248,7 +248,12 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         const waterX = this.getWaterXAtCat();
         const safeWaterX = waterX + 45;
 
-        if (this.target.x < safeWaterX || this.x < safeWaterX) {
+        const marshTop = this.scene.marshTop !== undefined ? this.scene.marshTop : 100;
+        const marshBottom = this.scene.marshBottom !== undefined ? this.scene.marshBottom : (this.scene.scale?.height || 600) - 100;
+        const minY = marshTop + 15;
+        const maxY = marshBottom - 20;
+
+        if (this.target.x < safeWaterX || (this.x < safeWaterX && this.target.x <= this.x)) {
             this.endChase();
             return;
         }
@@ -277,9 +282,10 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
 
         // Give up if clamped against a boundary and no longer closing in,
         // so the cat never freezes beside an unreachable rail.
-        if (distance >= this.lastChaseDistance - 1) {
+        const isClamped = (this.x <= safeWaterX + 4) || (this.y <= minY + 4) || (this.y >= maxY - 4);
+        if (isClamped && distance >= this.lastChaseDistance - 0.5) {
             this.chaseStuckTimer += delta;
-            if (this.chaseStuckTimer > 700) {
+            if (this.chaseStuckTimer > 1500) {
                 this.endChase();
                 return;
             }
@@ -374,7 +380,9 @@ export class Cat extends GroundPredator {
 
         this.patrolSpeed = 120;
         this.chaseSpeed = 320;
-        this.visionRange = 120;
+        this.visionRange = 185;
+        this.senseRadius = 90;
+        this.steerRate = 16;
         this.animationSpeed = 80;
 
         this.body.setVelocityX(this.patrolSpeed);
@@ -383,11 +391,17 @@ export class Cat extends GroundPredator {
     startChase(rail) {
         this.state = 'chase';
         this.target = rail;
+        this.chaseStuckTimer = 0;
+        this.lastChaseDistance = Infinity;
 
         this.setFrame(2);
 
         if (rail.panic) {
             rail.panic();
+        }
+
+        if (Math.abs(rail.x - this.x) > 4) {
+            this.setFlipX(rail.x < this.x);
         }
 
         this.scene.tweens.add({

@@ -265,9 +265,13 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
         const waterX = this.getWaterXAtFox();
         const safeWaterX = waterX + 45;
+        const marshTop = this.scene.marshTop !== undefined ? this.scene.marshTop : 100;
+        const marshBottom = this.scene.marshBottom !== undefined ? this.scene.marshBottom : (this.scene.scale?.height || 600) - 100;
+        const minY = marshTop + 15;
+        const maxY = marshBottom - 15;
         const maxMarshX = (this.scene.scale?.width || 1000) - 100;
 
-        if (this.target.x < safeWaterX || this.x < safeWaterX || this.x > maxMarshX) {
+        if (this.target.x < safeWaterX || (this.x < safeWaterX && this.target.x <= this.x) || (this.x > maxMarshX && this.target.x >= this.x)) {
             this.endChase();
             return;
         }
@@ -296,9 +300,10 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
         // Give up if clamped against a boundary and no longer closing in,
         // so the fox never freezes beside an unreachable rail.
-        if (distance >= this.lastChaseDistance - 1) {
+        const isClamped = (this.x <= safeWaterX + 4) || (this.x >= maxMarshX - 4) || (this.y <= minY + 4) || (this.y >= maxY - 4);
+        if (isClamped && distance >= this.lastChaseDistance - 0.5) {
             this.chaseStuckTimer += delta;
-            if (this.chaseStuckTimer > 700) {
+            if (this.chaseStuckTimer > 1500) {
                 this.endChase();
                 return;
             }
