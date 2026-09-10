@@ -195,7 +195,7 @@ export class UIScene extends Phaser.Scene {
             const fsBtn = this.add.image(width - 18, cy, 'icon_maximize')
                 .setScale(0.65)
                 .setInteractive({ useHandCursor: true });
-            fsBtn.on('pointerdown', () => toggleFullscreen());
+            fsBtn.on('pointerup', () => toggleFullscreen());
 
             this.footerTipText = this.add.text(width - 40, cy, 'Plant cover to save Rails', {
                 fontFamily: 'Mona Sans',
@@ -214,7 +214,7 @@ export class UIScene extends Phaser.Scene {
             }).setOrigin(0, 0.5);
             fsContainer.add([fsIcon, fsText]);
             fsContainer.setSize(110, 24).setInteractive({ useHandCursor: true });
-            fsContainer.on('pointerdown', () => toggleFullscreen());
+            fsContainer.on('pointerup', () => toggleFullscreen());
 
             this.add.text(width - 26, cy, '[ESC] PAUSE', {
                 fontFamily: 'Mona Sans',

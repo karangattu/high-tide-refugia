@@ -1,5 +1,5 @@
 import * as Phaser from 'phaser';
-import { triggerFullscreenAndOrientation } from '../utils/mobile.js';
+import { triggerFullscreenAndOrientation, toggleFullscreen } from '../utils/mobile.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -30,6 +30,7 @@ export class MenuScene extends Phaser.Scene {
         this.createTitle(width, height);
         this.createButtons(width, height);
         this.createFooter(width, height);
+        this.createFullscreenButton(width);
 
         this.cameras.main.fadeIn(600);
     }
@@ -460,9 +461,6 @@ export class MenuScene extends Phaser.Scene {
         });
 
         btn.on('pointerdown', () => {
-            if (label === 'PLAY') {
-                triggerFullscreenAndOrientation();
-            }
             this.tweens.add({
                 targets: [btn, text],
                 scaleX: 0.95,
@@ -473,7 +471,27 @@ export class MenuScene extends Phaser.Scene {
             });
         });
 
+        // Fullscreen must be requested from a user-activation event:
+        // on touch devices pointerdown does not grant activation, pointerup does.
+        btn.on('pointerup', () => {
+            if (label === 'PLAY') {
+                triggerFullscreenAndOrientation();
+            }
+        });
+
         return { btn, text };
+    }
+
+    createFullscreenButton(width) {
+        const btn = this.add.image(width - 30, 30, 'icon_maximize')
+            .setScale(0.8)
+            .setAlpha(0.7)
+            .setDepth(12)
+            .setInteractive({ useHandCursor: true });
+
+        btn.on('pointerover', () => btn.setAlpha(1));
+        btn.on('pointerout', () => btn.setAlpha(0.7));
+        btn.on('pointerup', () => toggleFullscreen());
     }
 
     createFooter(width, height) {

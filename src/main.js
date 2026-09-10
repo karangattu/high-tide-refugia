@@ -102,16 +102,16 @@ window.addEventListener('resize', () => {
 
 export { triggerFullscreenAndOrientation };
 
+// Fullscreen needs transient user activation. On touch devices pointerdown
+// does not grant it (only pointerup/click/touchend do), so listen on click.
 const triggerAutoFullscreen = () => {
     const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     if (isTouch) {
         triggerFullscreenAndOrientation();
     }
-    window.removeEventListener('pointerdown', triggerAutoFullscreen);
-    window.removeEventListener('touchstart', triggerAutoFullscreen);
+    window.removeEventListener('click', triggerAutoFullscreen);
 };
-window.addEventListener('pointerdown', triggerAutoFullscreen, { once: true });
-window.addEventListener('touchstart', triggerAutoFullscreen, { once: true });
+window.addEventListener('click', triggerAutoFullscreen, { once: true });
 
 if (typeof window !== 'undefined' && 'serviceWorker' in window.navigator && window.location.protocol.startsWith('http')) {
     window.addEventListener('load', () => {

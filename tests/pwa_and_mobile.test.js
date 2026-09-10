@@ -42,3 +42,51 @@ test('mobile.js exports fullscreen triggers and responsive device checks', () =>
     assert.match(mobileRaw, /export function isMobileOrTablet\(/);
     assert.match(mobileRaw, /export function isPhonePortrait\(/);
 });
+
+test('Fullscreen requests fire on user-activation events so Android actually enters fullscreen', () => {
+    const menuRaw = fs.readFileSync('src/scenes/MenuScene.js', 'utf-8');
+    const uiRaw = fs.readFileSync('src/scenes/UIScene.js', 'utf-8');
+    const mainRaw = fs.readFileSync('src/main.js', 'utf-8');
+
+    // Touch devices do not grant user activation on pointerdown, so every
+    // requestFullscreen call must originate from pointerup or click.
+    assert.match(
+        menuRaw,
+        /btn\.on\('pointerup',\s*\(\)\s*=>\s*\{\s*if\s*\(label\s*===\s*'PLAY'\)\s*\{\s*triggerFullscreenAndOrientation\(\);/,
+        'PLAY must trigger fullscreen from pointerup, not pointerdown'
+    );
+    assert.doesNotMatch(
+        menuRaw,
+        /btn\.on\('pointerdown',[\s\S]{0,260}?triggerFullscreenAndOrientation/,
+        'PLAY must not request fullscreen from pointerdown'
+    );
+    assert.match(menuRaw, /icon_maximize/, 'Menu must expose a visible fullscreen toggle button');
+    assert.match(menuRaw, /toggleFullscreen\(\)/, 'Menu fullscreen button must toggle fullscreen');
+
+    assert.match(
+        uiRaw,
+        /fsBtn\.on\('pointerup',\s*\(\)\s*=>\s*toggleFullscreen\(\)\)/,
+        'In-game fullscreen button must use pointerup'
+    );
+    assert.match(
+        uiRaw,
+        /fsContainer\.on\('pointerup',\s*\(\)\s*=>\s*toggleFullscreen\(\)\)/,
+        'In-game fullscreen label must use pointerup'
+    );
+    assert.doesNotMatch(
+        uiRaw,
+        /on\('pointerdown',\s*\(\)\s*=>\s*toggleFullscreen\(\)\)/,
+        'In-game fullscreen must not use pointerdown'
+    );
+
+    assert.match(
+        mainRaw,
+        /addEventListener\('click',\s*triggerAutoFullscreen/,
+        'Auto-fullscreen on first interaction must use click (valid activation for touch and mouse)'
+    );
+    assert.doesNotMatch(
+        mainRaw,
+        /addEventListener\('(pointerdown|touchstart)',\s*triggerAutoFullscreen/,
+        'Auto-fullscreen must not listen on non-activating events'
+    );
+});

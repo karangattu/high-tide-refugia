@@ -1,4 +1,11 @@
 import * as Phaser from 'phaser';
+import {
+    getSavedPlayerName,
+    fetchTopScores,
+    submitHighScore,
+    subscribeToLeaderboard,
+    normalizeName,
+} from '../systems/HighScoreManager.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -19,7 +26,125 @@ export class GameOverScene extends Phaser.Scene {
 
         this.createBackground(width, height);
         this.createPanel(width, height);
+        this.setupLeaderboard();
         this.cameras.main.fadeIn(500);
+    }
+
+    setupLeaderboard() {
+        this.refreshLeaderboard();
+
+        // Refetch when anyone submits from any client (realtime)
+        this.unsubscribeLeaderboard = subscribeToLeaderboard(() => {
+            this.refreshLeaderboard();
+        });
+
+        // Returning player (name saved from a previous run): keep their entry current
+        if (getSavedPlayerName() && (this.stats.score || 0) > 0) {
+            this.handleSubmitName(null, true);
+        }
+
+        this.events.once('shutdown', () => {
+            if (this.unsubscribeLeaderboard) {
+                this.unsubscribeLeaderboard();
+                this.unsubscribeLeaderboard = null;
+            }
+            this.removeNameForm();
+        });
+    }
+
+    async refreshLeaderboard() {
+        if (!this.leaderboardSlots || !this.leaderboardSlots.length) return;
+
+        try {
+            const rows = await fetchTopScores(5);
+
+            if (!rows.length) {
+                this.leaderboardSlots.forEach(slot => {
+                    slot.nameText.setText('-');
+                    slot.scoreText.setText('');
+                    slot.rankText.setText(`${slot.index + 1}.`);
+                });
+                if (this.lbStatusText) this.lbStatusText.setText('No scores yet - be the first!');
+                return;
+            }
+
+            this.leaderboardSlots.forEach(slot => {
+                const row = rows[slot.index];
+                if (row) {
+                    const name = String(row.player_name || '');
+                    slot.nameText.setText(name.length > 12 ? `${name.slice(0, 11)}…` : name);
+                    slot.scoreText.setText(String(row.score ?? 0));
+                    slot.nameText.setColor(slot.index === 0 ? '#f1c40f' : '#ffffff');
+                    slot.rankText.setText(`${slot.index + 1}.`);
+                } else {
+                    slot.nameText.setText('-');
+                    slot.scoreText.setText('');
+                    slot.rankText.setText('');
+                }
+            });
+            if (this.lbStatusText) this.lbStatusText.setText('LIVE - updates in realtime');
+        } catch {
+            if (this.lbStatusText) this.lbStatusText.setText('Leaderboard unavailable');
+        }
+    }
+
+    renderLeaderboardRows(topY, spacing, fontPx, rankX, nameX, scoreX) {
+        (this.leaderboardSlots || []).forEach(slot => {
+            slot.rankText.destroy();
+            slot.nameText.destroy();
+            slot.scoreText.destroy();
+        });
+        this.leaderboardSlots = [];
+
+        for (let i = 0; i < 5; i++) {
+            const y = topY + i * spacing;
+
+            const rankText = this.add.text(rankX, y, `${i + 1}.`, {
+                fontFamily: 'Mona Sans',
+                fontSize: `${fontPx}px`,
+                fontStyle: 'bold',
+                color: '#f39c12',
+                resolution: TEXT_RES,
+            }).setOrigin(0, 0.5).setDepth(12);
+
+            const nameText = this.add.text(nameX, y, '...', {
+                fontFamily: 'Mona Sans',
+                fontSize: `${fontPx}px`,
+                color: '#ffffff',
+                resolution: TEXT_RES,
+            }).setOrigin(1, 0.5).setDepth(12);
+
+            const scoreText = this.add.text(scoreX, y, '', {
+                fontFamily: 'Mona Sans',
+                fontSize: `${fontPx}px`,
+                fontStyle: 'bold',
+                color: '#e67e22',
+                resolution: TEXT_RES,
+            }).setOrigin(1, 0.5).setDepth(12);
+
+            this.leaderboardSlots.push({ index: i, rankText, nameText, scoreText });
+        }
+    }
+
+    async handleSubmitName(inputEl, silent = false) {
+        const rawName = inputEl ? inputEl.value : getSavedPlayerName();
+        const stats = this.stats || { score: 0, railsSaved: 0, railsLost: 0 };
+
+        if (!silent) {
+            if (normalizeName(rawName).length < 2) {
+                if (this.lbStatusText) this.lbStatusText.setText('Name needs 2+ characters');
+                return;
+            }
+            if (this.lbStatusText) this.lbStatusText.setText('Submitting...');
+        }
+
+        try {
+            await submitHighScore(rawName, stats);
+            if (this.lbStatusText) this.lbStatusText.setText(`Best score saved for ${normalizeName(rawName)}`);
+            await this.refreshLeaderboard();
+        } catch {
+            if (this.lbStatusText) this.lbStatusText.setText('Could not save score');
+        }
     }
 
     createBackground(width, height) {
@@ -76,7 +201,7 @@ export class GameOverScene extends Phaser.Scene {
         const compact = height <= 520 || width < 680;
 
         if (isLandscape) {
-            const panelW = Math.min(compact ? 680 : 760, width - 30);
+            const panelW = Math.min(compact ? 880 : 1010, width - 30);
             const panelH = Math.min(compact ? 320 : 380, height - 20);
             const panelX = width / 2 - panelW / 2;
             const panelY = Math.max(10, (height - panelH) / 2);
@@ -89,8 +214,9 @@ export class GameOverScene extends Phaser.Scene {
             panel.lineStyle(2, header.borderColor, 0.6);
             panel.strokeRoundedRect(panelX, panelY, panelW, panelH, 20);
 
-            const col1X = panelX + panelW * 0.28;
-            const col2X = panelX + panelW * 0.72;
+            const col1X = panelX + panelW * 0.22;
+            const col2X = panelX + panelW * 0.55;
+            const col3X = panelX + panelW * 0.86;
 
             const titleFontSize = header.titleText.length > 15 ? (compact ? '22px' : '26px') : (compact ? '28px' : '32px');
             this.add.text(col1X, panelY + (compact ? 34 : 44), header.titleText, {
@@ -105,8 +231,9 @@ export class GameOverScene extends Phaser.Scene {
                 fontFamily: 'Mona Sans',
                 fontSize: compact ? '13px' : '15px',
                 color: '#aaaaaa',
-                wordWrap: { width: panelW * 0.44 },
+                wordWrap: { width: panelW * 0.30 },
                 align: 'center',
+                lineSpacing: 3,
                 resolution: TEXT_RES,
             }).setOrigin(0.5);
 
@@ -171,8 +298,8 @@ export class GameOverScene extends Phaser.Scene {
             });
 
             const buttonY = panelY + panelH - (compact ? 42 : 50);
-            const btnSpread = compact ? 90 : 110;
-            this.createButton(col2X - btnSpread, buttonY, header.buttonText, () => {
+
+            this.createButton(panelX + panelW * 0.26, buttonY, header.buttonText, () => {
                 this.cameras.main.fadeOut(300);
                 this.time.delayedCall(300, () => {
                     this.scene.start('GameScene');
@@ -180,12 +307,46 @@ export class GameOverScene extends Phaser.Scene {
                 });
             }, false, compact ? 140 : 160, compact ? 42 : 48);
 
-            this.createButton(col2X + btnSpread, buttonY, 'MENU', () => {
+            this.createButton(panelX + panelW * 0.50, buttonY, 'MENU', () => {
                 this.cameras.main.fadeOut(300);
                 this.time.delayedCall(300, () => {
                     this.scene.start('MenuScene');
                 });
             }, true, compact ? 120 : 140, compact ? 42 : 48);
+
+            this.add.text(col3X, panelY + (compact ? 30 : 38), 'LEADERBOARD', {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '16px' : '20px',
+                fontStyle: 'bold',
+                color: '#f39c12',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(12);
+
+            const rowsTopY = panelY + (compact ? 68 : 84);
+            const rowsSpacing = compact ? 32 : 38;
+            this.renderLeaderboardRows(
+                rowsTopY,
+                rowsSpacing,
+                compact ? 14 : 16,
+                col3X - 104,
+                col3X + 38,
+                col3X + 102
+            );
+
+            const formCy = panelY + panelH - (compact ? 26 : 30);
+            this.lbStatusText = this.add.text(col3X, formCy - (compact ? 46 : 52), '', {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '11px' : '12px',
+                color: '#9fd8e8',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(12);
+            this.add.text(col3X, formCy - (compact ? 24 : 27), 'ONE ENTRY PER NAME', {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '10px' : '12px',
+                color: '#65806e',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(12);
+            this.createNameEntry(col3X, formCy, compact);
 
             return;
         }
@@ -288,6 +449,42 @@ export class GameOverScene extends Phaser.Scene {
             resolution: TEXT_RES,
         }).setOrigin(0.5);
 
+        const lbHeaderY = statsY + (statsData.length - 1) * statsSpacing + (compact ? 46 : 58);
+        const lbRowsTop = lbHeaderY + (compact ? 26 : 30);
+        const lbRowSpacing = compact ? 20 : 23;
+        const lbRowsBottom = lbRowsTop + 4 * lbRowSpacing;
+        const lbFormCy = lbRowsBottom + (compact ? 60 : 66);
+
+        if (lbHeaderY < survivalY - 40 && lbRowsBottom < survivalY - 12) {
+            this.add.text(width / 2, lbHeaderY, 'LEADERBOARD', {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '14px' : '16px',
+                fontStyle: 'bold',
+                color: '#f39c12',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(12);
+
+            this.renderLeaderboardRows(
+                lbRowsTop,
+                lbRowSpacing,
+                compact ? 12 : 14,
+                width / 2 - 105,
+                width / 2 + 34,
+                width / 2 + 105
+            );
+
+            if (lbFormCy < survivalY - 6) {
+                const lbStatusY = lbRowsBottom + (compact ? 16 : 18);
+                this.lbStatusText = this.add.text(width / 2, lbStatusY, '', {
+                    fontFamily: 'Mona Sans',
+                    fontSize: compact ? '10px' : '11px',
+                    color: '#9fd8e8',
+                    resolution: TEXT_RES,
+                }).setOrigin(0.5).setDepth(12);
+                this.createNameEntry(width / 2, lbFormCy, compact);
+            }
+        }
+
         const buttonY = Math.max(survivalY + (compact ? 46 : 56), panelY + panelH - (compact ? 50 : 58));
         const btnSpread = compact ? 100 : 140;
 
@@ -352,5 +549,63 @@ export class GameOverScene extends Phaser.Scene {
         });
 
         hitArea.on('pointerdown', callback);
+    }
+
+    createNameEntry(cx, cy, compact) {
+        this.removeNameForm();
+
+        const rect = this.scale.canvas.getBoundingClientRect();
+        const sx = rect.width / this.scale.width;
+        const sy = rect.height / this.scale.height;
+
+        const inputW = compact ? 132 : 152;
+        const btnW = compact ? 74 : 86;
+        const formH = compact ? 26 : 32;
+        const left = Math.round(rect.left + cx * sx - (inputW + 6 + btnW) / 2);
+        const top = Math.round(rect.top + cy * sy - formH / 2);
+
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:fixed;display:flex;gap:6px;z-index:60;'
+            + `left:${left}px;top:${top}px;`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = 24;
+        input.placeholder = 'enter your name';
+        input.autocapitalize = 'none';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+        input.style.cssText = `width:${inputW}px;height:${formH}px;box-sizing:border-box;`
+            + 'border:2px solid #274a36;border-radius:8px;background:rgba(9,25,36,0.92);'
+            + "color:#ffffff;font-family:'Mona Sans',sans-serif;font-weight:700;"
+            + `font-size:${compact ? 12 : 14}px;padding:0 8px;outline:none;`;
+        input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                input.blur();
+                this.handleSubmitName(input);
+            }
+            ev.stopPropagation();
+        });
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.textContent = 'SAVE';
+        saveBtn.style.cssText = `width:${btnW}px;height:${formH}px;border:none;border-radius:8px;`
+            + 'background:#27ae60;color:#ffffff;font-family:\'Mona Sans\',sans-serif;'
+            + `font-weight:800;font-size:${compact ? 11 : 13}px;letter-spacing:0.06em;cursor:pointer;`;
+        saveBtn.addEventListener('click', () => this.handleSubmitName(input));
+
+        wrap.appendChild(input);
+        wrap.appendChild(saveBtn);
+        document.body.appendChild(wrap);
+        this.nameForm = wrap;
+    }
+
+    removeNameForm() {
+        if (this.nameForm) {
+            this.nameForm.remove();
+            this.nameForm = null;
+        }
     }
 }
