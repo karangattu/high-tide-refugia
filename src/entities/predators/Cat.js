@@ -1,11 +1,11 @@
 import * as Phaser from 'phaser';
 import { getEntityScaleFactor } from '../../utils/mobile.js';
 
-const CAT_BASE_SCALE = 0.28;
-const CAT_CHASE_SCALE = 0.31;
-const CAT_ALERT_SCALE = 0.34;
-const CAT_ATTACK_SCALE_X = 0.35;
-const CAT_ATTACK_SCALE_Y = 0.29;
+const CAT_BASE_SCALE = 0.235;
+const CAT_CHASE_SCALE = 0.26;
+const CAT_ALERT_SCALE = 0.285;
+const CAT_ATTACK_SCALE_X = 0.29;
+const CAT_ATTACK_SCALE_Y = 0.24;
 
 class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y, patrolMinX, patrolMaxX, texture) {

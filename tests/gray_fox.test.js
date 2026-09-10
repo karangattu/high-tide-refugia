@@ -58,6 +58,22 @@ test('Fox presentation scale keeps the larger predator visibly ahead of a rail',
     assert.ok(baseScale >= 0.36, `Fox base scale (${baseScale}) should give its larger artwork a clear size lead`);
 });
 
+test('Fox presentation scale gives the wild canid a larger physical presence than the domestic cat', () => {
+    const foxContent = fs.readFileSync('src/entities/predators/Fox.js', 'utf-8');
+    const catContent = fs.readFileSync('src/entities/predators/Cat.js', 'utf-8');
+    const foxBaseScale = Number(foxContent.match(/FOX_BASE_SCALE\s*=\s*([0-9.]+)/)?.[1]);
+    const catBaseScale = Number(catContent.match(/CAT_BASE_SCALE\s*=\s*([0-9.]+)/)?.[1]);
+
+    const FOX_CANVAS_W = 450;
+    const CAT_FRAME_W = 500;
+    const foxDisplayW = FOX_CANVAS_W * foxBaseScale;
+    const catDisplayW = CAT_FRAME_W * catBaseScale;
+
+    assert.ok(foxBaseScale >= 0.44, `Fox base scale (${foxBaseScale}) should be scaled up`);
+    assert.ok(catBaseScale <= 0.25, `Cat base scale (${catBaseScale}) should be scaled down`);
+    assert.ok(foxDisplayW > catDisplayW * 1.5, `Fox width (${foxDisplayW.toFixed(1)}px) must exceed cat width (${catDisplayW.toFixed(1)}px)`);
+});
+
 test('Fox cover evasion ensures rails in vegetation are invisible and immune from chase', () => {
     const foxContent = fs.readFileSync('src/entities/predators/Fox.js', 'utf-8');
 

@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
 import { getEntityScaleFactor } from '../../utils/mobile.js';
 
-const FOX_BASE_SCALE = 0.36;
-const FOX_CHASE_SCALE = 0.39;
-const FOX_ALERT_SCALE = 0.41;
+const FOX_BASE_SCALE = 0.48;
+const FOX_CHASE_SCALE = 0.51;
+const FOX_ALERT_SCALE = 0.53;
 const FOX_RUN_TEXTURES = [
     'fox_run_1', 'fox_run_2', 'fox_run_3', 'fox_run_4',
     'fox_run_5', 'fox_run_6', 'fox_run_7',

@@ -11,6 +11,7 @@ import { WaterSystem } from '../systems/WaterSystem.js';
 import { SeedBank } from '../systems/SeedBank.js';
 import { ScoreManager } from '../systems/ScoreManager.js';
 import { LevelManager } from '../systems/LevelManager.js';
+import { getRandomMarshFact } from '../data/marshFacts.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -848,10 +849,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     completeLevel() {
-        const config = this.levelManager.getCurrentConfig();
-
-        // Single level: surviving all waves wins the game.
-        this.showMarshFact(config.marshFact, () => {
+        const fact = getRandomMarshFact();
+        this.showMarshFact(fact, () => {
             this.gameWon();
         });
     }
@@ -890,44 +889,63 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
-    showMarshFact(fact, onComplete) {
+    showMarshFact(factData, onComplete) {
         const { width, height } = this.scale;
         const compact = height <= 520 || width < 650;
         this.isPaused = true;
+
+        const isObj = typeof factData === 'object' && factData !== null;
+        const species = isObj && factData.species ? factData.species : null;
+        const headline = isObj && factData.headline ? factData.headline : null;
+        const text = isObj && factData.fact ? factData.fact : (typeof factData === 'string' ? factData : '');
 
         const overlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
             .setDepth(100);
 
         const panelW = Math.min(680, width - 40);
-        const panelH = compact ? 270 : 320;
+        const panelH = compact ? 290 : 340;
         const panel = this.add.graphics().setDepth(101);
         panel.fillStyle(0x1a2a1a, 0.95);
         panel.fillRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
         panel.lineStyle(2, 0x27ae60);
         panel.strokeRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 20);
 
-        const leafL = this.add.image(width / 2 - (compact ? 100 : 140), height / 2 - panelH / 2 + 52, 'icon_leaf').setScale(1.5).setDepth(102);
-        const title = this.add.text(width / 2, height / 2 - panelH / 2 + 52, 'MARSH FACT', {
+        const leafL = this.add.image(width / 2 - (compact ? 110 : 150), height / 2 - panelH / 2 + 42, 'icon_leaf').setScale(compact ? 1.2 : 1.4).setDepth(102);
+        const title = this.add.text(width / 2, height / 2 - panelH / 2 + 42, 'MARSH FACT', {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? '28px' : '36px',
+            fontSize: compact ? '24px' : '30px',
             fontStyle: 'bold',
             color: '#27ae60',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
-        const leafR = this.add.image(width / 2 + (compact ? 100 : 140), height / 2 - panelH / 2 + 52, 'icon_leaf').setScale(1.5).setDepth(102);
+        const leafR = this.add.image(width / 2 + (compact ? 110 : 150), height / 2 - panelH / 2 + 42, 'icon_leaf').setScale(compact ? 1.2 : 1.4).setDepth(102);
 
-        const factText = this.add.text(width / 2, height / 2 + 10, fact, {
+        let subTitleText = null;
+        if (species || headline) {
+            const subStr = species && headline ? `${species.toUpperCase()} · ${headline}` : (species || headline);
+            subTitleText = this.add.text(width / 2, height / 2 - panelH / 2 + (compact ? 74 : 84), subStr, {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '13px' : '15px',
+                fontStyle: 'bold',
+                color: '#f1c40f',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(102);
+        }
+
+        const factY = subTitleText ? height / 2 + (compact ? 14 : 18) : height / 2 + 10;
+        const factText = this.add.text(width / 2, factY, text, {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? '18px' : '24px',
+            fontSize: compact ? '15px' : '19px',
             color: '#ffffff',
             wordWrap: { width: panelW - 70 },
             align: 'center',
+            lineSpacing: compact ? 3 : 5,
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
 
-        const continueText = this.add.text(width / 2, height / 2 + panelH / 2 - 45, 'Tap to continue...', {
+        const continueText = this.add.text(width / 2, height / 2 + panelH / 2 - (compact ? 28 : 34), 'Tap to continue...', {
             fontFamily: 'Mona Sans',
-            fontSize: compact ? '16px' : '20px',
+            fontSize: compact ? '14px' : '17px',
             color: '#888888',
             resolution: TEXT_RES,
         }).setOrigin(0.5).setDepth(102);
@@ -940,6 +958,7 @@ export class GameScene extends Phaser.Scene {
                 title.destroy();
                 leafL.destroy();
                 leafR.destroy();
+                if (subTitleText) subTitleText.destroy();
                 factText.destroy();
                 continueText.destroy();
                 this.isPaused = false;

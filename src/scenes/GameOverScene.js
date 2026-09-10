@@ -554,19 +554,13 @@ export class GameOverScene extends Phaser.Scene {
     createNameEntry(cx, cy, compact) {
         this.removeNameForm();
 
-        const rect = this.scale.canvas.getBoundingClientRect();
-        const sx = rect.width / this.scale.width;
-        const sy = rect.height / this.scale.height;
-
         const inputW = compact ? 132 : 152;
         const btnW = compact ? 74 : 86;
         const formH = compact ? 26 : 32;
-        const left = Math.round(rect.left + cx * sx - (inputW + 6 + btnW) / 2);
-        const top = Math.round(rect.top + cy * sy - formH / 2);
+        const totalW = inputW + 6 + btnW;
 
         const wrap = document.createElement('div');
-        wrap.style.cssText = 'position:fixed;display:flex;gap:6px;z-index:60;'
-            + `left:${left}px;top:${top}px;`;
+        wrap.style.cssText = 'position:fixed;display:flex;align-items:center;gap:6px;z-index:60;';
 
         const input = document.createElement('input');
         input.type = 'text';
@@ -588,6 +582,81 @@ export class GameOverScene extends Phaser.Scene {
             ev.stopPropagation();
         });
 
+        let isFocused = false;
+        const updatePosition = () => {
+            if (!wrap.parentNode) return;
+            const vv = window.visualViewport;
+            const isKeyboardVisible = Boolean(vv && vv.height < window.innerHeight * 0.82);
+            const elevate = isFocused || isKeyboardVisible;
+
+            if (elevate) {
+                const vvTop = vv ? vv.offsetTop : 0;
+                const vvHeight = vv ? vv.height : window.innerHeight;
+                const vvLeft = vv ? vv.offsetLeft : 0;
+                const vvWidth = vv ? vv.width : window.innerWidth;
+
+                const centerLeft = Math.round(vvLeft + (vvWidth - totalW) / 2);
+                const elevatedTop = Math.max(12, Math.round(vvTop + vvHeight - formH - 24));
+
+                wrap.style.left = `${centerLeft}px`;
+                wrap.style.top = `${elevatedTop}px`;
+                wrap.style.zIndex = '1000';
+                wrap.style.padding = '6px 10px';
+                wrap.style.borderRadius = '12px';
+                wrap.style.background = 'rgba(10, 26, 18, 0.96)';
+                wrap.style.boxShadow = '0 6px 24px rgba(0,0,0,0.85), 0 0 0 2px #27ae60';
+                input.style.borderColor = '#27ae60';
+            } else {
+                const rect = this.scale.canvas.getBoundingClientRect();
+                const sx = rect.width / this.scale.width;
+                const sy = rect.height / this.scale.height;
+                const defLeft = Math.round(rect.left + cx * sx - totalW / 2);
+                const defTop = Math.round(rect.top + cy * sy - formH / 2);
+
+                wrap.style.left = `${defLeft}px`;
+                wrap.style.top = `${defTop}px`;
+                wrap.style.zIndex = '60';
+                wrap.style.padding = '0';
+                wrap.style.borderRadius = '0';
+                wrap.style.background = 'transparent';
+                wrap.style.boxShadow = 'none';
+                input.style.borderColor = '#274a36';
+            }
+        };
+
+        const onFocus = () => {
+            isFocused = true;
+            updatePosition();
+        };
+
+        const onBlur = () => {
+            isFocused = false;
+            updatePosition();
+        };
+
+        input.addEventListener('focus', onFocus);
+        input.addEventListener('blur', onBlur);
+
+        const onVvResize = () => updatePosition();
+        const onVvScroll = () => updatePosition();
+        const onWinResize = () => updatePosition();
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', onVvResize);
+            window.visualViewport.addEventListener('scroll', onVvScroll);
+        }
+        window.addEventListener('resize', onWinResize);
+
+        this._cleanNameFormListeners = () => {
+            input.removeEventListener('focus', onFocus);
+            input.removeEventListener('blur', onBlur);
+            if (window.visualViewport) {
+                window.visualViewport.removeEventListener('resize', onVvResize);
+                window.visualViewport.removeEventListener('scroll', onVvScroll);
+            }
+            window.removeEventListener('resize', onWinResize);
+        };
+
         const saveBtn = document.createElement('button');
         saveBtn.type = 'button';
         saveBtn.textContent = 'SAVE';
@@ -600,9 +669,14 @@ export class GameOverScene extends Phaser.Scene {
         wrap.appendChild(saveBtn);
         document.body.appendChild(wrap);
         this.nameForm = wrap;
+        updatePosition();
     }
 
     removeNameForm() {
+        if (this._cleanNameFormListeners) {
+            this._cleanNameFormListeners();
+            this._cleanNameFormListeners = null;
+        }
         if (this.nameForm) {
             this.nameForm.remove();
             this.nameForm = null;

@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import { toggleFullscreen } from '../utils/mobile.js';
+import { AUTHENTIC_MARSH_FACTS } from '../data/marshFacts.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -183,7 +184,7 @@ export class UIScene extends Phaser.Scene {
             ? 'SF BAY REFUGE'
             : "RIDGWAY'S RAIL REFUGE";
 
-        this.add.text(leafX + (compact ? 22 : 28), cy, brand, {
+        const brandText = this.add.text(leafX + (compact ? 22 : 28), cy, brand, {
             fontFamily: 'Mona Sans',
             fontSize: compact ? '13px' : '15px',
             fontStyle: 'bold',
@@ -191,18 +192,13 @@ export class UIScene extends Phaser.Scene {
             resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
 
+        let tickerEndX = width - 40;
         if (compact) {
             const fsBtn = this.add.image(width - 18, cy, 'icon_maximize')
                 .setScale(0.65)
                 .setInteractive({ useHandCursor: true });
             fsBtn.on('pointerup', () => toggleFullscreen());
-
-            this.footerTipText = this.add.text(width - 40, cy, 'Plant cover to save Rails', {
-                fontFamily: 'Mona Sans',
-                fontSize: '12px',
-                color: '#b0c4b1',
-                resolution: TEXT_RES,
-            }).setOrigin(1, 0.5);
+            tickerEndX = width - 36;
         } else {
             const fsContainer = this.add.container(width - 145, cy);
             const fsIcon = this.add.image(-48, 0, 'icon_maximize').setScale(0.6);
@@ -223,15 +219,45 @@ export class UIScene extends Phaser.Scene {
                 resolution: TEXT_RES,
             }).setOrigin(1, 0.5);
 
-            const tip = width >= 1100
-                ? 'Rising King Tide · Plant Gumplant & Cordgrass corridors to guide Rails to safety'
-                : 'Plant Gumplant & Cordgrass corridors to guide Rails to safety';
-            this.footerTipText = this.add.text(width / 2, cy, tip, {
-                fontFamily: 'Mona Sans',
-                fontSize: '14px',
-                color: '#b0c4b1',
-                resolution: TEXT_RES,
-            }).setOrigin(0.5);
+            tickerEndX = width - 215;
+        }
+
+        const tickerStartX = brandText.x + (brandText.width || (compact ? 95 : 180)) + (compact ? 12 : 20);
+        const trackW = tickerEndX - tickerStartX;
+
+        if (trackW > 70) {
+            this.tickerFacts = AUTHENTIC_MARSH_FACTS.map(f => f.ticker);
+            this.tickerFactIndex = 0;
+            this.tickerStartX = tickerStartX;
+            this.tickerSpeed = compact ? 42 : 52;
+            this.tickerItems = [];
+
+            const maskGraphics = this.make.graphics();
+            maskGraphics.fillStyle(0xffffff);
+            maskGraphics.fillRect(tickerStartX, cy - footerH / 2, trackW, footerH);
+            this.tickerMask = maskGraphics.createGeometryMask();
+
+            let cursorX = tickerStartX;
+            while (cursorX < tickerStartX + trackW + 600) {
+                const factText = this.tickerFacts[this.tickerFactIndex] + '    ◆    ';
+                this.tickerFactIndex = (this.tickerFactIndex + 1) % this.tickerFacts.length;
+
+                const item = this.add.text(cursorX, cy, factText, {
+                    fontFamily: 'Mona Sans',
+                    fontSize: compact ? '11px' : '13px',
+                    color: '#b0c4b1',
+                    resolution: TEXT_RES,
+                }).setOrigin(0, 0.5).setMask(this.tickerMask);
+
+                this.tickerItems.push(item);
+                cursorX += item.width;
+            }
+
+            this.events.on('shutdown', () => {
+                if (maskGraphics) {
+                    maskGraphics.destroy();
+                }
+            });
         }
     }
 
@@ -323,6 +349,29 @@ export class UIScene extends Phaser.Scene {
         } else {
             if (this.pauseOverlay) { this.pauseOverlay.destroy(); this.pauseOverlay = null; }
             if (this.pauseText) { this.pauseText.destroy(); this.pauseText = null; }
+        }
+    }
+
+    update(time, delta) {
+        if (this.tickerItems && this.tickerItems.length > 0) {
+            const dt = delta / 1000;
+            const shift = this.tickerSpeed * dt;
+
+            for (let i = 0; i < this.tickerItems.length; i++) {
+                this.tickerItems[i].x -= shift;
+            }
+
+            const first = this.tickerItems[0];
+            if (first.x + first.width < this.tickerStartX) {
+                this.tickerItems.shift();
+                const last = this.tickerItems[this.tickerItems.length - 1];
+                const nextFact = this.tickerFacts[this.tickerFactIndex] + '    ◆    ';
+                this.tickerFactIndex = (this.tickerFactIndex + 1) % this.tickerFacts.length;
+
+                first.setText(nextFact);
+                first.x = last.x + last.width;
+                this.tickerItems.push(first);
+            }
         }
     }
 }
