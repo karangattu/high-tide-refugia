@@ -18,6 +18,12 @@ jobs:
           node-version: 20
           cache: npm
 
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - run: pip install pillow numpy
+
       - run: npm ci
 
       - run: npm test

@@ -24,6 +24,7 @@ test('test.yml defines a parallel GitHub Action workflow that runs tests', () =>
     assert.match(testWorkflow, /workflow_dispatch:/);
     assert.match(testWorkflow, /uses:\s*actions\/checkout@v7/);
     assert.match(testWorkflow, /uses:\s*actions\/setup-node@v7/);
+    assert.match(testWorkflow, /uses:\s*actions\/setup-python@v7/);
     assert.match(testWorkflow, /run:\s*npm ci/);
     assert.match(testWorkflow, /run:\s*npm test/);
 });
