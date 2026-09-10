@@ -21,7 +21,14 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.alertScale = CAT_ALERT_SCALE * entityScale;
         this.attackScaleX = CAT_ATTACK_SCALE_X * entityScale;
         this.attackScaleY = CAT_ATTACK_SCALE_Y * entityScale;
-        this.catchDistance = 30 * entityScale;
+        // Floor the catch radius so lanes right against the marsh clamp
+        // (up to 20px away) stay reachable on small mobile scales.
+        this.catchDistance = Math.max(26, 30 * entityScale);
+
+        // Smooth steering + stuck detection for chase
+        this.steerRate = 11;
+        this.chaseStuckTimer = 0;
+        this.lastChaseDistance = Infinity;
 
         this.setScale(this.baseScale);
         this.setDepth(4);
@@ -102,7 +109,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
 
         this.animationTimer += delta;
         if (this.animationTimer >= this.animationSpeed) {
-            this.animationTimer = 0;
+            this.animationTimer %= this.animationSpeed;
             this.currentFrame = (this.currentFrame + 1) % this.walkingFrames.length;
 
             if (this.state === 'patrol' || this.state === 'chase') {
@@ -132,7 +139,14 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    patrol(_delta) {
+    steer(desiredVX, desiredVY, delta) {
+        const dt = Math.min(delta || 16, 50) / 1000;
+        const t = 1 - Math.exp(-this.steerRate * dt);
+        this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, desiredVX, t);
+        this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, desiredVY, t);
+    }
+
+    patrol(delta) {
         const waterX = this.getWaterXAtCat();
         const safeWaterX = waterX + 45;
 
@@ -143,30 +157,34 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             Math.min(maxMarshX, currentPatrolMinX + this.patrolSpan)
         );
 
+        let dir = this.body.velocity.x < 0 ? -1 : 1;
         if (this.x >= currentPatrolMaxX) {
-            this.body.setVelocityX(-this.patrolSpeed);
+            dir = -1;
             this.setFlipX(true);
         } else if (this.x <= currentPatrolMinX) {
-            this.body.setVelocityX(this.patrolSpeed);
+            dir = 1;
             this.setFlipX(false);
         }
 
         const distY = this.homeY - this.y;
-        if (Math.abs(distY) > 12) {
-            this.body.setVelocityY(Phaser.Math.Clamp(distY * 0.8, -40, 40));
-        } else {
-            this.body.setVelocityY(0);
-        }
+        const desiredVY = Math.abs(distY) > 12
+            ? Phaser.Math.Clamp(distY * 0.8, -40, 40)
+            : 0;
+
+        this.steer(dir * this.patrolSpeed, desiredVY, delta);
     }
 
     searchForPrey(rails) {
         if (!rails || !rails.children) return;
 
         const waterX = this.getWaterXAtCat();
+        const safeWaterX = waterX + 45;
 
         const detectedRail = rails.children.entries.find(rail => {
             if (!rail.isAlive || !rail.isDetectable) return false;
-            if (rail.x < waterX + 30) return false;
+            // Never lock onto a rail parked inside the water exclusion band,
+            // where this predator is not allowed to follow.
+            if (rail.x < safeWaterX) return false;
             return this.canSeeRail(rail);
         });
 
@@ -193,6 +211,8 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     startChase(rail) {
         this.state = 'chase';
         this.target = rail;
+        this.chaseStuckTimer = 0;
+        this.lastChaseDistance = Infinity;
 
         // Switch to pouncing/running pose for chase
         this.setFrame(5);
@@ -214,7 +234,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         });
     }
 
-    chase(_delta) {
+    chase(delta) {
         if (!this.target || !this.target.isAlive) {
             this.endChase();
             return;
@@ -228,18 +248,21 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         const waterX = this.getWaterXAtCat();
         const safeWaterX = waterX + 45;
 
-        if (this.target.x < waterX + 30 || this.x < safeWaterX) {
+        if (this.target.x < safeWaterX || this.x < safeWaterX) {
             this.endChase();
             return;
         }
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
-        this.body.setVelocity(
+        this.steer(
             Math.cos(angle) * this.chaseSpeed,
-            Math.sin(angle) * this.chaseSpeed
+            Math.sin(angle) * this.chaseSpeed,
+            delta
         );
 
-        this.setFlipX(this.target.x < this.x);
+        if (Math.abs(this.target.x - this.x) > 4) {
+            this.setFlipX(this.target.x < this.x);
+        }
 
         const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
         if (distance < this.catchDistance) {
@@ -249,7 +272,21 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
 
         if (distance > 300) {
             this.endChase();
+            return;
         }
+
+        // Give up if clamped against a boundary and no longer closing in,
+        // so the cat never freezes beside an unreachable rail.
+        if (distance >= this.lastChaseDistance - 1) {
+            this.chaseStuckTimer += delta;
+            if (this.chaseStuckTimer > 700) {
+                this.endChase();
+                return;
+            }
+        } else {
+            this.chaseStuckTimer = 0;
+        }
+        this.lastChaseDistance = distance;
     }
 
     catchPrey() {
@@ -282,6 +319,8 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     endChase() {
         this.state = 'patrol';
         this.target = null;
+        this.chaseStuckTimer = 0;
+        this.lastChaseDistance = Infinity;
         this.setFrame(0);
         this.setScale(this.baseScale);
 

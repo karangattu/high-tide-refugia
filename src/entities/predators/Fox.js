@@ -39,7 +39,14 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         // Foxes also hunt by sound/smell: within this radius they notice prey
         // in any direction, even outside their forward line of sight.
         this.senseRadius = 95;
-        this.catchDistance = 32 * entityScale;
+        // Floor the catch radius so lanes against the marsh clamp stay
+        // reachable on small mobile scales.
+        this.catchDistance = Math.max(26, 32 * entityScale);
+
+        // Smooth steering + stuck detection for chase
+        this.steerRate = 11;
+        this.chaseStuckTimer = 0;
+        this.lastChaseDistance = Infinity;
 
         this.patrolDirX = Math.random() < 0.5 ? -1 : 1;
         this.patrolDirY = Math.random() < 0.5 ? -1 : 1;
@@ -83,6 +90,13 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         const vy = this.patrolDirY * Math.sin(this.headingAngle) * this.patrolSpeed;
         this.body.setVelocity(vx, vy);
         this.setFlipX(vx < 0);
+    }
+
+    steer(desiredVX, desiredVY, delta) {
+        const dt = Math.min(delta || 16, 50) / 1000;
+        const t = 1 - Math.exp(-this.steerRate * dt);
+        this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, desiredVX, t);
+        this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, desiredVY, t);
     }
 
     update(time, delta, rails) {
@@ -172,18 +186,25 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             this.wanderTimer = 0;
             this.nextWanderInterval = 2600 + Math.random() * 1800;
             this.headingAngle = 0.44 + Math.random() * 0.52;
-            this.applyDiagonalVelocity();
         }
+
+        const vx = this.patrolDirX * Math.cos(this.headingAngle) * this.patrolSpeed;
+        const vy = this.patrolDirY * Math.sin(this.headingAngle) * this.patrolSpeed;
+        this.steer(vx, vy, delta);
+        if (Math.abs(vx) > 1) this.setFlipX(vx < 0);
     }
 
     searchForPrey(rails) {
         if (!rails || !rails.children) return;
 
         const waterX = this.getWaterXAtFox();
+        const safeWaterX = waterX + 45;
 
         const detectedRail = rails.children.entries.find(rail => {
             if (!rail.isAlive || !rail.isDetectable) return false;
-            if (rail.x < waterX + 30) return false;
+            // Never lock onto a rail parked inside the water exclusion band,
+            // where this predator is not allowed to follow.
+            if (rail.x < safeWaterX) return false;
             return this.canSeeRail(rail);
         });
 
@@ -213,6 +234,8 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.state = 'chase';
         this.target = rail;
         this.animationTimer = 0;
+        this.chaseStuckTimer = 0;
+        this.lastChaseDistance = Infinity;
 
         if (rail.panic) {
             rail.panic();
@@ -234,7 +257,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         }
     }
 
-    chase(_delta) {
+    chase(delta) {
         if (!this.target || !this.target.isAlive || !this.target.isDetectable) {
             this.endChase();
             return;
@@ -244,18 +267,21 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         const safeWaterX = waterX + 45;
         const maxMarshX = (this.scene.scale?.width || 1000) - 100;
 
-        if (this.target.x < waterX + 30 || this.x < safeWaterX || this.x > maxMarshX) {
+        if (this.target.x < safeWaterX || this.x < safeWaterX || this.x > maxMarshX) {
             this.endChase();
             return;
         }
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
-        this.body.setVelocity(
+        this.steer(
             Math.cos(angle) * this.chaseSpeed,
-            Math.sin(angle) * this.chaseSpeed
+            Math.sin(angle) * this.chaseSpeed,
+            delta
         );
 
-        this.setFlipX(this.target.x < this.x);
+        if (Math.abs(this.target.x - this.x) > 4) {
+            this.setFlipX(this.target.x < this.x);
+        }
 
         const distance = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
         if (distance < this.catchDistance) {
@@ -265,7 +291,21 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
         if (distance > 300) {
             this.endChase();
+            return;
         }
+
+        // Give up if clamped against a boundary and no longer closing in,
+        // so the fox never freezes beside an unreachable rail.
+        if (distance >= this.lastChaseDistance - 1) {
+            this.chaseStuckTimer += delta;
+            if (this.chaseStuckTimer > 700) {
+                this.endChase();
+                return;
+            }
+        } else {
+            this.chaseStuckTimer = 0;
+        }
+        this.lastChaseDistance = distance;
     }
 
     catchPrey() {
@@ -319,6 +359,8 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
     endChase() {
         this.state = 'patrol';
         this.target = null;
+        this.chaseStuckTimer = 0;
+        this.lastChaseDistance = Infinity;
         this.currentRunFrame = 0;
         this.animationTimer = 0;
         this.setTexture(this.runningFrames[0]);
