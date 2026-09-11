@@ -27,6 +27,11 @@ test('one small, non-physics mouse runs every 15 seconds', async () => {
         marshBottom: 600,
         isPaused: false,
         isGameOver: false,
+        rails: {
+            children: {
+                entries: [{ isAlive: true, baseSpeed: 80 }],
+            },
+        },
         add: {
             sprite(x, y, texture) {
                 const sprite = {
@@ -109,7 +114,10 @@ test('one small, non-physics mouse runs every 15 seconds', async () => {
         assert.ok(mouse.displayWidth < 48, 'mouse stays less than half the visual width of a rail');
         assert.ok(mouse.x < 0, 'mouse starts fully off the left edge');
         assert.ok(tween.x > scene.scale.width, 'mouse finishes fully off the right edge');
-        assert.ok(tween.duration <= 1000, 'mouse crosses the screen really fast');
+        const crossingDistance = tween.x - mouse.x;
+        const mouseSpeed = crossingDistance / (tween.duration / 1000);
+        assert.ok(mouseSpeed > 80, 'mouse runs a little faster than the rail');
+        assert.ok(mouseSpeed <= 100, 'mouse stays close to rail speed instead of streaking across');
         assert.equal('physics' in mouse, false, 'mouse has no physics body for predators to catch');
 
         tween.onComplete();

@@ -1,8 +1,20 @@
 import { getEntityScaleFactor } from '../utils/mobile.js';
 
 const MOUSE_SCALE = 0.12;
-const MOUSE_CROSSING_DURATION = 850;
 const MOUSE_RUN_INTERVAL = 15_000;
+const MOUSE_SPEED_MULTIPLIER = 1.2;
+
+function getRailReferenceSpeed(scene) {
+    const liveRailSpeeds = (scene.rails?.children?.entries || [])
+        .filter(rail => rail.isAlive !== false && Number.isFinite(rail.baseSpeed))
+        .map(rail => rail.baseSpeed);
+    if (liveRailSpeeds.length > 0) return Math.max(...liveRailSpeeds);
+
+    const levelSpeedMultiplier = scene.levelManager
+        ?.getCurrentConfig?.()
+        ?.railSpeedMultiplier ?? 1;
+    return 120 * levelSpeedMultiplier;
+}
 
 export function startSaltMarshMouseRun(scene) {
     const entityScale = getEntityScaleFactor(scene.scale.width, scene.scale.height);
@@ -17,11 +29,14 @@ export function startSaltMarshMouseRun(scene) {
         .play('saltie_run');
     const offscreenPadding = mouse.displayWidth / 2 + 16;
     mouse.x = -offscreenPadding;
+    const destinationX = scene.scale.width + offscreenPadding;
+    const mouseSpeed = getRailReferenceSpeed(scene) * MOUSE_SPEED_MULTIPLIER;
+    const crossingDuration = ((destinationX - mouse.x) / mouseSpeed) * 1000;
 
     scene.tweens.add({
         targets: mouse,
-        x: scene.scale.width + offscreenPadding,
-        duration: MOUSE_CROSSING_DURATION,
+        x: destinationX,
+        duration: crossingDuration,
         ease: 'Linear',
         onComplete: () => mouse.destroy(),
     });
