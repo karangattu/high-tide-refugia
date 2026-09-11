@@ -1,7 +1,8 @@
 import { getEntityScaleFactor } from '../utils/mobile.js';
 
-const MOUSE_SCALE = 0.24;
+const MOUSE_SCALE = 0.12;
 const MOUSE_CROSSING_DURATION = 850;
+const MOUSE_RUN_INTERVAL = 15_000;
 
 export function startSaltMarshMouseRun(scene) {
     const entityScale = getEntityScaleFactor(scene.scale.width, scene.scale.height);
@@ -28,8 +29,17 @@ export function startSaltMarshMouseRun(scene) {
     return mouse;
 }
 
-export function advanceWaveWithMouseRun(scene) {
-    const wave = scene.levelManager.startNextWave();
-    if (wave.shouldSpawnMouse) startSaltMarshMouseRun(scene);
-    return wave;
+export function scheduleSaltMarshMouseRuns(scene) {
+    if (scene.mouseRunTimer) scene.mouseRunTimer.remove();
+
+    scene.mouseRunTimer = scene.time.addEvent({
+        delay: MOUSE_RUN_INTERVAL,
+        loop: true,
+        callback: () => {
+            if (scene.isPaused || scene.isGameOver || scene.tutorialActive) return;
+            startSaltMarshMouseRun(scene);
+        },
+    });
+
+    return scene.mouseRunTimer;
 }

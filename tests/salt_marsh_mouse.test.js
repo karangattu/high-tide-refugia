@@ -1,24 +1,32 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { LevelManager } from '../src/systems/LevelManager.js';
 
 const mouseModulePath = new URL('../src/effects/SaltMarshMouseRun.js', import.meta.url);
 
-test('every third wave launches one fast, non-physics mouse run', async () => {
+test('one small, non-physics mouse runs every 15 seconds', async () => {
     assert.ok(
         fs.existsSync(mouseModulePath),
         'the salt marsh mouse run effect must exist'
     );
 
-    const { advanceWaveWithMouseRun } = await import(mouseModulePath);
+    const { scheduleSaltMarshMouseRuns } = await import(mouseModulePath);
+    assert.equal(
+        typeof scheduleSaltMarshMouseRuns,
+        'function',
+        'the mouse effect must expose a repeating time-based scheduler'
+    );
+
     const sprites = [];
     const tweens = [];
+    let clockNow = 0;
+    const clockEvents = [];
     const scene = {
         scale: { width: 1200, height: 700 },
         marshTop: 150,
         marshBottom: 600,
-        levelManager: new LevelManager({}),
+        isPaused: false,
+        isGameOver: false,
         add: {
             sprite(x, y, texture) {
                 const sprite = {
@@ -54,14 +62,43 @@ test('every third wave launches one fast, non-physics mouse run', async () => {
                 return config;
             },
         },
+        time: {
+            addEvent(config) {
+                const event = {
+                    ...config,
+                    nextRun: clockNow + config.delay,
+                    removed: false,
+                    remove() {
+                        this.removed = true;
+                    },
+                };
+                clockEvents.push(event);
+                return event;
+            },
+        },
     };
-    scene.levelManager.startLevel();
+    const advanceClock = (milliseconds) => {
+        clockNow += milliseconds;
+        for (const event of clockEvents) {
+            while (!event.removed && clockNow >= event.nextRun) {
+                event.callback();
+                if (!event.loop) {
+                    event.removed = true;
+                    break;
+                }
+                event.nextRun += event.delay;
+            }
+        }
+    };
 
-    for (let wave = 1; wave <= 6; wave++) {
-        advanceWaveWithMouseRun(scene);
-    }
+    scheduleSaltMarshMouseRuns(scene);
+    advanceClock(14_999);
+    assert.equal(sprites.length, 0, 'no mouse appears before 15 seconds');
+    advanceClock(1);
+    assert.equal(sprites.length, 1, 'the first mouse appears at 15 seconds');
+    advanceClock(15_000);
 
-    assert.equal(sprites.length, 2, 'waves 3 and 6 each launch one mouse');
+    assert.equal(sprites.length, 2, 'another mouse appears after each 15-second interval');
     assert.equal(tweens.length, 2, 'each mouse gets one crossing tween');
 
     for (let i = 0; i < sprites.length; i++) {
@@ -69,6 +106,7 @@ test('every third wave launches one fast, non-physics mouse run', async () => {
         const tween = tweens[i];
         assert.equal(mouse.texture, 'saltie_run_1');
         assert.equal(mouse.animation, 'saltie_run');
+        assert.ok(mouse.displayWidth < 48, 'mouse stays less than half the visual width of a rail');
         assert.ok(mouse.x < 0, 'mouse starts fully off the left edge');
         assert.ok(tween.x > scene.scale.width, 'mouse finishes fully off the right edge');
         assert.ok(tween.duration <= 1000, 'mouse crosses the screen really fast');
