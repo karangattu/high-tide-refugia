@@ -1,12 +1,13 @@
-const CACHE_NAME = 'refugia-v1';
+const CACHE_NAME = 'refugia-v2';
+const scopeUrl = (path = '') => new URL(path, self.registration.scope).href;
 const PRECACHE_URLS = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
-  '/favicon.png',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/apple-touch-icon.png',
+  scopeUrl(),
+  scopeUrl('index.html'),
+  scopeUrl('manifest.webmanifest'),
+  scopeUrl('favicon.png'),
+  scopeUrl('icons/icon-192.png'),
+  scopeUrl('icons/icon-512.png'),
+  scopeUrl('icons/apple-touch-icon.png'),
 ];
 
 self.addEventListener('install', (event) => {
@@ -45,7 +46,8 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match('/index.html') || caches.match('/'))
+        .catch(() => caches.match(scopeUrl('index.html'))
+          .then((response) => response || caches.match(scopeUrl())))
     );
     return;
   }

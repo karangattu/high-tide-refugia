@@ -1,5 +1,10 @@
 import * as Phaser from 'phaser';
 import { triggerFullscreenAndOrientation, toggleFullscreen } from '../utils/mobile.js';
+import {
+    getManualInstallContent,
+    pwaInstall,
+    shouldShowInstallOption,
+} from '../utils/pwaInstall.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -31,6 +36,7 @@ export class MenuScene extends Phaser.Scene {
         this.createButtons(width, height);
         this.createFooter(width, height);
         this.createFullscreenButton(width);
+        this.createInstallButton();
 
         this.cameras.main.fadeIn(600);
     }
@@ -410,7 +416,7 @@ export class MenuScene extends Phaser.Scene {
 
         const primaryY = startY + this.btnPrimaryH / 2;
         const b1 = this.createButton(width / 2, primaryY, 'PLAY', 'menu_btn_primary', veryShort ? '26px' : '36px', '#2b1c07', () => {
-            this.showTutorial(() => this.startGame());
+            this.startGame();
         });
 
         const y = primaryY + this.btnPrimaryH / 2 + spacing;
@@ -492,6 +498,86 @@ export class MenuScene extends Phaser.Scene {
         btn.on('pointerover', () => btn.setAlpha(1));
         btn.on('pointerout', () => btn.setAlpha(0.7));
         btn.on('pointerup', () => toggleFullscreen());
+    }
+
+    createInstallButton() {
+        if (!shouldShowInstallOption()) return;
+
+        const x = this.compact ? 72 : 92;
+        const y = 30;
+        const w = this.compact ? 124 : 164;
+        const h = 44;
+        const bg = this.add.graphics().setDepth(12);
+        const draw = (hover = false) => {
+            bg.clear();
+            bg.fillStyle(0x0c1a0c, hover ? 0.95 : 0.82);
+            bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+            bg.lineStyle(1.5, hover ? 0xffffff : 0x3ddc84, 0.9);
+            bg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+        };
+        draw();
+
+        const label = this.add.text(x, y, 'INSTALL APP', {
+            fontFamily: 'Mona Sans',
+            fontSize: this.compact ? '13px' : '15px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(13);
+
+        const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0)
+            .setDepth(14)
+            .setInteractive({ useHandCursor: true });
+        const elements = [bg, label, hit];
+        this.installElements = elements;
+
+        hit.on('pointerover', () => draw(true));
+        hit.on('pointerout', () => draw(false));
+        hit.on('pointerup', async () => {
+            const result = await pwaInstall.requestInstall();
+            if (result.status === 'accepted') {
+                elements.forEach(element => element.setVisible(false));
+            } else if (result.status === 'unavailable') {
+                this.showInstallInstructions();
+            }
+        });
+
+        const unsubscribe = pwaInstall.subscribe(() => {
+            if (!shouldShowInstallOption()) {
+                elements.forEach(element => element.setVisible(false));
+            }
+        });
+        this.events.once('shutdown', unsubscribe);
+    }
+
+    showInstallInstructions() {
+        const { width, height } = this.scale;
+        const content = getManualInstallContent();
+        const panelH = Math.min(this.compact ? 300 : 350, height - 30);
+        const shell = this.buildModalShell(width, height, content.title, panelH);
+        const { left, top, panelW } = shell;
+        shell.items = [];
+
+        content.steps.forEach((step, index) => {
+            const y = top + (this.compact ? 74 : 92) + index * (this.compact ? 54 : 62);
+            const number = this.add.text(left + (this.compact ? 28 : 42), y, `${index + 1}`, {
+                fontFamily: 'Mona Sans',
+                fontSize: this.compact ? '16px' : '20px',
+                fontStyle: 'bold',
+                color: AMBER_STR,
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(92);
+            const text = this.add.text(left + (this.compact ? 50 : 70), y, step, {
+                fontFamily: 'Mona Sans',
+                fontSize: this.compact ? '13px' : '17px',
+                color: '#ffffff',
+                wordWrap: { width: panelW - (this.compact ? 76 : 110) },
+                resolution: TEXT_RES,
+            }).setOrigin(0, 0.5).setDepth(92);
+            shell.items.push(number, text);
+        });
+
+        this.buildModalClose(shell, null, { label: 'GOT IT' });
     }
 
     createFooter(width, height) {
@@ -694,65 +780,6 @@ export class MenuScene extends Phaser.Scene {
         });
 
         return items;
-    }
-
-    showTutorial(onStart = null) {
-        const { width, height } = this.scale;
-        const compact = this.compact;
-        const veryShort = height <= 420;
-        const panelW = Math.min(compact ? 560 : 760, width - 30);
-
-        const instructions = [
-            { icon: 'icon_wave', text: 'The tide is rising! Rails flee from left to right.' },
-            { icon: 'icon_leaf', text: 'TAP the marsh to plant vegetation and create hiding spots.' },
-            { icon: 'icon_paw', text: 'Cats and harriers hunt exposed Rails.' },
-            { icon: 'icon_bolt', text: 'Rails in plants become invisible to predators.' },
-            { icon: 'icon_trophy', text: 'Bonus points for "Continuous Cover" paths!' },
-            { icon: 'icon_heart_green', text: 'Save as many Rails as you can before the tide rises!' },
-        ];
-
-        const itemSpacing = veryShort ? 32 : (compact ? 40 : 50);
-        const bh = veryShort ? 36 : (compact ? 42 : 50);
-        const topPad = veryShort ? 18 : (compact ? 24 : 32);
-        const titleH = veryShort ? 24 : (compact ? 28 : 34);
-        const gapTitleToItems = veryShort ? 12 : (compact ? 18 : 24);
-        const itemsTotalH = (instructions.length - 1) * itemSpacing + (veryShort ? 18 : 22);
-        const gapItemsToClose = veryShort ? 14 : (compact ? 18 : 24);
-        const botPad = veryShort ? 14 : (compact ? 18 : 24);
-
-        const totalH = topPad + titleH + gapTitleToItems + itemsTotalH + gapItemsToClose + bh + botPad;
-
-        const shell = this.buildModalShell(width, height, 'HOW TO PLAY', totalH);
-        const { panelH, left, top } = shell;
-        const startY = top + topPad + titleH + gapTitleToItems + 10;
-        const iconX = left + (compact ? 34 : 54);
-        const textX = iconX + (compact ? 24 : 32);
-
-        shell.items = [];
-        instructions.forEach((item, i) => {
-            const y = startY + i * itemSpacing;
-            const ico = this.add.image(iconX, y, item.icon)
-                .setScale(veryShort ? 0.7 : (compact ? 0.85 : 1.15)).setDepth(92);
-            const txt = this.add.text(textX, y, item.text, {
-                fontFamily: 'Mona Sans',
-                fontSize: veryShort ? '13px' : (compact ? '15px' : '19px'),
-                color: '#ffffff',
-                resolution: TEXT_RES,
-                wordWrap: { width: panelW - (compact ? 80 : 120) },
-            }).setOrigin(0, 0.5).setDepth(92);
-            shell.items.push(ico, txt);
-        });
-
-        const closeY = startY + (instructions.length - 1) * itemSpacing + (veryShort ? 10 : 14) + gapItemsToClose + bh / 2;
-
-        this.buildModalClose(shell, onStart, {
-            label: onStart ? 'START GAME' : 'GOT IT',
-            primary: Boolean(onStart),
-            countdown: onStart ? 5 : 0,
-            y: closeY,
-            height: bh,
-            width: compact ? (panelH < 390 ? 180 : 210) : 250,
-        });
     }
 
     showSFBBOInfo() {

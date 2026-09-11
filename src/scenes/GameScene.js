@@ -11,6 +11,7 @@ import { WaterSystem } from '../systems/WaterSystem.js';
 import { SeedBank } from '../systems/SeedBank.js';
 import { ScoreManager } from '../systems/ScoreManager.js';
 import { LevelManager } from '../systems/LevelManager.js';
+import { TutorialFlow, createTutorialPlantTargets } from '../systems/TutorialFlow.js';
 import { getRandomMarshFact } from '../data/marshFacts.js';
 
 export class GameScene extends Phaser.Scene {
@@ -29,8 +30,11 @@ export class GameScene extends Phaser.Scene {
         // Tutorial state
         this.tutorialActive = false;
         this.tutorialAdvancing = false;
-        this.tutorialComplete = localStorage.getItem('htRefugiaTutorialDone') === 'true';
+        this.tutorialComplete = localStorage.getItem('htRefugiaInteractiveTutorialDone') === 'true';
         this.tutorialElements = [];
+        this.tutorialMarkers = [];
+        this.tutorialRail = null;
+        this.tutorialRefugeShown = false;
         this.levelStartElements = [];
 
         // Initialize systems
@@ -380,6 +384,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     canPlantAt(x, y) {
+        if (this.tutorialActive) {
+            return Boolean(this.tutorialFlow?.findAvailableTarget(x, y))
+                && this.seedBank.canPlant();
+        }
+
         const { width } = this.scale;
         const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
 
@@ -407,17 +416,25 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
+        const tutorialTarget = this.tutorialActive
+            ? this.tutorialFlow.claimTarget(x, y)
+            : null;
+        if (this.tutorialActive && !tutorialTarget) return;
+
         // Spend seeds
         if (!this.seedBank.spendSeeds()) return;
+
+        if (tutorialTarget) {
+            x = tutorialTarget.x;
+            y = tutorialTarget.y;
+        }
 
         const plantType = getPlantTypeForX(x, this.scale.width);
         const plant = new Plant(this, x, y, plantType);
         this.plants.add(plant);
+        this.scoreManager.recordPlantPlaced();
 
-        // If tutorial is active, first plant was placed — advance tutorial
-        if (this.tutorialActive) {
-            this.completeTutorial();
-        }
+        if (tutorialTarget) this.onTutorialPlantPlaced(tutorialTarget);
 
         // Sound effect would go here
     }
@@ -428,7 +445,7 @@ export class GameScene extends Phaser.Scene {
         // Reset water
         if (this.waterSystem) {
             this.waterSystem.reset();
-            this.waterSystem.setSpeed(config.waterSpeed);
+            this.waterSystem.setSpeed(this.tutorialComplete ? config.waterSpeed : 0);
         }
 
         // Update seed bank
@@ -442,24 +459,49 @@ export class GameScene extends Phaser.Scene {
         this.groundPredators.clear(true, true);
         this.harriers.clear(true, true);
 
-        // Spawn predators
-        this.spawnPredators(config);
-
-        // King tide?
-        if (config.isKingTide && this.waterSystem) {
-            this.time.delayedCall(3000, () => {
-                this.waterSystem.triggerKingTide();
-            });
+        if (!this.tutorialComplete) {
+            this.spawnTutorialPredator();
+            this.startTutorial();
+            return;
         }
 
-        // Show level start banner and advance to tutorial or wave sequence once dismissed
+        this.launchFullGame(config);
+    }
+
+    launchFullGame(config) {
+        this.rails.clear(true, true);
+        this.plants.clear(true, true);
+        this.groundPredators.clear(true, true);
+        this.harriers.clear(true, true);
+        this.scoreManager.reset();
+        this.seedBank.reset();
+
+        if (this.waterSystem) {
+            this.waterSystem.reset();
+            this.waterSystem.setSpeed(config.waterSpeed);
+        }
+
+        this.spawnPredators(config);
+
+        if (config.isKingTide && this.waterSystem) {
+            this.time.delayedCall(3000, () => this.waterSystem.triggerKingTide());
+        }
+
         this.showLevelStart(config, () => {
-            if (!this.tutorialComplete) {
-                this.startTutorial();
-            } else {
-                this.levelManager.startNextWave();
-            }
+            this.levelManager.startNextWave();
         });
+    }
+
+    spawnTutorialPredator() {
+        const { width } = this.scale;
+        const laneY = (this.marshTop + this.marshBottom) / 2;
+        const patrolMin = Math.max(120, width * 0.38);
+        const patrolMax = Math.max(patrolMin + 120, Math.min(width - 90, width * 0.78));
+        const cat = new Cat(this, (patrolMin + patrolMax) / 2, laneY, patrolMin, patrolMax);
+        cat.catchDistance = -1;
+        cat.visionRange = 190;
+        this.groundPredators.add(cat);
+        this.tutorialPredator = cat;
     }
 
     spawnPredators(config) {
@@ -560,160 +602,185 @@ export class GameScene extends Phaser.Scene {
     }
 
     startTutorial() {
-        if (this.levelStartElements) {
-            this.levelStartElements.forEach(el => el.destroy());
-            this.levelStartElements = [];
-        }
-
         this.tutorialActive = true;
         this.tutorialAdvancing = false;
-        const { width, height } = this.scale;
-        const compact = height <= 520 || width < 650;
+        this.tutorialRefugeShown = false;
 
-        this.spawnRail();
+        const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
+        const left = Math.max(waterX + 80, 110);
+        const right = Math.max(left + 220, this.scale.width - 190);
+        this.tutorialLaneY = (this.marshTop + this.marshBottom) / 2;
+        this.tutorialFlow = new TutorialFlow(
+            createTutorialPlantTargets(left, right, this.tutorialLaneY, 5)
+        );
 
-        const panelX = width / 2;
-        const panelY = (this.marshY + height) / 2 - 40;
-        const panelW = Math.min(480, width - 40);
-        const panel = this.add.graphics().setDepth(90);
-        panel.fillStyle(0x000000, 0.7);
-        panel.fillRoundedRect(panelX - panelW / 2, panelY - 65, panelW, 130, 16);
+        this.setTutorialMessage(
+            'WATCH THE PREDATOR',
+            'This roaming cat can spot exposed Ridgway\'s Rails.'
+        );
 
-        const arrow = this.add.text(panelX, panelY + 78, '▼', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '36px' : '46px',
-            color: '#f1c40f',
-            resolution: TEXT_RES,
-        }).setOrigin(0.5).setDepth(91);
-
-        const hint = this.add.text(panelX, panelY - 16, 'TAP here to plant cover!', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '24px' : '32px',
-            fontStyle: 'bold',
-            color: '#ffffff',
-            resolution: TEXT_RES,
-        }).setOrigin(0.5).setDepth(91);
-
-        const subHint = this.add.text(panelX, panelY + 30, 'Rails need vegetation to hide from predators', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '15px' : '19px',
-            color: '#aaaaaa',
-            resolution: TEXT_RES,
-            wordWrap: { width: panelW - 30 },
-            align: 'center',
-        }).setOrigin(0.5).setDepth(91);
-
-        this.tweens.add({
-            targets: [hint],
-            scale: { from: 1, to: 1.06 },
-            duration: 600,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-        });
-
-        this.tweens.add({
-            targets: arrow,
-            y: arrow.y + 14,
-            duration: 500,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut',
-        });
-
-        this.tutorialElements = [panel, arrow, hint, subHint];
-    }
-
-    completeTutorial() {
-        if (this.tutorialAdvancing) return;
-        this.tutorialAdvancing = true;
-
-        if (this.tutorialElements) {
-            this.tutorialElements.forEach(el => el.destroy());
-            this.tutorialElements = [];
-        }
-
-        if (this.levelStartElements) {
-            this.levelStartElements.forEach(el => el.destroy());
-            this.levelStartElements = [];
-        }
-
-        const { width, height } = this.scale;
-        const compact = height <= 520 || width < 650;
-        const bandY = (this.marshY + height) / 2;
-        const msgY = bandY + (compact ? 24 : 36);
-
-        const cardW = Math.min(compact ? 520 : 700, width - 36);
-        const cardH = compact ? 52 : 64;
-        const card = this.add.graphics().setDepth(91).setAlpha(0);
-        card.fillStyle(0x000000, 0.78);
-        card.fillRoundedRect(width / 2 - cardW / 2, msgY - cardH / 2, cardW, cardH, 14);
-
-        const msg1 = this.add.text(width / 2, msgY, 'Nice! Rails hide in plants to stay safe.', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '20px' : '26px',
-            fontStyle: 'bold',
-            color: '#2ecc71',
-            stroke: '#000000',
-            strokeThickness: 4,
-            resolution: TEXT_RES,
-        }).setOrigin(0.5).setDepth(92).setAlpha(0);
-
-        this.tweens.add({
-            targets: [card, msg1],
-            alpha: 1,
-            duration: 400,
-            onComplete: () => {
-                this.tweens.add({
-                    targets: msg1,
-                    alpha: 0,
-                    delay: 1800,
-                    duration: 350,
-                    onComplete: () => {
-                        msg1.destroy();
-
-                        const msg2 = this.add.text(width / 2, msgY,
-                            'Plant more to create a corridor to the safe zone  →', {
-                            fontFamily: 'Mona Sans',
-                            fontSize: compact ? '18px' : '24px',
-                            fontStyle: 'bold',
-                            color: '#f1c40f',
-                            stroke: '#000000',
-                            strokeThickness: 4,
-                            resolution: TEXT_RES,
-                        }).setOrigin(0.5).setDepth(92).setAlpha(0);
-
-                        this.tweens.add({
-                            targets: msg2,
-                            alpha: 1,
-                            duration: 400,
-                            onComplete: () => {
-                                this.tweens.add({
-                                    targets: [card, msg2],
-                                    alpha: 0,
-                                    delay: 2200,
-                                    duration: 400,
-                                    onComplete: () => {
-                                        card.destroy();
-                                        msg2.destroy();
-                                        this.finishTutorial();
-                                    }
-                                });
-                            }
-                        });
-                    }
-                });
+        this.time.delayedCall(2200, () => {
+            if (this.tutorialActive && this.tutorialFlow?.stage === 'observe') {
+                this.beginTutorialPlanting();
             }
         });
     }
 
+    setTutorialMessage(title, subtitle, color = '#f39c12') {
+        const { width, height } = this.scale;
+        const compact = height <= 520 || width < 650;
+        const panelW = Math.min(compact ? 570 : 700, width - 30);
+        const panelH = compact ? 66 : 82;
+        const panelY = this.marshTop + panelH / 2 + (compact ? 4 : 10);
+
+        if (!this.tutorialMessagePanel) {
+            const panel = this.add.graphics().setDepth(90);
+            panel.fillStyle(0x07150c, 0.88);
+            panel.fillRoundedRect(width / 2 - panelW / 2, panelY - panelH / 2, panelW, panelH, 14);
+            panel.lineStyle(1.5, 0xf39c12, 0.65);
+            panel.strokeRoundedRect(width / 2 - panelW / 2, panelY - panelH / 2, panelW, panelH, 14);
+
+            const heading = this.add.text(width / 2, panelY - (compact ? 12 : 16), title, {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '18px' : '24px',
+                fontStyle: 'bold',
+                color,
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(91);
+
+            const detail = this.add.text(width / 2, panelY + (compact ? 13 : 17), subtitle, {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '12px' : '16px',
+                color: '#ffffff',
+                wordWrap: { width: panelW - 28 },
+                align: 'center',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(91);
+
+            this.tutorialMessagePanel = panel;
+            this.tutorialHeading = heading;
+            this.tutorialDetail = detail;
+            this.tutorialElements = [panel, heading, detail];
+            return;
+        }
+
+        this.tutorialHeading.setText(title).setColor(color);
+        this.tutorialDetail.setText(subtitle);
+    }
+
+    beginTutorialPlanting() {
+        this.tutorialFlow.beginPlanting();
+        this.setTutorialMessage(
+            'PLANT 5 REFUGE PATCHES · 0/5',
+            'Tap each glowing spot to build a spaced Smart Cover route.'
+        );
+
+        this.tutorialMarkers = this.tutorialFlow.targets.map(target => {
+            const marker = this.add.circle(target.x, target.y, 25, 0x2ecc71, 0.18)
+                .setStrokeStyle(3, 0x7dffad, 0.95)
+                .setDepth(12);
+            this.tweens.add({
+                targets: marker,
+                scaleX: { from: 0.86, to: 1.16 },
+                scaleY: { from: 0.86, to: 1.16 },
+                alpha: { from: 0.65, to: 1 },
+                duration: 700,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+            return { id: target.id, marker };
+        });
+    }
+
+    onTutorialPlantPlaced(target) {
+        const markerEntry = this.tutorialMarkers.find(entry => entry.id === target.id);
+        if (markerEntry?.marker) {
+            this.tweens.killTweensOf(markerEntry.marker);
+            markerEntry.marker.destroy();
+        }
+
+        const placed = this.tutorialFlow.placements;
+        if (this.tutorialFlow.stage === 'plant') {
+            this.setTutorialMessage(
+                `PLANT 5 REFUGE PATCHES · ${placed}/5`,
+                'Keep the patches spaced along the highlighted rail route.'
+            );
+            return;
+        }
+
+        this.beginRefugeDemonstration();
+    }
+
+    beginRefugeDemonstration() {
+        this.tutorialMarkers.forEach(entry => {
+            if (entry.marker?.active) {
+                this.tweens.killTweensOf(entry.marker);
+                entry.marker.destroy();
+            }
+        });
+        this.tutorialMarkers = [];
+        this.setTutorialMessage(
+            'WATCH THE REFUGE WORK',
+            'The rail becomes hidden whenever it ducks into vegetation.'
+        );
+
+        this.time.delayedCall(1000, () => this.spawnTutorialRail());
+    }
+
+    spawnTutorialRail() {
+        if (!this.tutorialActive || this.tutorialFlow?.stage !== 'demonstrate') return;
+        const waterX = this.waterSystem ? this.waterSystem.getWaterX(this.tutorialLaneY) : 50;
+        const rail = new Rail(this, Math.max(35, waterX + 35), this.tutorialLaneY, 1);
+        rail.baseSpeed = 105;
+        rail._speedX = 105;
+        rail.wobbleAmp = 1;
+        rail.wobbleFreq = 0;
+        rail.wobbleOffset = 0;
+        this.rails.add(rail);
+        this.tutorialRail = rail;
+    }
+
+    showTutorialRefugeFeedback(rail) {
+        if (this.tutorialRefugeShown) return;
+        this.tutorialRefugeShown = true;
+        this.setTutorialMessage(
+            'SAFE IN THE REFUGE!',
+            'The cat loses sight of the rail while it is under plant cover.',
+            '#2ecc71'
+        );
+        this.particleManager.emitScorePopup(rail.x, rail.y, 'HIDDEN!', '#2ecc71');
+    }
+
+    completeTutorial() {
+        if (this.tutorialAdvancing || !this.tutorialFlow?.completeDemonstration()) return;
+        this.tutorialAdvancing = true;
+        this.setTutorialMessage(
+            'REFUGE CREATED!',
+            'Now use a few well-placed patches to protect rails during the rising tide.',
+            '#2ecc71'
+        );
+
+        this.time.delayedCall(1800, () => this.finishTutorial());
+    }
+
     finishTutorial() {
         this.tutorialActive = false;
-        this.tutorialAdvancing = false;
         this.tutorialComplete = true;
-        try { localStorage.setItem('htRefugiaTutorialDone', 'true'); } catch { /* ignore */ }
+        try { localStorage.setItem('htRefugiaInteractiveTutorialDone', 'true'); } catch { /* ignore */ }
 
-        this.levelManager.startNextWave();
+        this.tutorialElements.forEach(element => element?.destroy());
+        this.tutorialElements = [];
+        this.tutorialMarkers.forEach(entry => entry.marker?.destroy());
+        this.tutorialMarkers = [];
+        this.tutorialMessagePanel = null;
+        this.tutorialHeading = null;
+        this.tutorialDetail = null;
+        this.tutorialRail = null;
+        this.tutorialFlow = null;
+
+        this.tutorialAdvancing = false;
+        this.launchFullGame(this.levelManager.getCurrentConfig());
     }
 
     spawnRail() {
@@ -774,6 +841,19 @@ export class GameScene extends Phaser.Scene {
         this.rails.children.entries.forEach(rail => {
             if (rail.isAlive && !rail.hasReachedSafety && rail.x >= this.safeZoneX) {
                 rail.reachSafety();
+                if (this.tutorialActive && rail === this.tutorialRail) {
+                    if (rail.hasUsedCover) {
+                        this.completeTutorial();
+                    } else {
+                        this.tutorialRail = null;
+                        this.setTutorialMessage(
+                            'LET\'S WATCH AGAIN',
+                            'The rail will follow the same route through your refuge patches.'
+                        );
+                        this.time.delayedCall(900, () => this.spawnTutorialRail());
+                    }
+                    return;
+                }
                 this.scoreManager.railSaved(rail);
             }
         });
@@ -798,6 +878,10 @@ export class GameScene extends Phaser.Scene {
 
             if (!isOverlappingPlant && rail.isSafe) {
                 rail.exitPlant();
+            }
+
+            if (this.tutorialActive && rail === this.tutorialRail && rail.isSafe) {
+                this.showTutorialRefugeFeedback(rail);
             }
         });
     }

@@ -18,7 +18,7 @@ test('GameScene sequences showLevelStart with onComplete callback to prevent tex
     );
 });
 
-test('GameScene cleans up levelStartElements and guards tutorialAdvancing', () => {
+test('GameScene tracks level banners and guards tutorial completion', () => {
     const content = fs.readFileSync('src/scenes/GameScene.js', 'utf-8');
 
     assert.match(
@@ -29,29 +29,7 @@ test('GameScene cleans up levelStartElements and guards tutorialAdvancing', () =
 
     assert.match(
         content,
-        /if\s*\(\s*this\.tutorialAdvancing\s*\)\s*return/,
+        /if\s*\(this\.tutorialAdvancing\s*\|\|\s*!this\.tutorialFlow\?\.completeDemonstration\(\)\)\s*return/,
         'completeTutorial must guard against multiple overlapping triggers'
-    );
-});
-
-test('GameScene separates corridor hint vertically and wraps it in a readable background card', () => {
-    const content = fs.readFileSync('src/scenes/GameScene.js', 'utf-8');
-
-    assert.match(
-        content,
-        /const\s+msgY\s*=\s*bandY\s*\+\s*\(compact\s*\?\s*24\s*:\s*36\)/,
-        'msgY must be placed below central bandY rather than overlapping bandY - 60'
-    );
-
-    assert.match(
-        content,
-        /card\.fillRoundedRect\s*\(/,
-        'corridor hint must render with a readable rounded backdrop card'
-    );
-
-    assert.match(
-        content,
-        /Plant more to create a corridor to the safe zone/,
-        'corridor hint text must be preserved'
     );
 });

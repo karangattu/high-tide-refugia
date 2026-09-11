@@ -7,9 +7,12 @@ import { UIScene } from './scenes/UIScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { IntroScene } from './scenes/IntroScene.js';
 import { isPhonePortrait, triggerFullscreenAndOrientation } from './utils/mobile.js';
+import { pwaInstall } from './utils/pwaInstall.js';
 
 const MOBILE_PHONE_MAX_DIMENSION = 600;
 const GAMEPLAY_SCENES = ['GameScene', 'UIScene'];
+
+pwaInstall.start();
 
 // Game configuration
 const config = {
@@ -115,7 +118,8 @@ window.addEventListener('click', triggerAutoFullscreen, { once: true });
 
 if (typeof window !== 'undefined' && 'serviceWorker' in window.navigator && window.location.protocol.startsWith('http')) {
     window.addEventListener('load', () => {
-        window.navigator.serviceWorker.register('/sw.js').catch(() => {});
+        const serviceWorkerUrl = new window.URL('./sw.js', window.location.href);
+        window.navigator.serviceWorker.register(serviceWorkerUrl, { scope: './' }).catch(() => {});
     });
 }
 

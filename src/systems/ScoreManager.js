@@ -1,16 +1,23 @@
+export function getStrategicCoverBonus(plantsPlaced, hasUsedCover) {
+    if (!hasUsedCover || plantsPlaced < 5 || plantsPlaced > 16) return 0;
+    if (plantsPlaced <= 8) return 150;
+    if (plantsPlaced <= 12) return 100;
+    return 50;
+}
+
 export class ScoreManager {
     constructor(scene) {
         this.scene = scene;
         this.score = 0;
         this.railsSaved = 0;
         this.railsLost = 0;
-        this.perfectRuns = 0;
+        this.strategicSaves = 0;
+        this.plantsPlaced = 0;
         this.currentCombo = 0;
         this.maxCombo = 0;
 
         // Score values
         this.baseRailScore = 100;
-        this.perfectBonus = 200;
         this.comboMultiplier = 1;
 
         // Callbacks for UI updates
@@ -24,12 +31,14 @@ export class ScoreManager {
         // Calculate score
         let points = this.baseRailScore * this.comboMultiplier;
         let bonusText = '';
+        const strategicBonus = getStrategicCoverBonus(this.plantsPlaced, rail.hasUsedCover);
 
-        // Perfect run bonus (never touched dirt)
-        if (rail.isPerfectRun && !rail.touchedDirt) {
-            points += this.perfectBonus;
-            this.perfectRuns++;
-            bonusText = '\nPERFECT COVER!';
+        // Reward enough useful habitat to protect rails, while making dense
+        // marsh carpeting less valuable than a small set of well-placed patches.
+        if (strategicBonus > 0) {
+            points += strategicBonus;
+            this.strategicSaves++;
+            bonusText = '\nSMART COVER!';
 
             // Increase combo
             this.currentCombo++;
@@ -40,7 +49,7 @@ export class ScoreManager {
             // Update multiplier
             this.comboMultiplier = 1 + (this.currentCombo * 0.1);
         } else {
-            // Reset combo on non-perfect
+            // Reset combo when the current habitat plan earns no efficiency bonus.
             this.currentCombo = 0;
             this.comboMultiplier = 1;
         }
@@ -50,10 +59,15 @@ export class ScoreManager {
         // Visual feedback
         if (this.scene.particleManager) {
             const scoreText = `+${Math.floor(points)}${bonusText}`;
-            const color = rail.touchedDirt ? '#27ae60' : '#f1c40f';
+            const color = strategicBonus > 0 ? '#f1c40f' : '#27ae60';
             this.scene.particleManager.emitScorePopup(rail.x, rail.y, scoreText, color);
         }
 
+        this.notifyUpdate();
+    }
+
+    recordPlantPlaced() {
+        this.plantsPlaced++;
         this.notifyUpdate();
     }
 
@@ -82,7 +96,8 @@ export class ScoreManager {
             score: this.score,
             railsSaved: this.railsSaved,
             railsLost: this.railsLost,
-            perfectRuns: this.perfectRuns,
+            strategicSaves: this.strategicSaves,
+            plantsPlaced: this.plantsPlaced,
             maxCombo: this.maxCombo,
             survivalRate: this.railsSaved / (this.railsSaved + this.railsLost) || 0,
         };
@@ -101,7 +116,8 @@ export class ScoreManager {
         this.score = 0;
         this.railsSaved = 0;
         this.railsLost = 0;
-        this.perfectRuns = 0;
+        this.strategicSaves = 0;
+        this.plantsPlaced = 0;
         this.currentCombo = 0;
         this.maxCombo = 0;
         this.comboMultiplier = 1;

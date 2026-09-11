@@ -46,7 +46,7 @@ export class UIScene extends Phaser.Scene {
 
         this.add.image(x + (compact ? 14 : 26), cy, 'seed').setScale(compact ? 0.95 : 1.5);
 
-        this.add.text(x + (compact ? 28 : 46), y + (compact ? 5 : 10), 'SEEDS', {
+        this.seedLabel = this.add.text(x + (compact ? 28 : 46), y + (compact ? 5 : 10), 'SEEDS · 0 PLANTS', {
             fontFamily: 'Mona Sans',
             fontSize: compact ? '11px' : '15px',
             fontStyle: 'bold',
@@ -386,6 +386,7 @@ export class UIScene extends Phaser.Scene {
     updateStats(stats) {
         if (this.savedText) this.savedText.setText(`${stats.railsSaved}`);
         if (this.lostText) this.lostText.setText(`${stats.railsLost}/5`);
+        if (this.seedLabel) this.seedLabel.setText(`SEEDS · ${stats.plantsPlaced || 0} PLANTS`);
 
         this.refreshWaveProgress();
     }

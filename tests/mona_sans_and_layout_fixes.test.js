@@ -36,10 +36,10 @@ test('package.json and main.js configure Mona Sans font package', () => {
     assert.match(mainJs, /import\s+['"]@fontsource\/mona-sans\/index\.css['"]/, 'main.js must import Mona Sans css');
 });
 
-test('GameScene tutorial arrow renders actual unicode character and not escaped literal', () => {
+test('GameScene tutorial uses concise, readable refuge guidance', () => {
     const content = fs.readFileSync('src/scenes/GameScene.js', 'utf-8');
-    assert.doesNotMatch(content, /\\u25bc/, 'GameScene.js must not contain raw escaped \\u25bc string');
-    assert.match(content, /'▼'/, 'GameScene.js must contain literal unicode arrow ▼');
+    assert.match(content, /'PLANT 5 REFUGE PATCHES · 0\/5'/, 'tutorial must give a concrete planting goal');
+    assert.match(content, /'SAFE IN THE REFUGE!'/, 'tutorial must explain when the rail reaches cover');
 });
 
 test('UIScene footer brand layout prevents overlap with center tips', () => {

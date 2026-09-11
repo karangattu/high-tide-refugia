@@ -33,6 +33,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.isBeingCaught = false;
         this.hasReachedSafety = false;
         this.touchedDirt = false;   // For continuous cover tracking
+        this.hasUsedCover = false;  // Qualifies saves for strategic habitat scoring
 
         // Base movement (scaled by level multiplier)
         this.baseSpeed = Phaser.Math.Between(80, 120) * speedMultiplier;
@@ -137,6 +138,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         if (!this.scene || !this.isAlive || this.isSafe) return;
         this.isSafe = true;
         this.isDetectable = false;
+        this.hasUsedCover = true;
 
         if (this.scene.tweens) {
             this.scene.tweens.add({

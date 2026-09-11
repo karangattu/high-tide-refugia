@@ -13,10 +13,13 @@ test('PWA manifest exists, is valid JSON, and has required fullscreen and landsc
     assert.equal(manifest.short_name, 'Refugia');
     assert.equal(manifest.display, 'fullscreen');
     assert.equal(manifest.orientation, 'landscape');
+    assert.equal(manifest.start_url, './');
+    assert.equal(manifest.scope, './');
     assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3);
 
     for (const icon of manifest.icons) {
-        const localPath = icon.src.replace(/^\//, 'public/');
+        assert.doesNotMatch(icon.src, /^\//, 'Manifest icons must work under the GitHub Pages subdirectory');
+        const localPath = `public/${icon.src.replace(/^\.\//, '')}`;
         assert.ok(fs.existsSync(localPath), `Icon file must exist: ${localPath}`);
     }
 });
@@ -27,13 +30,21 @@ test('Service worker caches essential assets and handles install, activate, and 
     assert.match(swRaw, /addEventListener\('fetch'/);
     assert.match(swRaw, /manifest\.webmanifest/);
     assert.match(swRaw, /icon-512\.png/);
+    assert.match(swRaw, /self\.registration\.scope/);
+    assert.doesNotMatch(swRaw, /^\s*['"]\/(?:index\.html|manifest\.webmanifest|icons\/)/m);
 });
 
 test('index.html includes manifest link, apple touch icon, and viewport-fit=cover', () => {
-    assert.match(indexRaw, /<link\s+rel="manifest"\s+href="\/manifest\.webmanifest"/);
+    assert.match(indexRaw, /<link\s+rel="manifest"\s+href="\.\/manifest\.webmanifest"/);
     assert.match(indexRaw, /<link\s+rel="apple-touch-icon"/);
     assert.match(indexRaw, /apple-mobile-web-app-capable/);
     assert.match(indexRaw, /viewport-fit=cover/);
+});
+
+test('service worker registration follows the deployed page directory', () => {
+    const mainRaw = fs.readFileSync('src/main.js', 'utf-8');
+    assert.match(mainRaw, /new window\.URL\('\.\/sw\.js',\s*window\.location\.href\)/);
+    assert.doesNotMatch(mainRaw, /serviceWorker\.register\('\/sw\.js'\)/);
 });
 
 test('mobile.js exports fullscreen triggers and responsive device checks', () => {

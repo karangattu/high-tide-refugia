@@ -191,7 +191,7 @@ export class GameOverScene extends Phaser.Scene {
             titleText: 'TOO MANY RAILS LOST',
             titleColor: '#e74c3c',
             borderColor: 0xc0392b,
-            subText: 'Plant continuous plant cover so rails can shelter from predators.',
+            subText: 'Place a few patches along rail routes so birds can duck into cover.',
             buttonText: 'TRY AGAIN',
         };
     }
@@ -273,7 +273,7 @@ export class GameOverScene extends Phaser.Scene {
             const statsData = [
                 { icon: 'icon_heart_green', label: 'Rails Saved', value: this.stats.railsSaved || 0, color: '#27ae60' },
                 { icon: 'icon_heart_broken', label: 'Rails Lost', value: this.stats.railsLost || 0, color: '#e74c3c' },
-                { icon: 'icon_leaf', label: 'Perfect Runs', value: this.stats.perfectRuns || 0, color: '#f1c40f' },
+                { icon: 'icon_leaf', label: 'Smart Saves', value: this.stats.strategicSaves || 0, color: '#f1c40f' },
                 { icon: 'icon_flame', label: 'Max Combo', value: this.stats.maxCombo || 0, color: '#e67e22' },
             ];
 
@@ -415,7 +415,7 @@ export class GameOverScene extends Phaser.Scene {
         const statsData = [
             { icon: 'icon_heart_green', label: 'Rails Saved', value: this.stats.railsSaved || 0, color: '#27ae60' },
             { icon: 'icon_heart_broken', label: 'Rails Lost', value: this.stats.railsLost || 0, color: '#e74c3c' },
-            { icon: 'icon_leaf', label: 'Perfect Runs', value: this.stats.perfectRuns || 0, color: '#f1c40f' },
+            { icon: 'icon_leaf', label: 'Smart Saves', value: this.stats.strategicSaves || 0, color: '#f1c40f' },
             { icon: 'icon_flame', label: 'Max Combo', value: this.stats.maxCombo || 0, color: '#e67e22' },
         ];
 
