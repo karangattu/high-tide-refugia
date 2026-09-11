@@ -7,6 +7,8 @@ import {
     normalizeName,
 } from '../systems/HighScoreManager.js';
 import { getNameEntryLayout } from '../ui/nameEntryLayout.js';
+import { getGameOverLayoutMode, getOrientationAxis } from '../ui/orientationLayout.js';
+import { canApplyAsyncRender, nextRenderGeneration } from '../ui/asyncRenderGuard.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -20,15 +22,48 @@ export class GameOverScene extends Phaser.Scene {
         this.reason = data.reason || 'Game Over';
         this.level = data.level || 1;
         this.victory = data.victory || false;
+        this.pendingPlayerName = data.pendingPlayerName || '';
     }
 
     create() {
         const { width, height } = this.scale;
+        this.renderGeneration = nextRenderGeneration(this.renderGeneration);
+        this.leaderboardSlots = [];
+        this.lbStatusText = null;
+        this.orientationAxis = getOrientationAxis(
+            window.screen?.orientation?.type,
+            width,
+            height
+        );
 
         this.createBackground(width, height);
         this.createPanel(width, height);
         this.setupLeaderboard();
+        this.onOrientationSettled = () => this.handleOrientationSettled();
+        window.addEventListener('refugia:orientation-settled', this.onOrientationSettled);
+        this.events.once('shutdown', () => {
+            window.removeEventListener('refugia:orientation-settled', this.onOrientationSettled);
+            this.onOrientationSettled = null;
+        });
         this.cameras.main.fadeIn(500);
+    }
+
+    handleOrientationSettled() {
+        const nextAxis = getOrientationAxis(
+            window.screen?.orientation?.type,
+            window.innerWidth,
+            window.innerHeight
+        );
+        if (nextAxis === this.orientationAxis) return;
+
+        this.pendingPlayerName = this.nameInput?.value || this.pendingPlayerName;
+        this.scene.restart({
+            stats: this.stats,
+            reason: this.reason,
+            level: this.level,
+            victory: this.victory,
+            pendingPlayerName: this.pendingPlayerName,
+        });
     }
 
     setupLeaderboard() {
@@ -55,9 +90,11 @@ export class GameOverScene extends Phaser.Scene {
 
     async refreshLeaderboard() {
         if (!this.leaderboardSlots || !this.leaderboardSlots.length) return;
+        const requestGeneration = this.renderGeneration;
 
         try {
             const rows = await fetchTopScores(5);
+            if (!canApplyAsyncRender(requestGeneration, this.renderGeneration, this.sys.isActive())) return;
 
             if (!rows.length) {
                 this.leaderboardSlots.forEach(slot => {
@@ -85,6 +122,7 @@ export class GameOverScene extends Phaser.Scene {
             });
             if (this.lbStatusText) this.lbStatusText.setText('LIVE - updates in realtime');
         } catch {
+            if (!canApplyAsyncRender(requestGeneration, this.renderGeneration, this.sys.isActive())) return;
             if (this.lbStatusText) this.lbStatusText.setText('Leaderboard unavailable');
         }
     }
@@ -130,6 +168,7 @@ export class GameOverScene extends Phaser.Scene {
     async handleSubmitName(inputEl, silent = false) {
         const rawName = inputEl ? inputEl.value : getSavedPlayerName();
         const stats = this.stats || { score: 0, railsSaved: 0, railsLost: 0 };
+        const requestGeneration = this.renderGeneration;
 
         if (!silent) {
             if (normalizeName(rawName).length < 2) {
@@ -141,9 +180,11 @@ export class GameOverScene extends Phaser.Scene {
 
         try {
             await submitHighScore(rawName, stats);
+            if (!canApplyAsyncRender(requestGeneration, this.renderGeneration, this.sys.isActive())) return;
             if (this.lbStatusText) this.lbStatusText.setText(`Best score saved for ${normalizeName(rawName)}`);
             await this.refreshLeaderboard();
         } catch {
+            if (!canApplyAsyncRender(requestGeneration, this.renderGeneration, this.sys.isActive())) return;
             if (this.lbStatusText) this.lbStatusText.setText('Could not save score');
         }
     }
@@ -198,7 +239,7 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     createPanel(width, height) {
-        const isLandscape = height <= 520 || (width >= 680 && width > height);
+        const isLandscape = getGameOverLayoutMode(width, height) === 'landscape';
         const compact = height <= 520 || width < 680;
 
         if (isLandscape) {
@@ -582,6 +623,7 @@ export class GameOverScene extends Phaser.Scene {
         input.autocapitalize = 'none';
         input.autocomplete = 'off';
         input.spellcheck = false;
+        input.value = this.pendingPlayerName;
         input.style.cssText = `width:${inputW}px;height:${formH}px;box-sizing:border-box;`
             + 'border:2px solid #274a36;border-radius:8px;background:rgba(9,25,36,0.92);'
             + "color:#ffffff;font-family:'Mona Sans',sans-serif;font-weight:700;"
@@ -593,6 +635,9 @@ export class GameOverScene extends Phaser.Scene {
                 this.handleSubmitName(input);
             }
             ev.stopPropagation();
+        });
+        input.addEventListener('input', () => {
+            this.pendingPlayerName = input.value;
         });
 
         let isFocused = false;
@@ -704,6 +749,7 @@ export class GameOverScene extends Phaser.Scene {
         wrap.appendChild(controls);
         document.body.appendChild(wrap);
         this.nameForm = wrap;
+        this.nameInput = input;
         updatePosition();
     }
 
@@ -716,5 +762,6 @@ export class GameOverScene extends Phaser.Scene {
             this.nameForm.remove();
             this.nameForm = null;
         }
+        this.nameInput = null;
     }
 }

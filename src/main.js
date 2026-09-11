@@ -6,10 +6,11 @@ import { GameScene } from './scenes/GameScene.js';
 import { UIScene } from './scenes/UIScene.js';
 import { GameOverScene } from './scenes/GameOverScene.js';
 import { IntroScene } from './scenes/IntroScene.js';
-import { isPhonePortrait, triggerFullscreenAndOrientation } from './utils/mobile.js';
+import { shouldRequireLandscape, triggerFullscreenAndOrientation } from './utils/mobile.js';
 import { pwaInstall } from './utils/pwaInstall.js';
+import { scheduleOrientationRefresh } from './utils/viewportResize.js';
 
-const MOBILE_PHONE_MAX_DIMENSION = 600;
+const MOBILE_LANDSCAPE_MAX_DIMENSION = 1024;
 const GAMEPLAY_SCENES = ['GameScene', 'UIScene'];
 
 pwaInstall.start();
@@ -50,7 +51,13 @@ if (typeof window !== 'undefined') {
 }
 
 function syncMobileOrientationLock() {
-    const portraitLocked = isPhonePortrait(MOBILE_PHONE_MAX_DIMENSION);
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    const portraitLocked = shouldRequireLandscape(
+        window.innerWidth,
+        window.innerHeight,
+        isTouchDevice,
+        MOBILE_LANDSCAPE_MAX_DIMENSION
+    );
 
     document.body.classList.toggle('landscape-required', portraitLocked);
 
@@ -76,6 +83,16 @@ function syncMobileOrientationLock() {
 
 syncMobileOrientationLock();
 
+function resizeGameToContainer() {
+    const container = document.getElementById('game-container');
+    const bounds = container?.getBoundingClientRect();
+    if (bounds?.width > 0 && bounds?.height > 0) {
+        game.scale.resize(Math.round(bounds.width), Math.round(bounds.height));
+    }
+    game.scale.refresh();
+    syncMobileOrientationLock();
+}
+
 // Handle window focus for audio
 window.addEventListener('blur', () => {
     game.sound.pauseAll();
@@ -89,18 +106,24 @@ window.addEventListener('focus', () => {
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('gesturechange', (e) => e.preventDefault());
 
-// Re-fit game on orientation change (mobile)
+let cancelOrientationRefresh = null;
+
+// Android reports several intermediate viewport sizes while rotating. Re-fit
+// across the whole transition, then let responsive scenes rebuild once.
 window.addEventListener('orientationchange', () => {
-    setTimeout(() => {
-        game.scale.refresh();
-        syncMobileOrientationLock();
-    }, 200);
+    if (document.activeElement instanceof window.HTMLElement) {
+        document.activeElement.blur();
+    }
+    if (cancelOrientationRefresh) cancelOrientationRefresh();
+    cancelOrientationRefresh = scheduleOrientationRefresh(
+        () => resizeGameToContainer(),
+        () => window.dispatchEvent(new window.Event('refugia:orientation-settled'))
+    );
 });
 
 // Also listen for resize to handle split-screen / multi-window on tablets
 window.addEventListener('resize', () => {
-    game.scale.refresh();
-    syncMobileOrientationLock();
+    resizeGameToContainer();
 });
 
 export { triggerFullscreenAndOrientation };

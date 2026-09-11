@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { getGameOverLayoutMode } from '../src/ui/orientationLayout.js';
 
 function getFilesRecursively(dir, extension = '.js') {
     let files = [];
@@ -50,7 +51,8 @@ test('UIScene footer brand layout prevents overlap with center tips', () => {
 
 test('GameOverScene widescreen layout and portrait stat coordinates avoid overlap', () => {
     const content = fs.readFileSync('src/scenes/GameOverScene.js', 'utf-8');
-    assert.match(content, /width\s*>=\s*680\s*&&\s*width\s*>\s*height/, 'GameOverScene must handle widescreen landscape layouts');
+    assert.equal(getGameOverLayoutMode(1280, 800), 'landscape');
+    assert.equal(getGameOverLayoutMode(800, 1280), 'portrait');
     assert.match(content, /const\s+survivalY\s*=/, 'GameOverScene must calculate survivalY dynamically');
     assert.match(content, /fontFamily:\s*['"]Mona Sans['"]/, 'GameOverScene must use Mona Sans');
 });

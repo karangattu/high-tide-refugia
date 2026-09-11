@@ -44,14 +44,20 @@ export function isMobileOrTablet() {
     return hasTouch || isSmall;
 }
 
+export function shouldRequireLandscape(width, height, isTouchDevice, maxDimension = 1024) {
+    const smallestSide = Math.min(width, height);
+    return isTouchDevice && smallestSide <= maxDimension && height > width;
+}
+
 export function isPhonePortrait(maxDimension = 600) {
     if (typeof window === 'undefined') return false;
     const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
-    const smallestSide = Math.min(window.innerWidth, window.innerHeight);
-
-    return isTouchDevice
-        && smallestSide <= maxDimension
-        && window.innerHeight > window.innerWidth;
+    return shouldRequireLandscape(
+        window.innerWidth,
+        window.innerHeight,
+        isTouchDevice,
+        maxDimension
+    );
 }
 
 // Compact viewports (phones in landscape, small windows) get smaller

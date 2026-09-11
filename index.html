@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=overlays-content">
   <meta name="description"
     content="Rail Refuge: High Tide Rising - Save endangered Ridgway's Rails from rising tides and predators by planting protective vegetation">
   <meta name="mobile-web-app-capable" content="yes">
@@ -44,6 +44,7 @@
     body {
       width: 100%;
       height: 100%;
+      height: 100dvh;
       overflow: hidden;
       background:
         radial-gradient(ellipse 55% 38% at 72% 32%, rgba(243, 156, 18, 0.14), transparent 70%),
@@ -60,12 +61,13 @@
     }
 
     #game-container {
-      width: 100%;
-      height: 100%;
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
       /* Safe area insets for notched devices */
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
@@ -149,7 +151,7 @@
     @media (min-width: 768px) and (max-width: 1024px) {
       #game-container canvas {
         max-width: 100vw;
-        max-height: 100vh;
+        max-height: 100dvh;
       }
     }
 
