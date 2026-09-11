@@ -6,6 +6,7 @@ import {
     subscribeToLeaderboard,
     normalizeName,
 } from '../systems/HighScoreManager.js';
+import { getNameEntryLayout } from '../ui/nameEntryLayout.js';
 
 const TEXT_RES = window.devicePixelRatio || 2;
 
@@ -554,25 +555,37 @@ export class GameOverScene extends Phaser.Scene {
     createNameEntry(cx, cy, compact) {
         this.removeNameForm();
 
-        const inputW = compact ? 132 : 152;
-        const btnW = compact ? 74 : 86;
-        const formH = compact ? 26 : 32;
-        const totalW = inputW + 6 + btnW;
+        const inputW = compact ? 150 : 172;
+        const btnW = compact ? 82 : 94;
+        const formH = 44;
+        const gap = 8;
+        const totalW = inputW + gap + btnW;
 
         const wrap = document.createElement('div');
-        wrap.style.cssText = 'position:fixed;display:flex;align-items:center;gap:6px;z-index:60;';
+        wrap.style.cssText = 'position:fixed;display:block;box-sizing:border-box;z-index:60;';
+
+        const label = document.createElement('div');
+        label.textContent = 'ENTER YOUR NAME';
+        label.style.cssText = 'display:none;margin:0 0 8px;color:#f39c12;'
+            + "font-family:'Mona Sans',sans-serif;font-size:14px;font-weight:800;"
+            + 'letter-spacing:0.08em;text-align:center;';
+
+        const controls = document.createElement('div');
+        controls.style.cssText = `display:flex;align-items:center;gap:${gap}px;width:100%;`;
 
         const input = document.createElement('input');
         input.type = 'text';
         input.maxLength = 24;
-        input.placeholder = 'enter your name';
+        input.placeholder = 'Your name';
+        input.setAttribute('aria-label', 'Your leaderboard name');
+        input.setAttribute('enterkeyhint', 'done');
         input.autocapitalize = 'none';
         input.autocomplete = 'off';
         input.spellcheck = false;
         input.style.cssText = `width:${inputW}px;height:${formH}px;box-sizing:border-box;`
             + 'border:2px solid #274a36;border-radius:8px;background:rgba(9,25,36,0.92);'
             + "color:#ffffff;font-family:'Mona Sans',sans-serif;font-weight:700;"
-            + `font-size:${compact ? 12 : 14}px;padding:0 8px;outline:none;`;
+            + 'font-size:16px;padding:0 12px;outline:none;';
         input.addEventListener('keydown', (ev) => {
             if (ev.key === 'Enter') {
                 ev.preventDefault();
@@ -586,41 +599,57 @@ export class GameOverScene extends Phaser.Scene {
         const updatePosition = () => {
             if (!wrap.parentNode) return;
             const vv = window.visualViewport;
-            const isKeyboardVisible = Boolean(vv && vv.height < window.innerHeight * 0.82);
-            const elevate = isFocused || isKeyboardVisible;
+            const rect = this.scale.canvas.getBoundingClientRect();
+            const layout = getNameEntryLayout({
+                focused: isFocused,
+                visualViewport: vv ? {
+                    width: vv.width,
+                    height: vv.height,
+                    offsetLeft: vv.offsetLeft,
+                    offsetTop: vv.offsetTop,
+                } : null,
+                windowViewport: { width: window.innerWidth, height: window.innerHeight },
+                canvasRect: rect,
+                gameSize: { width: this.scale.width, height: this.scale.height },
+                anchor: { x: cx, y: cy },
+                inlineWidth: totalW,
+                rowHeight: formH,
+            });
 
-            if (elevate) {
-                const vvTop = vv ? vv.offsetTop : 0;
-                const vvHeight = vv ? vv.height : window.innerHeight;
-                const vvLeft = vv ? vv.offsetLeft : 0;
-                const vvWidth = vv ? vv.width : window.innerWidth;
+            wrap.style.left = `${layout.left}px`;
+            wrap.style.top = `${layout.top}px`;
+            wrap.style.width = `${layout.width}px`;
 
-                const centerLeft = Math.round(vvLeft + (vvWidth - totalW) / 2);
-                const elevatedTop = Math.max(12, Math.round(vvTop + vvHeight - formH - 24));
-
-                wrap.style.left = `${centerLeft}px`;
-                wrap.style.top = `${elevatedTop}px`;
+            if (layout.mode === 'typing') {
                 wrap.style.zIndex = '1000';
-                wrap.style.padding = '6px 10px';
-                wrap.style.borderRadius = '12px';
-                wrap.style.background = 'rgba(10, 26, 18, 0.96)';
-                wrap.style.boxShadow = '0 6px 24px rgba(0,0,0,0.85), 0 0 0 2px #27ae60';
+                wrap.style.padding = '12px';
+                wrap.style.borderRadius = '14px';
+                wrap.style.background = 'rgba(7, 21, 12, 0.98)';
+                wrap.style.boxShadow = '0 8px 28px rgba(0,0,0,0.9), 0 0 0 2px #27ae60';
+                label.style.display = 'block';
+                input.style.width = 'auto';
+                input.style.flex = '1 1 auto';
+                input.style.height = '48px';
+                input.style.fontSize = '18px';
                 input.style.borderColor = '#27ae60';
+                saveBtn.style.width = '92px';
+                saveBtn.style.height = '48px';
+                saveBtn.style.fontSize = '14px';
             } else {
-                const rect = this.scale.canvas.getBoundingClientRect();
-                const sx = rect.width / this.scale.width;
-                const sy = rect.height / this.scale.height;
-                const defLeft = Math.round(rect.left + cx * sx - totalW / 2);
-                const defTop = Math.round(rect.top + cy * sy - formH / 2);
-
-                wrap.style.left = `${defLeft}px`;
-                wrap.style.top = `${defTop}px`;
                 wrap.style.zIndex = '60';
                 wrap.style.padding = '0';
                 wrap.style.borderRadius = '0';
                 wrap.style.background = 'transparent';
                 wrap.style.boxShadow = 'none';
+                label.style.display = 'none';
+                input.style.width = `${inputW}px`;
+                input.style.flex = '0 0 auto';
+                input.style.height = `${formH}px`;
+                input.style.fontSize = '16px';
                 input.style.borderColor = '#274a36';
+                saveBtn.style.width = `${btnW}px`;
+                saveBtn.style.height = `${formH}px`;
+                saveBtn.style.fontSize = compact ? '12px' : '13px';
             }
         };
 
@@ -662,11 +691,17 @@ export class GameOverScene extends Phaser.Scene {
         saveBtn.textContent = 'SAVE';
         saveBtn.style.cssText = `width:${btnW}px;height:${formH}px;border:none;border-radius:8px;`
             + 'background:#27ae60;color:#ffffff;font-family:\'Mona Sans\',sans-serif;'
-            + `font-weight:800;font-size:${compact ? 11 : 13}px;letter-spacing:0.06em;cursor:pointer;`;
-        saveBtn.addEventListener('click', () => this.handleSubmitName(input));
+            + `font-weight:800;font-size:${compact ? 12 : 13}px;letter-spacing:0.06em;cursor:pointer;`;
+        saveBtn.addEventListener('pointerdown', (event) => event.preventDefault());
+        saveBtn.addEventListener('click', () => {
+            this.handleSubmitName(input);
+            input.blur();
+        });
 
-        wrap.appendChild(input);
-        wrap.appendChild(saveBtn);
+        controls.appendChild(input);
+        controls.appendChild(saveBtn);
+        wrap.appendChild(label);
+        wrap.appendChild(controls);
         document.body.appendChild(wrap);
         this.nameForm = wrap;
         updatePosition();
