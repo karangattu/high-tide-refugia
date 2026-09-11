@@ -55,6 +55,7 @@ export class LevelManager {
         return {
             waveNumber: this.waveNumber,
             railsToSpawn: this.railsToSpawn,
+            shouldSpawnMouse: this.waveNumber % 3 === 0,
             isLevelComplete: false,
         };
     }

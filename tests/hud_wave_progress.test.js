@@ -55,3 +55,16 @@ test('LevelManager exposes wave progress used by the HUD bar', () => {
     assert.equal(progress.railsSpawned, 1, 'spawned rails advance within-wave progress');
     assert.equal(progress.railsToSpawn, 5);
 });
+
+test('LevelManager schedules one mouse run on every third wave', () => {
+    const manager = new LevelManager({});
+    manager.startLevel();
+
+    const mouseRuns = Array.from({ length: 8 }, () => (
+        manager.startNextWave().shouldSpawnMouse
+    ));
+
+    assert.deepEqual(mouseRuns, [
+        false, false, true, false, false, true, false, false,
+    ]);
+});

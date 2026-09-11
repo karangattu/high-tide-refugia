@@ -44,6 +44,10 @@ export class BootScene extends Phaser.Scene {
         // Load it raw so create() can crop only the artwork from each pose.
         this.load.image('fox_sheet_raw', 'assets/sprites/gray_fox_sprite.png');
 
+        // Load the six-pose salt marsh harvest mouse run sheet raw. Its poses
+        // overlap nominal grid columns, so create() extracts each alpha blob.
+        this.load.image('saltie_sheet_raw', 'assets/sprites/saltie_sprite_sheet.png');
+
         // Load plant growth sheets (4x2 grid of stages, sprout → mature)
         ['gumplant', 'saltgrass', 'pickleweed', 'cordgrass', 'jaumea'].forEach((key) => {
             this.load.image(`${key}_sheet`, `assets/sprites/${key}_sprite_sheet.png`);
@@ -342,12 +346,77 @@ export class BootScene extends Phaser.Scene {
         // Split the labelled fox reference sheet into clean gameplay frames
         this.sliceFoxSheet();
 
+        // Split the salt marsh harvest mouse sheet into a fast run cycle
+        this.sliceSaltieSheet();
+
         // Re-apply NEAREST now that the sliced rail textures exist
         // (plant stage textures intentionally keep LINEAR filtering)
         this.applyNearestFilter();
 
         // Transition to menu scene
         this.scene.start('MenuScene');
+    }
+
+    // ─── SALT MARSH HARVEST MOUSE SHEET SLICER ──────────────────
+
+    /** Extract the six overlapping horizontal poses, trim away neighboring
+     *  pose fragments, and bottom-center them on one canvas for a steady run. */
+    sliceSaltieSheet() {
+        const RAW = 'saltie_sheet_raw';
+        if (!this.textures.exists(RAW)) return;
+        const src = this.textures.get(RAW).source[0].image;
+        const regions = [
+            { x: 0, y: 0, w: 375, h: 360 },
+            { x: 300, y: 0, w: 390, h: 360 },
+            { x: 605, y: 0, w: 375, h: 360 },
+            { x: 875, y: 0, w: 390, h: 360 },
+            { x: 1180, y: 0, w: 370, h: 360 },
+            { x: 1440, y: 0, w: 323, h: 360 },
+        ];
+        const stages = regions.map((region, index) => ({
+            key: `saltie_run_${index + 1}`,
+            stage: this._trimLargestBlob(src, region.x, region.y, region.w, region.h),
+        }));
+
+        let maxW = 1;
+        let maxH = 1;
+        stages.forEach(({ stage }) => {
+            if (!stage) return;
+            maxW = Math.max(maxW, stage.w);
+            maxH = Math.max(maxH, stage.h);
+        });
+
+        stages.forEach(({ key, stage }) => {
+            if (this.textures.exists(key)) this.textures.remove(key);
+            const texture = this.textures.createCanvas(key, maxW, maxH);
+            if (!texture || !stage) return;
+            const ctx = texture.getContext();
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(
+                stage.canvas,
+                stage.x,
+                stage.y,
+                stage.w,
+                stage.h,
+                Math.round((maxW - stage.w) / 2),
+                maxH - stage.h,
+                stage.w,
+                stage.h
+            );
+            texture.refresh();
+        });
+
+        if (!this.anims.exists('saltie_run')) {
+            this.anims.create({
+                key: 'saltie_run',
+                frames: stages.map(({ key }) => ({ key })),
+                frameRate: 20,
+                repeat: -1,
+            });
+        }
+
+        this.textures.remove(RAW);
     }
 
     // ─── GRAY FOX SHEET SLICER ─────────────────────────────────

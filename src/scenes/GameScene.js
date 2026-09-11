@@ -7,6 +7,7 @@ import { Cat } from '../entities/predators/Cat.js';
 import { Fox } from '../entities/predators/Fox.js';
 import { Harrier } from '../entities/predators/Harrier.js';
 import { ParticleManager } from '../effects/ParticleManager.js';
+import { advanceWaveWithMouseRun } from '../effects/SaltMarshMouseRun.js';
 import { WaterSystem } from '../systems/WaterSystem.js';
 import { SeedBank } from '../systems/SeedBank.js';
 import { ScoreManager } from '../systems/ScoreManager.js';
@@ -488,7 +489,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.showLevelStart(config, () => {
-            this.levelManager.startNextWave();
+            advanceWaveWithMouseRun(this);
         });
     }
 
@@ -899,7 +900,7 @@ export class GameScene extends Phaser.Scene {
                     this.completeLevel();
                 } else {
                     // Start next wave
-                    this.levelManager.startNextWave();
+                    advanceWaveWithMouseRun(this);
                     this.spawnTimer = 0;
                 }
             }
