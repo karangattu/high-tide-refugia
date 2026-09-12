@@ -124,3 +124,117 @@ test('one small, non-physics mouse runs every 15 seconds', async () => {
         assert.equal(mouse.destroyed, true, 'mouse is removed after its run');
     }
 });
+
+test('salt marsh mouse runs only in non-water area when flooded', async () => {
+    const { startSaltMarshMouseRun } = await import(mouseModulePath);
+
+    const sprites = [];
+    const tweens = [];
+    let dirtEmitted = null;
+    const scene = {
+        scale: { width: 1200, height: 700 },
+        marshTop: 150,
+        marshBottom: 600,
+        waterSystem: {
+            getWaterX() {
+                return 300;
+            },
+        },
+        particleManager: {
+            emitDirt(x, y) {
+                dirtEmitted = { x, y };
+            },
+        },
+        rails: {
+            children: {
+                entries: [{ isAlive: true, baseSpeed: 80 }],
+            },
+        },
+        add: {
+            sprite(x, y, texture) {
+                const sprite = {
+                    x,
+                    y,
+                    texture,
+                    displayWidth: 356,
+                    destroyed: false,
+                    setScale(scale) {
+                        this.scale = scale;
+                        this.displayWidth *= scale;
+                        return this;
+                    },
+                    setDepth(depth) {
+                        this.depth = depth;
+                        return this;
+                    },
+                    play(animation) {
+                        this.animation = animation;
+                        return this;
+                    },
+                    destroy() {
+                        this.destroyed = true;
+                    },
+                };
+                sprites.push(sprite);
+                return sprite;
+            },
+        },
+        tweens: {
+            add(config) {
+                tweens.push(config);
+                return config;
+            },
+        },
+    };
+
+    const mouse = startSaltMarshMouseRun(scene);
+    assert.ok(mouse);
+    assert.ok(mouse.x >= 335, 'mouse starts ahead of water in the non-water part');
+    assert.equal(sprites.length, 1);
+    assert.equal(tweens.length, 1);
+    assert.equal(tweens[0].targets, mouse);
+    assert.ok(tweens[0].x > scene.scale.width);
+    const crossingDistance = tweens[0].x - mouse.x;
+    const mouseSpeed = crossingDistance / (tweens[0].duration / 1000);
+    assert.ok(mouseSpeed > 80 && mouseSpeed <= 100);
+    assert.ok(dirtEmitted);
+    assert.equal(dirtEmitted.x, mouse.x - 6);
+});
+
+test('salt marsh mouse does not spawn when entire run area is submerged', async () => {
+    const { startSaltMarshMouseRun } = await import(mouseModulePath);
+
+    const scene = {
+        scale: { width: 1200, height: 700 },
+        marshTop: 150,
+        marshBottom: 600,
+        waterSystem: {
+            getWaterX() {
+                return 1190;
+            },
+        },
+        rails: { children: { entries: [] } },
+        add: {
+            sprite(x, y, texture) {
+                return {
+                    x,
+                    y,
+                    texture,
+                    displayWidth: 356,
+                    destroyed: false,
+                    setScale() { return this; },
+                    setDepth() { return this; },
+                    play() { return this; },
+                    destroy() { this.destroyed = true; },
+                };
+            },
+        },
+        tweens: {
+            add() {},
+        },
+    };
+
+    const mouse = startSaltMarshMouseRun(scene);
+    assert.equal(mouse, null);
+});
+

@@ -16,6 +16,17 @@ function getRailReferenceSpeed(scene) {
     return 120 * levelSpeedMultiplier;
 }
 
+function getWaterLineX(scene, y) {
+    if (!scene?.waterSystem) return null;
+    if (typeof scene.waterSystem.getWaterX === 'function') {
+        return scene.waterSystem.getWaterX(y);
+    }
+    if (Number.isFinite(scene.waterSystem.currentX)) {
+        return scene.waterSystem.currentX;
+    }
+    return null;
+}
+
 export function startSaltMarshMouseRun(scene) {
     const entityScale = getEntityScaleFactor(scene.scale.width, scene.scale.height);
     const verticalPadding = 24;
@@ -28,8 +39,21 @@ export function startSaltMarshMouseRun(scene) {
         .setDepth(5)
         .play('saltie_run');
     const offscreenPadding = mouse.displayWidth / 2 + 16;
-    mouse.x = -offscreenPadding;
     const destinationX = scene.scale.width + offscreenPadding;
+
+    let startX = -offscreenPadding;
+    const waterX = getWaterLineX(scene, y);
+    if (waterX !== null && waterX > -offscreenPadding) {
+        startX = Math.max(35, waterX + 35);
+    }
+
+    const maxDryX = Math.min(destinationX - 40, (scene.safeZoneX ?? scene.scale.width) - 40);
+    if (startX >= maxDryX) {
+        mouse.destroy();
+        return null;
+    }
+
+    mouse.x = startX;
     const mouseSpeed = getRailReferenceSpeed(scene) * MOUSE_SPEED_MULTIPLIER;
     const crossingDuration = ((destinationX - mouse.x) / mouseSpeed) * 1000;
 
@@ -40,6 +64,10 @@ export function startSaltMarshMouseRun(scene) {
         ease: 'Linear',
         onComplete: () => mouse.destroy(),
     });
+
+    if (mouse.x > 0 && scene.particleManager?.emitDirt) {
+        scene.particleManager.emitDirt(mouse.x - 6, y);
+    }
 
     return mouse;
 }
