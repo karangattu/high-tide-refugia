@@ -26,15 +26,17 @@ export class ParticleManager {
     }
 
     emitHearts(x, y) {
+        // High depth so the hearts stay visible above the marsh plants and the
+        // upland gumplant row when a rail reaches the safe refuge.
         const particles = this.scene.add.particles(x, y, 'heart', {
             speed: { min: 30, max: 80 },
             angle: { min: 250, max: 290 },
             lifespan: 1500,
             quantity: 5,
-            scale: { start: 1, end: 0.5 },
+            scale: { start: 0.11, end: 0.055 },
             alpha: { start: 1, end: 0 },
             gravityY: -50,
-        });
+        }).setDepth(50);
 
         this.scene.time.delayedCall(100, () => {
             particles.stop();
@@ -44,8 +46,46 @@ export class ParticleManager {
         });
     }
 
+    /** Float the authored +1 reward badge, with an optional caption. */
+    emitPlusOne(x, y, label = '+1 SEED') {
+        const badge = this.scene.add.image(x, y, 'plus1')
+            .setScale(0.13)
+            .setDepth(60);
+        const cap = label
+            ? this.scene.add.text(x + 26, y, label, {
+                fontFamily: 'Mona Sans',
+                fontSize: '16px',
+                fontStyle: 'bold',
+                color: '#f1c40f',
+                stroke: '#000000',
+                strokeThickness: 4,
+                resolution: window.devicePixelRatio || 2,
+            }).setOrigin(0, 0.5).setDepth(60)
+            : null;
+
+        this.scene.tweens.add({
+            targets: badge,
+            y: y - 46,
+            scale: 0.09,
+            alpha: 0,
+            duration: 1000,
+            ease: 'Power2',
+            onComplete: () => badge.destroy(),
+        });
+        if (cap) {
+            this.scene.tweens.add({
+                targets: cap,
+                y: y - 46,
+                alpha: 0,
+                duration: 1000,
+                ease: 'Power2',
+                onComplete: () => cap.destroy(),
+            });
+        }
+    }
+
     emitWaterSplash(x, y) {
-        const particles = this.scene.add.particles(x, y, 'seed', {
+        const particles = this.scene.add.particles(x, y, 'particle', {
             speed: { min: 100, max: 200 },
             angle: { min: 200, max: 340 },
             lifespan: 500,
@@ -71,12 +111,45 @@ export class ParticleManager {
             lifespan: 10000,
             speedY: { min: 15, max: 30 },
             speedX: { min: -30, max: 30 },
-            scale: { start: 0.6, end: 0.3 },
+            scale: { start: 0.05, end: 0.025 },
             alpha: { start: 0.9, end: 0.2 },
             rotate: { min: 0, max: 360 },
             frequency: 2000,
             blendMode: Phaser.BlendModes.ADD,
         });
+    }
+
+    /** A short trail of paw prints telegraphing a ground predator's charge. */
+    emitPawPrints(x, y, count = 4) {
+        for (let i = 0; i < count; i++) {
+            const paw = this.scene.add.image(
+                x + i * 12,
+                y + (i % 2 === 0 ? -6 : 6),
+                'paw'
+            ).setDepth(1).setAlpha(0.75).setScale(0.9);
+            this.scene.tweens.add({
+                targets: paw,
+                alpha: 0,
+                duration: 900,
+                delay: i * 70,
+                onComplete: () => paw.destroy(),
+            });
+        }
+    }
+
+    /** Leaves thrown up when the player rustles a patch to divert predators. */
+    emitRustle(x, y) {
+        const particles = this.scene.add.particles(x, y, 'rustle', {
+            speed: { min: 40, max: 130 },
+            angle: { min: 200, max: 340 },
+            lifespan: 650,
+            quantity: 12,
+            scale: { start: 1, end: 0.2 },
+            alpha: { start: 0.95, end: 0 },
+            gravityY: 160,
+        });
+        this.scene.time.delayedCall(120, () => particles.stop());
+        this.scene.time.delayedCall(800, () => particles.destroy());
     }
 
     emitScorePopup(x, y, text, color = '#27ae60') {

@@ -42,18 +42,15 @@ export class SeedBank {
         this.notifyUpdate();
     }
 
-    collectFloatingSeed() {
+    collectFloatingSeed(x = null, y = null) {
         // Bonus seed from catching floating seeds
         this.addSeeds(1);
 
-        // Visual feedback in scene
+        // Visual feedback in scene, anchored on the pod when available
         if (this.scene.particleManager) {
-            this.scene.particleManager.emitScorePopup(
-                this.scene.scale.width / 2,
-                100,
-                '+1 SEED',
-                '#f39c12'
-            );
+            const px = x ?? this.scene.scale.width / 2;
+            const py = y ?? 100;
+            this.scene.particleManager.emitPlusOne?.(px, py, '+1 SEED');
         }
     }
 

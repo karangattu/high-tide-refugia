@@ -33,26 +33,12 @@ test('GameScene entity depth hierarchy ensures rail is in front of plants and be
     assert.ok(harrierDepth > waterDepth, `Harrier depth (${harrierDepth}) must fly above Water depth (${waterDepth})`);
 });
 
-test('MenuScene places runner rail in front of background gumplants and scales down bird', () => {
+test('MenuScene no longer draws decorative runner rails over the opening screen', () => {
     const menuContent = fs.readFileSync('src/scenes/MenuScene.js', 'utf-8');
 
-    const gumplantMatch = menuContent.match(/gumplant[\s\S]*?\.setDepth\((-[0-9]+|\d+)\)/);
-    const runnerMatch = menuContent.match(/makeRunner[\s\S]*?\.setDepth\((-[0-9]+|\d+)\)/);
-
-    assert.ok(gumplantMatch, 'MenuScene gumplant must define depth');
-    assert.ok(runnerMatch, 'MenuScene runner rail must define depth');
-
-    const gumplantDepth = Number(gumplantMatch[1]);
-    const runnerDepth = Number(runnerMatch[1]);
-
-    assert.ok(runnerDepth > gumplantDepth, `Menu runner depth (${runnerDepth}) must be in front of gumplant (${gumplantDepth})`);
-
-    const runnerScaleMatch = menuContent.match(/this\.compact\s*\?\s*([0-9.]+)\s*:\s*([0-9.]+)/);
-    assert.ok(runnerScaleMatch, 'MenuScene runner scale defined');
-    const compactScale = Number(runnerScaleMatch[1]);
-    const standardScale = Number(runnerScaleMatch[2]);
-    assert.ok(compactScale <= 0.12, `Compact runner scale (${compactScale}) <= 0.12`);
-    assert.ok(standardScale <= 0.14, `Standard runner scale (${standardScale}) <= 0.14`);
+    assert.doesNotMatch(menuContent, /startRailRunner\s*\(/, 'MenuScene must not start a decorative rail runner');
+    assert.doesNotMatch(menuContent, /makeRunner\s*\(/, 'MenuScene must not build runner rail sprites');
+    assert.doesNotMatch(menuContent, /rail_running_/, 'MenuScene must not animate running rail frames');
 });
 
 test('Rail dimensions remain smaller than ground and aerial predators across states', () => {

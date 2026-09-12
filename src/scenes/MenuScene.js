@@ -28,20 +28,80 @@ export class MenuScene extends Phaser.Scene {
         this.horizonY = Math.round(height * (this.portrait ? 0.20 : (compact ? 0.16 : 0.40)));
         this.marshY = Math.round(height * (this.portrait ? 0.36 : (compact ? 0.28 : 0.56)));
 
+        this.createBackgroundVideo(width, height);
         this.createBackground(width, height);
         this.createMarshDetail(width, height);
-        this.startRailRunner(width, height);
         this.createParticles(width, height);
         this.createTitle(width, height);
         this.createButtons(width, height);
         this.createFooter(width, height);
         this.createFullscreenButton(width);
         this.createInstallButton();
+        this.createTutorialReplayLink();
 
         this.cameras.main.fadeIn(600);
     }
 
     // ─── BACKGROUND ──────────────────────────────────────────────
+
+    /**
+     * Full-bleed looping footage behind the menu. Falls back to the painted
+     * marsh background when video is unavailable (unsupported device or a
+     * failed download).
+     */
+    createBackgroundVideo(width, height) {
+        if (!this.cache.video || !this.cache.video.exists('intro_video')) return;
+
+        const video = this.add.video(width / 2, height / 2, 'intro_video');
+        if (!video) return;
+
+        video.setDepth(-18);
+        video.setMute(true);
+        video.setLoop(true);
+
+        // Hide until the real dimensions are known, otherwise the default
+        // 256px video texture flashes before it scales to cover the screen.
+        video.setAlpha(0);
+        const applyCover = () => {
+            const vw = video.video?.videoWidth || 0;
+            const vh = video.video?.videoHeight || 0;
+            if (vw <= 0 || vh <= 0) return;
+            video.setScale(Math.max(width / vw, height / vh));
+            if (video.alpha < 1) video.setAlpha(1);
+        };
+        applyCover();
+        video.on('created', applyCover);
+        video.on('metadata', applyCover);
+        video.on('error', () => {
+            if (video.active) video.destroy();
+            this.bgVideo = null;
+            if (this.bgVideoScrim) {
+                this.bgVideoScrim.destroy();
+                this.bgVideoScrim = null;
+            }
+        });
+
+        try {
+            video.play(true);
+        } catch { /* autoplay will retry on first input */ }
+
+        // Autoplay can be blocked until the first user gesture.
+        this.input.once('pointerdown', () => {
+            if (video.active && !video.isPlaying()) {
+                video.play(true);
+            }
+        });
+
+        // Gentle scrim so the title, buttons and footer stay legible.
+        this.bgVideoScrim = this.add.rectangle(
+            width / 2, height / 2, width, height, 0x061018, 0.3
+        ).setDepth(-17);
+
+        this.bgVideo = video;
+        this.events.once('shutdown', () => {
+            if (this.bgVideo && this.bgVideo.active) this.bgVideo.stop();
+        });
+    }
 
     createBackground(width, height) {
         const { horizonY, marshY } = this;
@@ -206,68 +266,11 @@ export class MenuScene extends Phaser.Scene {
             .setDepth(-24);
     }
 
-    // ─── RAIL RUNNERS ────────────────────────────────────────────
-
-    startRailRunner(width, height) {
-        const groundY = this.marshY + (height - this.marshY) * 0.30;
-        const scale = this.compact ? 0.11 : 0.13;
-
-        const makeRunner = (startDelay, yOff, scl, duration) => {
-            const rail = this.add.sprite(-140, groundY + yOff, 'rail_running_1')
-                .setScale(scl)
-                .setDepth(-10);
-            const run = () => {
-                rail.stop();
-                rail.setX(-140).setY(groundY + yOff).setAlpha(1);
-                this.tweens.add({
-                    targets: rail,
-                    x: width + 140,
-                    duration,
-                    ease: 'Linear',
-                    onComplete: () => {
-                        this.time.delayedCall(Phaser.Math.Between(1200, 2600), run);
-                    },
-                });
-            };
-            this.time.delayedCall(startDelay, run);
-            return rail;
-        };
-
-        this.runnerA = makeRunner(600, 0, scale, Phaser.Math.Between(8500, 9500));
-        this.runnerB = makeRunner(3200, -14, scale * 0.85, Phaser.Math.Between(7500, 8200));
-
-        // Shared frame cycler (ground-anchored slices keep feet steady)
-        this.railTick = 0;
-        this.time.addEvent({
-            delay: 130,
-            loop: true,
-            callback: () => {
-                this.railTick = (this.railTick + 1) % 4;
-                if (this.runnerA) this.runnerA.setTexture(`rail_running_${this.railTick + 1}`);
-                if (this.runnerB) this.runnerB.setTexture(`rail_running_${((this.railTick + 2) % 4) + 1}`);
-            },
-        });
-    }
-
     // ─── PARTICLES ───────────────────────────────────────────────
 
     createParticles(width, _height) {
-        // Drifting seeds across the whole scene
-        this.add.particles(0, 0, 'seed', {
-            x: { min: 0, max: width },
-            y: { min: -20, max: -10 },
-            lifespan: 9000,
-            speedY: { min: 15, max: 35 },
-            speedX: { min: -15, max: 15 },
-            scale: { start: 0.5, end: 0.3 },
-            alpha: { start: 0.7, end: 0 },
-            rotate: { min: 0, max: 360 },
-            frequency: 600,
-            blendMode: Phaser.BlendModes.ADD,
-        }).setDepth(-15);
-
         // Water glints on the flood side
-        this.add.particles(0, 0, 'seed', {
+        this.add.particles(0, 0, 'particle', {
             x: { min: 0, max: width * 0.5 },
             y: { min: this.horizonY, max: this.marshY },
             lifespan: 2500,
@@ -548,6 +551,50 @@ export class MenuScene extends Phaser.Scene {
             }
         });
         this.events.once('shutdown', unsubscribe);
+    }
+
+    /**
+     * Small corner link that relaunches the interactive tutorial on demand,
+     * so returning players and students can practise without clearing storage.
+     */
+    createTutorialReplayLink() {
+        const x = this.compact ? 70 : 92;
+        const y = shouldShowInstallOption() ? 84 : 30;
+        const w = this.compact ? 130 : 168;
+        const h = 40;
+
+        const bg = this.add.graphics().setDepth(12);
+        const draw = (hover = false) => {
+            bg.clear();
+            bg.fillStyle(0x07150c, hover ? 0.95 : 0.8);
+            bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+            bg.lineStyle(1.5, hover ? 0xffd27a : AMBER, hover ? 0.95 : 0.7);
+            bg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 12);
+        };
+        draw();
+
+        this.add.text(x, y, 'REPLAY TUTORIAL', {
+            fontFamily: 'Mona Sans',
+            fontSize: this.compact ? '12px' : '14px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(13);
+
+        const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0)
+            .setDepth(14)
+            .setInteractive({ useHandCursor: true });
+
+        hit.on('pointerover', () => draw(true));
+        hit.on('pointerout', () => draw(false));
+        hit.on('pointerup', () => this.startTutorialReplay());
+    }
+
+    startTutorialReplay() {
+        this.cameras.main.fadeOut(500);
+        this.time.delayedCall(500, () => {
+            this.scene.start('IntroScene', { forceTutorial: true });
+        });
     }
 
     showInstallInstructions() {

@@ -39,12 +39,18 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.add(this.bird);
 
         // State
-        this.state = 'glide'; // glide, dive, recovery
+        this.state = 'glide'; // glide, telegraph, dive, recovery
         this.speed = 100;
         this.diveSpeed = 480;
         this.target = null;
         this.diveTimer = 0;
         this.cooldownTimer = 0;
+
+        // Tutorial harriers only demonstrate their shadow: they never strike.
+        this.harmless = false;
+        // Reticle warning before the strike, so dives can be reacted to.
+        this.diveDelay = 420;
+        this.telegraphRing = null;
 
         // Glide pattern
         this.glideDirection = 1;
@@ -66,6 +72,8 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.minY = 100;
         this.maxY = scene.scale.height - 100;
         this.midY = (this.minY + this.maxY) / 2;
+
+        this.once('destroy', () => this.clearTelegraph());
     }
 
     update(time, delta, rails, plants) {
@@ -84,6 +92,9 @@ export class Harrier extends Phaser.GameObjects.Container {
             case 'glide':
                 this.glide(delta);
                 this.searchForPrey(rails, plants);
+                break;
+            case 'telegraph':
+                this.telegraph(delta);
                 break;
             case 'dive':
                 this.dive(delta);
@@ -122,6 +133,7 @@ export class Harrier extends Phaser.GameObjects.Container {
     }
 
     searchForPrey(rails, plants) {
+        if (this.harmless) return;
         if (!rails || !rails.children) return;
 
         const exposedRail = rails.children.entries.find(rail => {
@@ -146,7 +158,58 @@ export class Harrier extends Phaser.GameObjects.Container {
         }
     }
 
+    /**
+     * Warn before striking: the ground reticle pulses for a beat so the player
+     * can pull the rail into cover, then the bird commits to the dive.
+     */
     startDive(rail) {
+        if (this.state === 'telegraph' || this.state === 'dive') return;
+        this.state = 'telegraph';
+        this.target = rail;
+        this.telegraphTimer = this.diveDelay;
+
+        if (this.scene && this.scene.add) {
+            this.telegraphRing = this.scene.add.circle(rail.x, rail.y, 8)
+                .setStrokeStyle(3, 0xff6b6b, 0.9)
+                .setDepth(7);
+            this.scene.tweens.add({
+                targets: this.telegraphRing,
+                radius: this.searchRadius,
+                alpha: 0.1,
+                duration: this.diveDelay,
+            });
+        }
+
+        if (rail.panic) rail.panic();
+    }
+
+    telegraph(delta) {
+        this.telegraphTimer -= delta;
+        if (this.telegraphRing && this.target && this.target.isAlive) {
+            this.telegraphRing.x = this.target.x;
+            this.telegraphRing.y = this.target.y;
+        }
+        if (this.telegraphTimer > 0) return;
+
+        const rail = this.target;
+        const canStrike = rail && rail.isAlive && rail.isDetectable;
+        this.clearTelegraph();
+        if (!canStrike) {
+            this.missPrey();
+            return;
+        }
+        this.beginDive(rail);
+    }
+
+    clearTelegraph() {
+        if (this.telegraphRing) {
+            this.scene?.tweens?.killTweensOf(this.telegraphRing);
+            this.telegraphRing.destroy();
+            this.telegraphRing = null;
+        }
+    }
+
+    beginDive(rail) {
         this.state = 'dive';
         this.target = rail;
         this.diveStartX = this.x;
@@ -203,6 +266,7 @@ export class Harrier extends Phaser.GameObjects.Container {
     }
 
     catchPrey() {
+        this.clearTelegraph();
         this.state = 'catch';
         if (this.target && this.target.isAlive) {
             this.target.die('predator');
@@ -266,6 +330,7 @@ export class Harrier extends Phaser.GameObjects.Container {
     }
 
     missPrey() {
+        this.clearTelegraph();
         this.target = null;
         if (this.scene && this.scene.particleManager) {
             this.scene.particleManager.emitDirt(this.x, this.y);

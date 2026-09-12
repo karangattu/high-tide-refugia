@@ -51,6 +51,12 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.visionRange = 150;
         this.visionAngle = Math.PI / 3;
 
+        // Terrain response (pickleweed mats) and player diversion lures
+        this.terrainFactor = 1;
+        this.lureX = 0;
+        this.lureY = 0;
+        this.lureUntil = 0;
+
         this.animationTimer = 0;
         this.currentFrame = 0;
         this.walkingFrames = [0, 1, 2, 3];
@@ -122,6 +128,17 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
+        // Dense pickleweed tangles slow ground predators as they cross it.
+        this.terrainFactor = this.getTerrainSlowFactor();
+
+        // A player rustle or a Saltie sighting can pull the predator off the
+        // rail route for a moment — but never mid-pounce.
+        if (this.state !== 'attack' && this.lureUntil && time < this.lureUntil) {
+            this.handleLure(delta);
+            return;
+        }
+        if (time >= this.lureUntil) this.lureUntil = 0;
+
         switch (this.state) {
             case 'patrol':
                 this.patrol(delta);
@@ -144,6 +161,48 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         const t = 1 - Math.exp(-this.steerRate * dt);
         this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, desiredVX, t);
         this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, desiredVY, t);
+    }
+
+    /** Speed multiplier from crossing pickleweed tangle mats (min over overlaps). */
+    getTerrainSlowFactor() {
+        const plants = this.scene?.plants;
+        if (!plants || !plants.children) return 1;
+        let factor = 1;
+        for (const plant of plants.children.entries) {
+            if (plant.plantType !== 'pickleweed') continue;
+            if (plant.isCover && !plant.isCover()) continue;
+            const radius = (plant.getCoverRadius ? plant.getCoverRadius() : 36) + 14;
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, plant.x, plant.y);
+            if (dist < radius) {
+                const slow = plant.getGroundSlowFactor ? plant.getGroundSlowFactor() : 0.75;
+                factor = Math.min(factor, slow);
+            }
+        }
+        return factor;
+    }
+
+    /** Walk toward a diversion point instead of the state machine. */
+    handleLure(delta) {
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, this.lureX, this.lureY);
+        const speed = this.patrolSpeed * this.terrainFactor;
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, this.lureX, this.lureY);
+        if (dist < 24) {
+            this.body.setVelocity(0, 0);
+            return;
+        }
+        this.steer(Math.cos(angle) * speed, Math.sin(angle) * speed, delta);
+        if (Math.abs(this.lureX - this.x) > 4) this.setFlipX(this.lureX < this.x);
+    }
+
+    /** Lure this predator toward (x, y) for `duration` ms. */
+    distractAt(x, y, duration = 1500) {
+        this.lureX = x;
+        this.lureY = y;
+        this.lureUntil = (this.scene?.time?.now ?? 0) + duration;
+        // A committed pounce must finish; otherwise the rail would freeze.
+        if (this.state === 'chase' || this.state === 'cooldown') {
+            this.endChase();
+        }
     }
 
     patrol(delta) {
@@ -171,7 +230,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             ? Phaser.Math.Clamp(distY * 0.8, -40, 40)
             : 0;
 
-        this.steer(dir * this.patrolSpeed, desiredVY, delta);
+        this.steer(dir * this.patrolSpeed * this.terrainFactor, desiredVY, delta);
     }
 
     searchForPrey(rails) {
@@ -213,6 +272,9 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.target = rail;
         this.chaseStuckTimer = 0;
         this.lastChaseDistance = Infinity;
+
+        // Paw prints telegraph the charge before the predator closes in.
+        this.scene.particleManager?.emitPawPrints?.(this.x, this.y, 4);
 
         // Switch to pouncing/running pose for chase
         this.setFrame(5);
@@ -260,8 +322,8 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
         this.steer(
-            Math.cos(angle) * this.chaseSpeed,
-            Math.sin(angle) * this.chaseSpeed,
+            Math.cos(angle) * this.chaseSpeed * this.terrainFactor,
+            Math.sin(angle) * this.chaseSpeed * this.terrainFactor,
             delta
         );
 
@@ -395,6 +457,9 @@ export class Cat extends GroundPredator {
         this.lastChaseDistance = Infinity;
 
         this.setFrame(2);
+
+        // Paw prints telegraph the charge before the cat closes in.
+        this.scene.particleManager?.emitPawPrints?.(this.x, this.y, 4);
 
         if (rail.panic) {
             rail.panic();

@@ -58,6 +58,12 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.target = null;
         this.cooldownTimer = 0;
 
+        // Terrain response (pickleweed mats) and player diversion lures
+        this.terrainFactor = 1;
+        this.lureX = 0;
+        this.lureY = 0;
+        this.lureUntil = 0;
+
         this.runningFrames = FOX_RUN_TEXTURES;
         this.pounceFrames = FOX_POUNCE_TEXTURES;
         this.currentRunFrame = 0;
@@ -86,8 +92,9 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
     applyDiagonalVelocity() {
         if (!this.body) return;
-        const vx = this.patrolDirX * Math.cos(this.headingAngle) * this.patrolSpeed;
-        const vy = this.patrolDirY * Math.sin(this.headingAngle) * this.patrolSpeed;
+        const speed = this.patrolSpeed * (this.terrainFactor || 1);
+        const vx = this.patrolDirX * Math.cos(this.headingAngle) * speed;
+        const vy = this.patrolDirY * Math.sin(this.headingAngle) * speed;
         this.body.setVelocity(vx, vy);
         this.setFlipX(vx < 0);
     }
@@ -97,6 +104,48 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         const t = 1 - Math.exp(-this.steerRate * dt);
         this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, desiredVX, t);
         this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, desiredVY, t);
+    }
+
+    /** Speed multiplier from crossing pickleweed tangle mats (min over overlaps). */
+    getTerrainSlowFactor() {
+        const plants = this.scene?.plants;
+        if (!plants || !plants.children) return 1;
+        let factor = 1;
+        for (const plant of plants.children.entries) {
+            if (plant.plantType !== 'pickleweed') continue;
+            if (plant.isCover && !plant.isCover()) continue;
+            const radius = (plant.getCoverRadius ? plant.getCoverRadius() : 36) + 14;
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, plant.x, plant.y);
+            if (dist < radius) {
+                const slow = plant.getGroundSlowFactor ? plant.getGroundSlowFactor() : 0.75;
+                factor = Math.min(factor, slow);
+            }
+        }
+        return factor;
+    }
+
+    /** Trot toward a diversion point instead of running the state machine. */
+    handleLure(delta) {
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, this.lureX, this.lureY);
+        const speed = this.patrolSpeed * this.terrainFactor;
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, this.lureX, this.lureY);
+        if (dist < 24) {
+            this.body.setVelocity(0, 0);
+            return;
+        }
+        this.steer(Math.cos(angle) * speed, Math.sin(angle) * speed, delta);
+        if (Math.abs(this.lureX - this.x) > 4) this.setFlipX(this.lureX < this.x);
+    }
+
+    /** Lure this predator toward (x, y) for `duration` ms. */
+    distractAt(x, y, duration = 1500) {
+        this.lureX = x;
+        this.lureY = y;
+        this.lureUntil = (this.scene?.time?.now ?? 0) + duration;
+        // A committed pounce must finish; otherwise the rail would freeze.
+        if (this.state === 'chase' || this.state === 'cooldown') {
+            this.endChase();
+        }
     }
 
     update(time, delta, rails) {
@@ -150,6 +199,17 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             this.animateRun(delta);
         }
 
+        // Dense pickleweed tangles slow ground predators as they cross it.
+        this.terrainFactor = this.getTerrainSlowFactor();
+
+        // A player rustle or a Saltie sighting can pull the fox off the route —
+        // but never mid-pounce.
+        if (this.state !== 'attack' && this.lureUntil && time < this.lureUntil) {
+            this.handleLure(delta);
+            return;
+        }
+        if (time >= this.lureUntil) this.lureUntil = 0;
+
         switch (this.state) {
             case 'patrol':
                 this.patrol(delta);
@@ -188,8 +248,9 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             this.headingAngle = 0.44 + Math.random() * 0.52;
         }
 
-        const vx = this.patrolDirX * Math.cos(this.headingAngle) * this.patrolSpeed;
-        const vy = this.patrolDirY * Math.sin(this.headingAngle) * this.patrolSpeed;
+        const speed = this.patrolSpeed * this.terrainFactor;
+        const vx = this.patrolDirX * Math.cos(this.headingAngle) * speed;
+        const vy = this.patrolDirY * Math.sin(this.headingAngle) * speed;
         this.steer(vx, vy, delta);
         if (Math.abs(vx) > 1) this.setFlipX(vx < 0);
     }
@@ -237,6 +298,9 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.chaseStuckTimer = 0;
         this.lastChaseDistance = Infinity;
 
+        // Paw prints telegraph the sprint before the fox closes in.
+        this.scene.particleManager?.emitPawPrints?.(this.x, this.y, 4);
+
         if (rail.panic) {
             rail.panic();
         }
@@ -278,8 +342,8 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
         this.steer(
-            Math.cos(angle) * this.chaseSpeed,
-            Math.sin(angle) * this.chaseSpeed,
+            Math.cos(angle) * this.chaseSpeed * this.terrainFactor,
+            Math.sin(angle) * this.chaseSpeed * this.terrainFactor,
             delta
         );
 

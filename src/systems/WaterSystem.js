@@ -19,7 +19,7 @@ export class WaterSystem {
         this.foamGraphics = scene.add.graphics().setDepth(6);
 
         // Spray flung off the crest as the wave breaks
-        this.foamEmitter = scene.add.particles(startX, 0, 'seed', {
+        this.foamEmitter = scene.add.particles(startX, 0, 'particle', {
             y: { min: this.topY, max: this.bottomY },
             speedX: { min: 6, max: 26 },
             speedY: { min: -14, max: 14 },

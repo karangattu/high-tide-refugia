@@ -54,6 +54,24 @@ export function startSaltMarshMouseRun(scene) {
     }
 
     mouse.x = startX;
+
+    // Tapping a running Saltie rewards a "Refugia Sighting!" bonus and can
+    // distract nearby predators chasing the rails.
+    if (typeof mouse.setInteractive === 'function') {
+        mouse.setInteractive({ useHandCursor: true });
+        if (typeof mouse.on === 'function') {
+            mouse.on('pointerdown', (_pointer, _lx, _ly, event) => {
+                if (event && typeof event.stopPropagation === 'function') {
+                    event.stopPropagation();
+                }
+                if (scene.onSaltieTapped) {
+                    scene.onSaltieTapped(mouse);
+                }
+                mouse.destroy();
+            });
+        }
+    }
+
     const mouseSpeed = getRailReferenceSpeed(scene) * MOUSE_SPEED_MULTIPLIER;
     const crossingDuration = ((destinationX - mouse.x) / mouseSpeed) * 1000;
 

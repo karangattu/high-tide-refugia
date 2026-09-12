@@ -23,6 +23,7 @@ export class GameOverScene extends Phaser.Scene {
         this.level = data.level || 1;
         this.victory = data.victory || false;
         this.pendingPlayerName = data.pendingPlayerName || '';
+        this.habitat = data.habitat || null;
     }
 
     create() {
@@ -238,6 +239,23 @@ export class GameOverScene extends Phaser.Scene {
         };
     }
 
+    /**
+     * Conservation breakdown shown after every run: species diversity, the
+     * grade of the habitat corridor, and how many rails beat the tide.
+     */
+    getHabitatRows() {
+        if (!this.habitat) return [];
+        const h = this.habitat;
+        const connected = Boolean(h.corridorConnected);
+        const grade = h.corridorGrade || 'D';
+        const gradeColor = connected ? '#2ecc71' : (grade === 'B' ? '#f1c40f' : '#e74c3c');
+        return [
+            { label: 'Native Diversity', value: `${h.speciesCount || 0}/${h.speciesTotal || 5} species`, color: '#2ecc71' },
+            { label: 'Refugia Corridor', value: connected ? `${grade} Corridor` : `${grade} Frayed`, color: gradeColor },
+            { label: 'Tide Survival', value: `${Math.round((h.tideSurvivalRate || 0) * 100)}%`, color: '#9fd8e8' },
+        ];
+    }
+
     createPanel(width, height) {
         const isLandscape = getGameOverLayoutMode(width, height) === 'landscape';
         const compact = height <= 520 || width < 680;
@@ -338,6 +356,35 @@ export class GameOverScene extends Phaser.Scene {
                     resolution: TEXT_RES,
                 }).setOrigin(0.5);
             });
+
+            const habitatRows = this.getHabitatRows();
+            if (habitatRows.length) {
+                const hHeaderY = statsY + statsData.length * statsSpacing + (compact ? 2 : 6);
+                this.add.text(col2X, hHeaderY, 'HABITAT REPORT', {
+                    fontFamily: 'Mona Sans',
+                    fontSize: compact ? '12px' : '14px',
+                    fontStyle: 'bold',
+                    color: '#27ae60',
+                    resolution: TEXT_RES,
+                }).setOrigin(0.5);
+
+                habitatRows.forEach((row, i) => {
+                    const ry = hHeaderY + (compact ? 18 : 22) + i * (compact ? 16 : 18);
+                    this.add.text(col2X - (compact ? 92 : 108), ry, row.label, {
+                        fontFamily: 'Mona Sans',
+                        fontSize: compact ? '11px' : '13px',
+                        color: '#8fa895',
+                        resolution: TEXT_RES,
+                    }).setOrigin(0, 0.5);
+                    this.add.text(col2X + (compact ? 92 : 108), ry, row.value, {
+                        fontFamily: 'Mona Sans',
+                        fontSize: compact ? '11px' : '13px',
+                        fontStyle: 'bold',
+                        color: row.color,
+                        resolution: TEXT_RES,
+                    }).setOrigin(1, 0.5);
+                });
+            }
 
             const buttonY = panelY + panelH - (compact ? 42 : 50);
 
@@ -490,6 +537,21 @@ export class GameOverScene extends Phaser.Scene {
             color: survivalRate >= 50 ? '#27ae60' : '#e74c3c',
             resolution: TEXT_RES,
         }).setOrigin(0.5);
+
+        if (this.habitat) {
+            const h = this.habitat;
+            const connected = Boolean(h.corridorConnected);
+            const grade = h.corridorGrade || 'D';
+            const tidePct = Math.round((h.tideSurvivalRate || 0) * 100);
+            const report = `HABITAT:  ${h.speciesCount || 0}/${h.speciesTotal || 5} species  ·  Corridor ${grade}  ·  Tide ${tidePct}%`;
+            this.add.text(width / 2, survivalY + (compact ? 22 : 28), report, {
+                fontFamily: 'Mona Sans',
+                fontSize: compact ? '11px' : '13px',
+                fontStyle: 'bold',
+                color: connected ? '#9be29b' : '#f1c40f',
+                resolution: TEXT_RES,
+            }).setOrigin(0.5);
+        }
 
         const lbHeaderY = statsY + (statsData.length - 1) * statsSpacing + (compact ? 46 : 58);
         const lbRowsTop = lbHeaderY + (compact ? 26 : 30);

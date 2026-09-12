@@ -281,21 +281,25 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         if (this.body) this.body.setVelocity(0, 0);
 
         if (this.scene.add) {
-            const exclaim = this.scene.add.text(this.x, this.y - 40, '!', {
-                fontFamily: 'Mona Sans',
-                fontSize: '32px',
-                fontStyle: 'bold',
-                color: '#ffcc00',
-                stroke: '#ff0000',
-                strokeThickness: 4,
-            }).setOrigin(0.5).setDepth(100);
+            const hasArt = this.scene.textures && this.scene.textures.exists('exclamation');
+            const exclaim = hasArt
+                ? this.scene.add.image(this.x, this.y - 40, 'exclamation')
+                    .setScale(0.09).setOrigin(0.5).setDepth(100)
+                : this.scene.add.text(this.x, this.y - 40, '!', {
+                    fontFamily: 'Mona Sans',
+                    fontSize: '32px',
+                    fontStyle: 'bold',
+                    color: '#ffcc00',
+                    stroke: '#ff0000',
+                    strokeThickness: 4,
+                }).setOrigin(0.5).setDepth(100);
 
             if (this.scene.tweens) {
                 this.scene.tweens.add({
                     targets: exclaim,
                     y: exclaim.y - 15,
-                    scaleX: 1.3,
-                    scaleY: 1.3,
+                    scaleX: hasArt ? 0.13 : 1.3,
+                    scaleY: hasArt ? 0.13 : 1.3,
                     duration: 200,
                     yoyo: true,
                     repeat: 1,

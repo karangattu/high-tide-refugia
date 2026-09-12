@@ -44,7 +44,7 @@ export class UIScene extends Phaser.Scene {
             .setOrigin(0.5)
             .setScale(panelW / 260, panelH / 52);
 
-        this.add.image(x + (compact ? 14 : 26), cy, 'seed').setScale(compact ? 0.95 : 1.5);
+        this.add.image(x + (compact ? 14 : 26), cy, 'seed').setScale(compact ? 0.062 : 0.09);
 
         this.seedLabel = this.add.text(x + (compact ? 28 : 46), y + (compact ? 5 : 10), 'SEEDS · 0 PLANTS', {
             fontFamily: 'Mona Sans',

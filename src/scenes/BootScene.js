@@ -7,25 +7,43 @@ export class BootScene extends Phaser.Scene {
     }
 
     preload() {
-        // Get loading bar element
         const loadingBar = document.getElementById('loading-bar');
-
-        // Update loading bar as assets load
-        this.load.on('progress', (value) => {
+        this.loadingProgress = 0;
+        // Monotonic: the loader and the video download report into the same
+        // bar, so late events never make it jump backwards.
+        this.setLoadingProgress = (frac) => {
+            const clamped = Math.max(0, Math.min(1, frac));
+            if (clamped <= this.loadingProgress + 0.0001) return;
+            this.loadingProgress = clamped;
             if (loadingBar) {
-                loadingBar.style.width = `${value * 100}%`;
+                loadingBar.style.width = `${clamped * 100}%`;
             }
-        });
+        };
+        this.assetsLoaded = false;
+        this.videoReady = false;
+        this.menuStarted = false;
 
-        this.load.on('complete', () => {
-            // Hide loading screen with fade
-            const loadingScreen = document.getElementById('loading-screen');
-            if (loadingScreen) {
-                loadingScreen.classList.add('hidden');
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                }, 500);
+        // Both videos are H.264 mp4. Only opt in when that exact format is
+        // decodable, otherwise Phaser's VideoFile constructor throws and
+        // aborts the whole preload.
+        const video = this.game?.device?.video;
+        this.videoSupported = Boolean(video && (video.mp4 || video.h264));
+        this.canLoadVideoUrl = (url) => {
+            if (!this.videoSupported) return false;
+            try {
+                return Boolean(video.getVideoURL(url));
+            } catch {
+                return false;
             }
+        };
+
+        this.hasMenuVideo = this.canLoadVideoUrl('intro_video.mp4');
+
+        // Asset bytes fill the first 70% of the bar; the background-video
+        // download fills the last 30% (see prefetchMenuVideo). Without video
+        // support the asset load owns the whole bar.
+        this.load.on('progress', (value) => {
+            this.setLoadingProgress(this.hasMenuVideo ? value * 0.7 : value);
         });
 
         // Load Ridgways Rail sprite sheet (4x2 grid, 4000x2233 -> 1000x1116 per frame)
@@ -54,13 +72,99 @@ export class BootScene extends Phaser.Scene {
         });
         // Legacy 'plant' key aliases the mature gumplant (set up in slicePlantSheets)
 
-        // Load Intro Video
-        this.load.video('intro_video', 'assets/title_movie.mp4');
+        // Background footage (cat chasing a rail through the marsh) loops
+        // behind the main menu. The claymation title movie is used by
+        // IntroScene. Guarded so devices without mp4 support fall back to the
+        // static menu art instead of breaking the whole load.
+        // The menu video is fetched by prefetchMenuVideo (below), which adds
+        // it to the video cache. The full-screen intro uses the loader.
+        if (this.canLoadVideoUrl('assets/title_movie.mp4')) {
+            this.load.video('title_movie', 'assets/title_movie.mp4');
+        }
 
         this.load.audio('rail_call', 'assets/sprites/ridgways_rail_call.mp3');
 
+        // Authored UI/reward art (replaces the old hand-drawn placeholder dots)
+        this.load.image('exclamation', 'assets/exclamation.png');
+        this.load.image('heart', 'assets/heart.png');
+        this.load.image('plus1', 'assets/plus1.png');
+        this.load.image('seed', 'assets/seed.png');
+
         // Create placeholder graphics for other assets
         this.createPlaceholderAssets();
+
+        if (this.hasMenuVideo) {
+            this.prefetchMenuVideo('intro_video.mp4');
+        } else {
+            this.videoReady = true;
+        }
+    }
+
+    /**
+     * Phaser's `load.video` never downloads the bytes (the <video> element
+     * streams them at playback), so the loader bar can't see its progress.
+     * Fetch the menu video ourselves, drive the bar, and hand the cached blob
+     * to the Phaser video cache so it plays instantly from memory.
+     */
+    prefetchMenuVideo(url) {
+        try {
+            const xhr = new window.XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.responseType = 'blob';
+            xhr.onprogress = (event) => {
+                if (event.lengthComputable && event.total > 0) {
+                    this.setLoadingProgress(0.7 + 0.3 * (event.loaded / event.total));
+                }
+            };
+            xhr.onload = () => {
+                let srcUrl = url;
+                if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
+                    try {
+                        srcUrl = window.URL.createObjectURL(xhr.response);
+                        this.menuVideoBlobUrl = srcUrl;
+                    } catch { /* fall back to the network URL */ }
+                }
+                // Register the menu video directly so it is guaranteed to be
+                // in the cache before MenuScene runs (no loader race).
+                if (this.cache.video.exists('intro_video')) {
+                    this.cache.video.get('intro_video').url = srcUrl;
+                } else {
+                    this.cache.video.add('intro_video', {
+                        url: srcUrl,
+                        noAudio: false,
+                        crossOrigin: undefined,
+                    });
+                }
+                this.setLoadingProgress(1);
+                this.videoReady = true;
+                this.tryStartMenu();
+            };
+            xhr.onerror = () => {
+                this.setLoadingProgress(1);
+                this.videoReady = true;
+                this.tryStartMenu();
+            };
+            xhr.send();
+        } catch {
+            this.videoReady = true;
+            this.tryStartMenu();
+        }
+    }
+
+    /** Start the menu only once assets are sliced and the video is ready. */
+    tryStartMenu() {
+        if (this.menuStarted || !this.assetsLoaded || !this.videoReady) return;
+        this.menuStarted = true;
+
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }
+
+        this.scene.start('MenuScene');
     }
 
     createPlaceholderAssets() {
@@ -183,28 +287,20 @@ export class BootScene extends Phaser.Scene {
         grassGraphics.generateTexture('grass', 64, 64);
         grassGraphics.destroy();
 
-        // Seed particle (16x16)
-        const seedGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-        seedGraphics.fillStyle(0xf39c12);
-        seedGraphics.fillCircle(8, 8, 4);
-        seedGraphics.fillStyle(0xffffff, 0.5);
-        seedGraphics.lineStyle(1, 0xffffff, 0.7);
-        seedGraphics.beginPath();
-        seedGraphics.moveTo(8, 4);
-        seedGraphics.lineTo(8, 0);
-        seedGraphics.lineTo(12, 2);
-        seedGraphics.stroke();
-        seedGraphics.generateTexture('seed', 16, 16);
-        seedGraphics.destroy();
-
-        // Heart particle (16x16)
-        const heartGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-        heartGraphics.fillStyle(0xff6b9d);
-        heartGraphics.fillCircle(5, 6, 4);
-        heartGraphics.fillCircle(11, 6, 4);
-        heartGraphics.fillTriangle(1, 8, 8, 15, 15, 8);
-        heartGraphics.generateTexture('heart', 16, 16);
-        heartGraphics.destroy();
+        // Tiny neutral spark used for water foam, spray and glints. The
+        // visible seed/heart/plus1 icons come from the authored PNG art.
+        const particleGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+        particleGraphics.fillStyle(0xf39c12);
+        particleGraphics.fillCircle(8, 8, 4);
+        particleGraphics.fillStyle(0xffffff, 0.5);
+        particleGraphics.lineStyle(1, 0xffffff, 0.7);
+        particleGraphics.beginPath();
+        particleGraphics.moveTo(8, 4);
+        particleGraphics.lineTo(8, 0);
+        particleGraphics.lineTo(12, 2);
+        particleGraphics.stroke();
+        particleGraphics.generateTexture('particle', 16, 16);
+        particleGraphics.destroy();
 
         // Dirt particle (8x8)
         const dirtGraphics = this.make.graphics({ x: 0, y: 0, add: false });
@@ -212,6 +308,41 @@ export class BootScene extends Phaser.Scene {
         dirtGraphics.fillCircle(4, 4, 3);
         dirtGraphics.generateTexture('dirt', 8, 8);
         dirtGraphics.destroy();
+
+        // Predator paw print telegraph (16x16)
+        const pawGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+        pawGraphics.fillStyle(0x2b1d10, 0.9);
+        pawGraphics.fillEllipse(8, 11, 8, 6);
+        pawGraphics.fillCircle(4, 5, 2.4);
+        pawGraphics.fillCircle(7.5, 3.5, 2.4);
+        pawGraphics.fillCircle(11, 5, 2.4);
+        pawGraphics.generateTexture('paw', 16, 16);
+        pawGraphics.destroy();
+
+        // Rustle leaf fleck (8x8)
+        const rustleGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+        rustleGraphics.fillStyle(0x86c15a);
+        rustleGraphics.fillTriangle(1, 7, 4, 1, 7, 7);
+        rustleGraphics.generateTexture('rustle', 8, 8);
+        rustleGraphics.destroy();
+
+        // King-tide wrack mat (64x28): flattened, tangled stems
+        const wrackGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+        wrackGraphics.fillStyle(0x6b5a2e, 0.95);
+        wrackGraphics.fillEllipse(32, 18, 62, 18);
+        wrackGraphics.lineStyle(2, 0x8a7440, 1);
+        for (let i = 0; i < 7; i++) {
+            const sx = 4 + i * 9;
+            wrackGraphics.beginPath();
+            wrackGraphics.moveTo(sx, 22);
+            wrackGraphics.lineTo(sx + 3, 8 + (i % 3) * 3);
+            wrackGraphics.lineTo(sx + 7, 12 + (i % 2) * 4);
+            wrackGraphics.strokePath();
+        }
+        wrackGraphics.fillStyle(0x4f7a2e, 1);
+        wrackGraphics.fillEllipse(32, 12, 46, 8);
+        wrackGraphics.generateTexture('wrack', 64, 28);
+        wrackGraphics.destroy();
 
         // Button texture (200x60)
         const buttonGraphics = this.make.graphics({ x: 0, y: 0, add: false });
@@ -312,7 +443,7 @@ export class BootScene extends Phaser.Scene {
             'cat_walking_1', 'cat_walking_2', 'cat_walking_3', 'cat_walking_4',
             'cat_pouncing', 'cat_with_kill',
             'water', 'water_edge', 'mud', 'grass',
-            'seed', 'heart', 'dirt',
+            'particle', 'dirt',
             'button', 'button_hover',
             'seedbank_bg', 'score_panel',
             'hud_panel', 'hud_panel_wide', 'hud_panel_bottom',
@@ -353,8 +484,9 @@ export class BootScene extends Phaser.Scene {
         // (plant stage textures intentionally keep LINEAR filtering)
         this.applyNearestFilter();
 
-        // Transition to menu scene
-        this.scene.start('MenuScene');
+        // Hand off to the menu once the background video has also loaded.
+        this.assetsLoaded = true;
+        this.tryStartMenu();
     }
 
     // ─── SALT MARSH HARVEST MOUSE SHEET SLICER ──────────────────
