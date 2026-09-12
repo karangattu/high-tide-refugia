@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "High Tide Refugia: Save the Ridgway's Rail",
   "short_name": "Refugia",
   "description": "Save endangered Ridgway's Rails from rising King Tides by restoring native San Francisco Bay tidal marsh zones.",
@@ -9,6 +10,7 @@
   "orientation": "landscape",
   "theme_color": "#0b2545",
   "background_color": "#0a160e",
+  "prefer_related_applications": false,
   "categories": ["games", "education"],
   "icons": [
     {

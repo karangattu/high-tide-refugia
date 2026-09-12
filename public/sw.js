@@ -1,4 +1,4 @@
-const CACHE_NAME = 'refugia-v2';
+const CACHE_NAME = 'refugia-v3';
 const scopeUrl = (path = '') => new URL(path, self.registration.scope).href;
 const PRECACHE_URLS = [
   scopeUrl(),
@@ -7,6 +7,7 @@ const PRECACHE_URLS = [
   scopeUrl('favicon.png'),
   scopeUrl('icons/icon-192.png'),
   scopeUrl('icons/icon-512.png'),
+  scopeUrl('icons/icon-maskable-512.png'),
   scopeUrl('icons/apple-touch-icon.png'),
 ];
 

@@ -33,9 +33,9 @@ export function getManualInstallContent(navigatorObject) {
         return {
             title: 'INSTALL ON ANDROID',
             steps: [
-                'In Chrome, tap the three-dot menu in the top-right.',
-                'Tap “Install app” or “Add to Home screen,” then confirm Install.',
-                'In Samsung Internet, tap the menu, then “Add page to” and “Home screen.”',
+                'Open this site directly in Chrome. If you tapped a link inside another app, tap the three-dot menu and choose “Open in Chrome.”',
+                'Tap the three-dot menu, then “Add to Home screen” and choose “Install app.”',
+                'Don’t see it? Update Chrome from the Play Store, turn off “Desktop site,” then try again.',
             ],
         };
     }

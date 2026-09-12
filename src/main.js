@@ -139,11 +139,12 @@ const triggerAutoFullscreen = () => {
 };
 window.addEventListener('click', triggerAutoFullscreen, { once: true });
 
+// Register as early as possible: Android Chrome only offers "Install app" once
+// an active service worker with a fetch handler controls the page, so we do not
+// wait for the (heavy) `load` event.
 if (typeof window !== 'undefined' && 'serviceWorker' in window.navigator && window.location.protocol.startsWith('http')) {
-    window.addEventListener('load', () => {
-        const serviceWorkerUrl = new window.URL('./sw.js', window.location.href);
-        window.navigator.serviceWorker.register(serviceWorkerUrl, { scope: './' }).catch(() => {});
-    });
+    const serviceWorkerUrl = new window.URL('./sw.js', window.location.href);
+    window.navigator.serviceWorker.register(serviceWorkerUrl, { scope: './' }).catch(() => {});
 }
 
 export default game;
