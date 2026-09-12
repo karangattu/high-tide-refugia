@@ -11,23 +11,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 });
 
 const LEADERBOARD_TABLE = 'rail_refuge_high_scores';
-const NAME_STORAGE_KEY = 'railRefugePlayerName';
-
-export function getSavedPlayerName() {
-    try {
-        return localStorage.getItem(NAME_STORAGE_KEY) || '';
-    } catch {
-        return '';
-    }
-}
-
-export function savePlayerName(name) {
-    try {
-        localStorage.setItem(NAME_STORAGE_KEY, name);
-    } catch {
-        // storage unavailable (private mode) - the entry still saves server-side
-    }
-}
 
 export function normalizeName(raw) {
     return String(raw || '')
@@ -61,7 +44,7 @@ export async function submitHighScore(playerName, stats) {
     });
     if (error) throw error;
 
-    savePlayerName(name);
+    // The name is intentionally not stored: shared devices serve many players.
     return data;
 }
 

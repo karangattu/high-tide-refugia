@@ -1,6 +1,5 @@
 import * as Phaser from 'phaser';
 import {
-    getSavedPlayerName,
     fetchTopScores,
     submitHighScore,
     subscribeToLeaderboard,
@@ -74,11 +73,6 @@ export class GameOverScene extends Phaser.Scene {
         this.unsubscribeLeaderboard = subscribeToLeaderboard(() => {
             this.refreshLeaderboard();
         });
-
-        // Returning player (name saved from a previous run): keep their entry current
-        if (getSavedPlayerName() && (this.stats.score || 0) > 0) {
-            this.handleSubmitName(null, true);
-        }
 
         this.events.once('shutdown', () => {
             if (this.unsubscribeLeaderboard) {
@@ -166,18 +160,16 @@ export class GameOverScene extends Phaser.Scene {
         }
     }
 
-    async handleSubmitName(inputEl, silent = false) {
-        const rawName = inputEl ? inputEl.value : getSavedPlayerName();
+    async handleSubmitName(inputEl) {
+        const rawName = inputEl ? inputEl.value : '';
         const stats = this.stats || { score: 0, railsSaved: 0, railsLost: 0 };
         const requestGeneration = this.renderGeneration;
 
-        if (!silent) {
-            if (normalizeName(rawName).length < 2) {
-                if (this.lbStatusText) this.lbStatusText.setText('Name needs 2+ characters');
-                return;
-            }
-            if (this.lbStatusText) this.lbStatusText.setText('Submitting...');
+        if (normalizeName(rawName).length < 2) {
+            if (this.lbStatusText) this.lbStatusText.setText('Name needs 2+ characters');
+            return;
         }
+        if (this.lbStatusText) this.lbStatusText.setText('Submitting...');
 
         try {
             await submitHighScore(rawName, stats);

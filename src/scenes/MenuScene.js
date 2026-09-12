@@ -37,7 +37,6 @@ export class MenuScene extends Phaser.Scene {
         this.createFooter(width, height);
         this.createFullscreenButton(width);
         this.createInstallButton();
-        this.createTutorialReplayLink();
 
         this.cameras.main.fadeIn(600);
     }
@@ -551,50 +550,6 @@ export class MenuScene extends Phaser.Scene {
             }
         });
         this.events.once('shutdown', unsubscribe);
-    }
-
-    /**
-     * Small corner link that relaunches the interactive tutorial on demand,
-     * so returning players and students can practise without clearing storage.
-     */
-    createTutorialReplayLink() {
-        const x = this.compact ? 70 : 92;
-        const y = shouldShowInstallOption() ? 84 : 30;
-        const w = this.compact ? 130 : 168;
-        const h = 40;
-
-        const bg = this.add.graphics().setDepth(12);
-        const draw = (hover = false) => {
-            bg.clear();
-            bg.fillStyle(0x07150c, hover ? 0.95 : 0.8);
-            bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, 12);
-            bg.lineStyle(1.5, hover ? 0xffd27a : AMBER, hover ? 0.95 : 0.7);
-            bg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 12);
-        };
-        draw();
-
-        this.add.text(x, y, 'REPLAY TUTORIAL', {
-            fontFamily: 'Mona Sans',
-            fontSize: this.compact ? '12px' : '14px',
-            fontStyle: 'bold',
-            color: '#ffffff',
-            resolution: TEXT_RES,
-        }).setOrigin(0.5).setDepth(13);
-
-        const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0)
-            .setDepth(14)
-            .setInteractive({ useHandCursor: true });
-
-        hit.on('pointerover', () => draw(true));
-        hit.on('pointerout', () => draw(false));
-        hit.on('pointerup', () => this.startTutorialReplay());
-    }
-
-    startTutorialReplay() {
-        this.cameras.main.fadeOut(500);
-        this.time.delayedCall(500, () => {
-            this.scene.start('IntroScene', { forceTutorial: true });
-        });
     }
 
     showInstallInstructions() {

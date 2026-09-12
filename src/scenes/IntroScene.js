@@ -7,10 +7,6 @@ export class IntroScene extends Phaser.Scene {
         super({ key: 'IntroScene' });
     }
 
-    init(data) {
-        this.forceTutorial = Boolean(data && data.forceTutorial);
-    }
-
     create() {
         const { width, height } = this.scale;
 
@@ -19,7 +15,6 @@ export class IntroScene extends Phaser.Scene {
 
         // No video support / failed download: skip straight into the game.
         if (!this.cache.video || !this.cache.video.exists('title_movie')) {
-            this.registry.set('forceRefugiaTutorial', this.forceTutorial);
             this.scene.start('GameScene');
             this.scene.launch('UIScene');
             return;
@@ -65,7 +60,6 @@ export class IntroScene extends Phaser.Scene {
             this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
                 video.pause(); // Stop the video
                 video.destroy();
-                this.registry.set('forceRefugiaTutorial', this.forceTutorial);
                 this.scene.start('GameScene');
                 this.scene.launch('UIScene');
             });

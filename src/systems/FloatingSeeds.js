@@ -1,12 +1,16 @@
 import * as Phaser from 'phaser';
 
-const MIN_DELAY = 6500;
-const MAX_DELAY = 11000;
-const DRIFT_SPEED = 48;
+const MIN_DELAY = 4000;
+const MAX_DELAY = 8000;
+const POP_IN_MS = 350;
+const VISIBLE_MIN = 3200;
+const VISIBLE_MAX = 5200;
 
 /**
- * Buoyant seed pods that ride the incoming tide foam. Tapping a pod grants a
- * bonus seed and gives players something to do between rail spawns.
+ * Buoyant seed pods that surface in the marsh near the tide edge. Unlike the
+ * rails, seeds do not travel across the screen: each pod pops into view,
+ * lingers for a few seconds, then fades away. Tapping a pod while it is
+ * visible grants a bonus seed.
  */
 export class FloatingSeeds {
     constructor(scene) {
@@ -30,33 +34,44 @@ export class FloatingSeeds {
         const scene = this.scene;
         const { width } = scene.scale;
         const waterX = scene.waterSystem ? scene.waterSystem.getWaterX() : 40;
-        const minY = scene.marshTop + 12;
-        const maxY = scene.marshBottom - 12;
-        const y = Phaser.Math.Between(minY, maxY);
-        const x = Phaser.Math.Clamp(waterX + Phaser.Math.Between(24, 90), 40, width - 180);
+        const y = Phaser.Math.Between(scene.marshTop + 14, scene.marshBottom - 14);
+        const x = Phaser.Math.Clamp(
+            waterX + Phaser.Math.Between(24, 180),
+            50,
+            width - 170
+        );
 
+        const targetScale = Phaser.Math.FloatBetween(0.13, 0.17);
         const pod = scene.add.image(x, y, 'seed')
-            .setScale(Phaser.Math.FloatBetween(0.13, 0.17))
+            .setScale(0)
+            .setAlpha(0)
             .setDepth(6);
 
+        // Pop into view.
         scene.tweens.add({
             targets: pod,
-            y: y - 9,
-            duration: Phaser.Math.Between(800, 1200),
+            scale: targetScale,
+            alpha: 1,
+            duration: POP_IN_MS,
+            ease: 'Back.easeOut',
+        });
+
+        // Gentle surface bob while it is visible.
+        scene.tweens.add({
+            targets: pod,
+            y: y - 8,
+            duration: Phaser.Math.Between(900, 1300),
             yoyo: true,
             repeat: -1,
             ease: 'Sine.easeInOut',
+            delay: POP_IN_MS,
         });
 
-        const travel = (width - 150) - x;
-        const duration = Math.max(2500, (travel / DRIFT_SPEED) * 1000);
-        scene.tweens.add({
-            targets: pod,
-            x: x + travel,
-            duration,
-            ease: 'Linear',
-            onComplete: () => this.remove(pod),
-        });
+        const visibleFor = Phaser.Math.Between(VISIBLE_MIN, VISIBLE_MAX);
+        pod.lifeTimer = scene.time.delayedCall(
+            POP_IN_MS + visibleFor,
+            () => this.fadeOut(pod)
+        );
 
         pod.setInteractive({ useHandCursor: true });
         pod.on('pointerdown', (_pointer, _lx, _ly, event) => {
@@ -65,15 +80,32 @@ export class FloatingSeeds {
             }
             this.collect(pod);
         });
-        pod.on('pointerover', () => pod.setScale(pod.scaleX * 1.15, pod.scaleY * 1.15));
-        pod.on('pointerout', () => pod.setScale(pod.scaleX / 1.15, pod.scaleY / 1.15));
+        pod.on('pointerover', () => pod.setTint(0xffe08a));
+        pod.on('pointerout', () => pod.clearTint());
 
         this.pods.push(pod);
         return pod;
     }
 
+    fadeOut(pod) {
+        if (!pod || !pod.active || !this.pods.includes(pod)) return;
+        this.clearLifeTimer(pod);
+        pod.disableInteractive();
+
+        this.scene.tweens.killTweensOf(pod);
+        this.scene.tweens.add({
+            targets: pod,
+            alpha: 0,
+            scale: pod.scaleX * 0.6,
+            duration: 450,
+            ease: 'Sine.easeIn',
+            onComplete: () => this.remove(pod),
+        });
+    }
+
     collect(pod) {
         if (!this.pods.includes(pod) || !pod.active) return false;
+        this.clearLifeTimer(pod);
         this.scene.seedBank?.collectFloatingSeed?.(pod.x, pod.y);
         // Guard the next scene-level tap so it doesn't also try to plant.
         this.scene.lastSeedTapTime = Date.now();
@@ -81,8 +113,16 @@ export class FloatingSeeds {
         return true;
     }
 
+    clearLifeTimer(pod) {
+        if (pod.lifeTimer) {
+            pod.lifeTimer.remove(false);
+            pod.lifeTimer = null;
+        }
+    }
+
     remove(pod) {
         if (!pod) return;
+        this.clearLifeTimer(pod);
         this.pods = this.pods.filter(entry => entry !== pod);
         if (pod.active) {
             this.scene.tweens.killTweensOf(pod);
@@ -96,6 +136,7 @@ export class FloatingSeeds {
             this.spawnEvent = null;
         }
         this.pods.forEach(pod => {
+            this.clearLifeTimer(pod);
             if (pod.active) {
                 this.scene.tweens.killTweensOf(pod);
                 pod.destroy();

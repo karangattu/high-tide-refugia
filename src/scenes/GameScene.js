@@ -22,18 +22,6 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
     }
 
-    init(data) {
-        // Menu can force the interactive tutorial even after it was completed.
-        const registryForced = this.registry?.get
-            ? Boolean(this.registry.get('forceRefugiaTutorial'))
-            : false;
-        this.forceTutorial = Boolean(data && data.forceTutorial) || registryForced;
-        // Consume the one-shot replay request so later starts behave normally.
-        if (registryForced && this.registry?.set) {
-            this.registry.set('forceRefugiaTutorial', false);
-        }
-    }
-
     create() {
         const { width, height } = this.scale;
 
@@ -42,11 +30,11 @@ export class GameScene extends Phaser.Scene {
         this.isGameOver = false;
         this.safeZoneX = width - 100;
 
-        // Tutorial state
+        // The interactive tutorial runs at the start of every game so shared
+        // devices always onboard each new player. Players can skip it.
         this.tutorialActive = false;
         this.tutorialAdvancing = false;
-        this.tutorialComplete = !this.forceTutorial
-            && localStorage.getItem('htRefugiaInteractiveTutorialDone') === 'true';
+        this.tutorialComplete = false;
         this.tutorialElements = [];
         this.tutorialMarkers = [];
         this.tutorialRail = null;
@@ -505,7 +493,7 @@ export class GameScene extends Phaser.Scene {
         if (!mouse) return;
         this.scoreManager.addBonus(50, mouse.x, mouse.y, '');
         this.seedBank.addSeeds(1);
-        this.particleManager.emitPlusOne(mouse.x, mouse.y, 'REFUGIA SIGHTING!');
+        this.particleManager.emitPlusOne(mouse.x, mouse.y, '+1 Salt Marsh Harvest Mouse spotted');
         this.particleManager.emitHearts(mouse.x, mouse.y);
         // Nearby predators take the bait and chase the mouse instead.
         this.groundPredators.children.entries.forEach(predator => {
@@ -1072,7 +1060,6 @@ export class GameScene extends Phaser.Scene {
     finishTutorial() {
         this.tutorialActive = false;
         this.tutorialComplete = true;
-        try { localStorage.setItem('htRefugiaInteractiveTutorialDone', 'true'); } catch { /* ignore */ }
 
         // Stop any in-flight scripted tide demo before the real tide starts.
         if (this.tweens && this.waterSystem) {

@@ -51,16 +51,20 @@ export class ParticleManager {
         const badge = this.scene.add.image(x, y, 'plus1')
             .setScale(0.13)
             .setDepth(60);
+        // Caption sits centered above the badge so longer notices (e.g. the
+        // harvest-mouse sighting) stay on screen instead of running off-edge.
         const cap = label
-            ? this.scene.add.text(x + 26, y, label, {
+            ? this.scene.add.text(x, y - 36, label, {
                 fontFamily: 'Mona Sans',
                 fontSize: '16px',
                 fontStyle: 'bold',
                 color: '#f1c40f',
                 stroke: '#000000',
                 strokeThickness: 4,
+                align: 'center',
+                wordWrap: { width: 300 },
                 resolution: window.devicePixelRatio || 2,
-            }).setOrigin(0, 0.5).setDepth(60)
+            }).setOrigin(0.5).setDepth(60)
             : null;
 
         this.scene.tweens.add({
