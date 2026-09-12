@@ -59,6 +59,11 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.boostTimer = null;
         this.boostResetTimer = null;
 
+        // Surprise reaction state — always time-limited so the run-cycle
+        // animation resumes even if the predator that scared us gives up.
+        this.isPanicking = false;
+        this.panicTimer = null;
+
         // Ground contact shadow (positioned dynamically in update())
         this.shadow = scene.add.image(x, y, 'shadow')
             .setAlpha(0.35)
@@ -66,6 +71,10 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.once('destroy', () => {
             if (this.shadow) this.shadow.destroy();
             this.shadow = null;
+            if (this.panicTimer) {
+                this.panicTimer.remove();
+                this.panicTimer = null;
+            }
             if (this.boostTimer) {
                 this.boostTimer.remove();
                 this.boostTimer = null;
@@ -236,6 +245,11 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
         this.hasReachedSafety = true;
         this.isAlive = false;
+        this.isPanicking = false;
+        if (this.panicTimer) {
+            this.panicTimer.remove();
+            this.panicTimer = null;
+        }
         if (this.boostTimer) {
             this.boostTimer.remove();
             this.boostTimer = null;
@@ -249,6 +263,8 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.setTexture('rail_calling');
 
         if (this.scene && this.scene.tweens) {
+            // Stop any in-flight startle pop so it can't fight the celebration.
+            this.scene.tweens.killTweensOf(this);
             this.scene.tweens.add({
                 targets: this,
                 y: this.y - 20,
@@ -278,7 +294,6 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.isPanicking = true;
         this.setRotation(0);
         this.setTexture('rail_surprised');
-        if (this.body) this.body.setVelocity(0, 0);
 
         if (this.scene.add) {
             const hasArt = this.scene.textures && this.scene.textures.exists('exclamation');
@@ -307,15 +322,44 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
                         exclaim.destroy();
                     }
                 });
+                // Startle pop on scale only — never tween the physics x/y
+                // position, which fights the arcade body and leaves the
+                // sprite visually stuck while the body keeps moving.
                 this.scene.tweens.add({
                     targets: this,
-                    x: this.x + 3,
-                    duration: 50,
+                    scaleX: this.baseScale * 1.12,
+                    scaleY: this.baseScale * 1.12,
+                    duration: 90,
                     yoyo: true,
-                    repeat: 3,
+                    repeat: 1,
                 });
             }
         }
+
+        // The fright is a beat, not a state: resume the run cycle shortly
+        // after so the sprite never freezes on the surprised frame.
+        if (this.panicTimer) {
+            this.panicTimer.remove();
+            this.panicTimer = null;
+        }
+        if (this.scene.time) {
+            this.panicTimer = this.scene.time.delayedCall(450, () => {
+                this.panicTimer = null;
+                this.clearPanic();
+            });
+        }
+    }
+
+    /** Resume normal animation after the startle beat ends. */
+    clearPanic() {
+        if (!this.isAlive || !this.isPanicking) return;
+        this.isPanicking = false;
+        if (this.isSafe) {
+            this.setTexture('rail_hiding');
+        } else {
+            this.setTexture(this.runningFrames[this.currentFrame]);
+        }
+        this.setScale(this.baseScale);
     }
 
     die(cause = 'predator') {
@@ -323,6 +367,10 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
 
         this.isAlive = false;
         this.isPanicking = false;
+        if (this.panicTimer) {
+            this.panicTimer.remove();
+            this.panicTimer = null;
+        }
         if (this.boostTimer) {
             this.boostTimer.remove();
             this.boostTimer = null;

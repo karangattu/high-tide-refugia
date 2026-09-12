@@ -1,6 +1,6 @@
 {
   "name": "rail-refuge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Rail Refuge: High Tide Rising - A tower defense game about saving endangered Ridgway's Rails during king tides",
   "type": "module",
   "scripts": {

@@ -144,8 +144,12 @@ export class Harrier extends Phaser.GameObjects.Container {
 
             if (plants && plants.children) {
                 const isUnderPlant = plants.children.entries.some(plant => {
+                    // Only mature, unflooded plants hide a rail — and each
+                    // species hides over its own cover radius.
+                    if (plant.isCover && !plant.isCover()) return false;
+                    const coverRadius = plant.getCoverRadius ? plant.getCoverRadius() : 40;
                     const plantDist = Phaser.Math.Distance.Between(plant.x, plant.y, rail.x, rail.y);
-                    return plantDist < 40;
+                    return plantDist < coverRadius;
                 });
                 if (isUnderPlant) return false;
             }

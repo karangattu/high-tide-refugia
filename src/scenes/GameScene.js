@@ -1206,10 +1206,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     updateRailPlantOverlaps() {
+        // Rails must travel a little past the canopy edge before cover drops,
+        // so a rail pacing on the boundary doesn't flicker safe/unsafe and
+        // make chasing predators look like they're rapidly changing their mind.
+        const EXIT_MARGIN = 14;
         this.rails.children.entries.forEach(rail => {
             if (!rail.isAlive) return;
 
             let isOverlappingPlant = false;
+            let isWithinExitMargin = false;
 
             this.plants.children.entries.forEach(plant => {
                 const distance = Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y);
@@ -1220,22 +1225,28 @@ export class GameScene extends Phaser.Scene {
                     if (!rail.isSafe) {
                         rail.enterPlant();
                     }
+                } else if (rail.isSafe && plant.isCover && plant.isCover() && distance < radius + EXIT_MARGIN) {
+                    isWithinExitMargin = true;
                 }
             });
 
             // King-tide wrack mats act as temporary floating stepping stones.
+            let isWithinWrackMargin = false;
             this.wrack.children.entries.forEach(mat => {
                 if (isOverlappingPlant) return;
                 const distance = Phaser.Math.Distance.Between(rail.x, rail.y, mat.x, mat.y);
-                if (distance < (mat.coverRadius || 48)) {
+                const radius = mat.coverRadius || 48;
+                if (distance < radius) {
                     isOverlappingPlant = true;
                     if (!rail.isSafe) {
                         rail.enterPlant();
                     }
+                } else if (rail.isSafe && distance < radius + EXIT_MARGIN) {
+                    isWithinWrackMargin = true;
                 }
             });
 
-            if (!isOverlappingPlant && rail.isSafe) {
+            if (!isOverlappingPlant && rail.isSafe && !isWithinExitMargin && !isWithinWrackMargin) {
                 rail.exitPlant();
             }
 

@@ -29,6 +29,10 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.steerRate = 11;
         this.chaseStuckTimer = 0;
         this.lastChaseDistance = Infinity;
+        // Hard cap on a single pursuit so a cat never trails a rail forever
+        // (e.g. a rail camped in cover at the edge of the catch radius).
+        this.chaseTimer = 0;
+        this.chaseTimeout = 3500;
 
         this.setScale(this.baseScale);
         this.setDepth(4);
@@ -244,6 +248,9 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             // Never lock onto a rail parked inside the water exclusion band,
             // where this predator is not allowed to follow.
             if (rail.x < safeWaterX) return false;
+            // Skip rails already sheltered under a mature plant — the
+            // isDetectable flag can lag a frame behind the overlap check.
+            if (this.isRailInCover(rail)) return false;
             return this.canSeeRail(rail);
         });
 
@@ -267,11 +274,32 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
+    /**
+     * Live cover check against mature plants, independent of the rail's
+     * cached isDetectable flag (which updates a frame later via the scene's
+     * overlap pass). Keeps predators from locking onto — or trailing —
+     * rails that are already visually inside vegetation.
+     */
+    isRailInCover(rail) {
+        const plants = this.scene?.plants;
+        if (!plants || !plants.children || !rail) return false;
+        for (const plant of plants.children.entries) {
+            if (!plant || plant.isCover === undefined) continue;
+            if (plant.isCover && !plant.isCover()) continue;
+            const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
+            if (Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y) < radius) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     startChase(rail) {
         this.state = 'chase';
         this.target = rail;
         this.chaseStuckTimer = 0;
         this.lastChaseDistance = Infinity;
+        this.chaseTimer = 0;
 
         // Paw prints telegraph the charge before the predator closes in.
         this.scene.particleManager?.emitPawPrints?.(this.x, this.y, 4);
@@ -303,6 +331,21 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (!this.target.isDetectable) {
+            this.endChase();
+            return;
+        }
+
+        // The rail ducked into vegetation (flag or live overlap) — break off
+        // instead of trailing it through the cover.
+        if (this.target.isSafe || this.isRailInCover(this.target)) {
+            this.endChase();
+            return;
+        }
+
+        // Hard cap on pursuit time so a chase that never closes in ends
+        // instead of looking like the cat "went crazy".
+        this.chaseTimer += delta;
+        if (this.chaseTimer > this.chaseTimeout) {
             this.endChase();
             return;
         }
@@ -389,6 +432,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.target = null;
         this.chaseStuckTimer = 0;
         this.lastChaseDistance = Infinity;
+        this.chaseTimer = 0;
         this.setFrame(0);
         this.setScale(this.baseScale);
 
@@ -455,6 +499,7 @@ export class Cat extends GroundPredator {
         this.target = rail;
         this.chaseStuckTimer = 0;
         this.lastChaseDistance = Infinity;
+        this.chaseTimer = 0;
 
         this.setFrame(2);
 
