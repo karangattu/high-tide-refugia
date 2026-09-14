@@ -63,7 +63,7 @@ test('UIScene and MenuScene wire up Lucide maximize, leaf, sprout, and link icon
     const menuSceneRaw = fs.readFileSync('src/scenes/MenuScene.js', 'utf-8');
     const waterSystemRaw = fs.readFileSync('src/systems/WaterSystem.js', 'utf-8');
 
-    assert.match(uiSceneRaw, /'icon_maximize'/);
+    assert.match(uiSceneRaw, /'EXPAND'/);
     assert.match(uiSceneRaw, /'icon_leaf'/);
     assert.match(menuSceneRaw, /'icon_external_link'/);
     assert.match(waterSystemRaw, /'icon_alert'/);

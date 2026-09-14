@@ -20,14 +20,14 @@ test('Center HUD renders a labeled wave progress bar', () => {
 
     assert.match(
         uiSceneContent,
-        /createHudCounter\([\s\S]*?'SAVED'/,
-        'center HUD must render a labeled SAVED counter'
+        /createHudCounter\([\s\S]*?'AT RISK'/,
+        'center HUD must render a labeled AT RISK counter'
     );
 
     assert.match(
         uiSceneContent,
-        /createHudCounter\([\s\S]*?'LOST'/,
-        'center HUD must render a labeled LOST counter'
+        /createHudCounter\([\s\S]*?'LEFT'/,
+        'center HUD must render a labeled remaining-loss counter'
     );
 
     assert.match(

@@ -196,7 +196,7 @@ export class WaterSystem {
         this.isKingTide = true;
         this.currentSpeed = this.baseSpeed * 2;
 
-        this.scene.cameras.main.shake(500, 0.01);
+        if (!this.scene.reducedMotion) this.scene.cameras.main.shake(500, 0.01);
 
         const warning = this.scene.add.text(
             this.scene.scale.width / 2,
@@ -224,7 +224,7 @@ export class WaterSystem {
         const targets = [warning, alertL, alertR].filter(Boolean);
         this.scene.tweens.add({
             targets,
-            scale: { from: 0.5, to: 1.2 },
+            scale: this.scene.reducedMotion ? 1 : { from: 0.5, to: 1.2 },
             alpha: { from: 1, to: 0 },
             duration: 2000,
             onComplete: () => targets.forEach(t => t.destroy()),

@@ -6,6 +6,7 @@ export class ParticleManager {
     }
 
     emitDirt(x, y) {
+        if (this.scene.reducedMotion) return;
         const particles = this.scene.add.particles(x, y, 'dirt', {
             speed: { min: 50, max: 150 },
             angle: { min: 230, max: 310 },
@@ -26,6 +27,7 @@ export class ParticleManager {
     }
 
     emitHearts(x, y) {
+        if (this.scene.reducedMotion) return;
         // High depth so the hearts stay visible above the marsh plants and the
         // upland gumplant row when a rail reaches the safe refuge.
         const particles = this.scene.add.particles(x, y, 'heart', {
@@ -69,7 +71,7 @@ export class ParticleManager {
 
         this.scene.tweens.add({
             targets: badge,
-            y: y - 46,
+            y: this.scene.reducedMotion ? y - 36 : y - 46,
             scale: 0.09,
             alpha: 0,
             duration: 1000,
@@ -79,7 +81,7 @@ export class ParticleManager {
         if (cap) {
             this.scene.tweens.add({
                 targets: cap,
-                y: y - 46,
+                y: this.scene.reducedMotion ? y - 36 : y - 46,
                 alpha: 0,
                 duration: 1000,
                 ease: 'Power2',
@@ -89,6 +91,7 @@ export class ParticleManager {
     }
 
     emitWaterSplash(x, y) {
+        if (this.scene.reducedMotion) return;
         const particles = this.scene.add.particles(x, y, 'particle', {
             speed: { min: 100, max: 200 },
             angle: { min: 200, max: 340 },
@@ -143,6 +146,7 @@ export class ParticleManager {
 
     /** Leaves thrown up when the player rustles a patch to divert predators. */
     emitRustle(x, y) {
+        if (this.scene.reducedMotion) return;
         const particles = this.scene.add.particles(x, y, 'rustle', {
             speed: { min: 40, max: 130 },
             angle: { min: 200, max: 340 },
@@ -169,9 +173,9 @@ export class ParticleManager {
 
         this.scene.tweens.add({
             targets: popup,
-            y: y - 50,
+            y: this.scene.reducedMotion ? y : y - 50,
             alpha: 0,
-            scale: 1.5,
+            scale: this.scene.reducedMotion ? 1 : 1.5,
             duration: 1000,
             ease: 'Power2',
             onComplete: () => popup.destroy(),

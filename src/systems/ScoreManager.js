@@ -1,51 +1,38 @@
-export function getStrategicCoverBonus(plantsPlaced, hasUsedCover) {
-    if (!hasUsedCover || plantsPlaced < 5 || plantsPlaced > 16) return 0;
-    if (plantsPlaced <= 8) return 150;
-    if (plantsPlaced <= 12) return 100;
-    return 50;
+/** Reward distance actually travelled under cover, independent of planting count. */
+export function getStrategicCoverBonus(coveredDistance, hasUsedCover) {
+    return hasUsedCover ? Math.min(150, Math.floor(coveredDistance / 40) * 25) : 0;
 }
 
-/**
- * Grade an unbroken habitat corridor running from the water edge to the safe
- * refuge. A corridor is connected when every neighbouring pair of cover plants
- * is at most `maxGap` px apart, beginning close to the waterline and ending
- * close to the refuge. Returns a compact summary for scoring and end screens.
+/** Find a continuous chain of overlapping shelter circles in two dimensions.
+ * The returned path is also drawn in the marsh, so scoring and feedback agree.
  */
-export function computeCorridorConnectivity(plants, options = {}) {
-    const maxGap = options.maxGap ?? 120;
-    const fromX = options.fromX ?? 0;
-    const toX = options.toX ?? Infinity;
-    const minX = options.minX ?? fromX;
-
-    const xs = (plants || [])
-        .map(p => (typeof p === 'number' ? p : (p?.x ?? null)))
-        .filter(x => Number.isFinite(x) && x >= minX)
-        .sort((a, b) => a - b);
-
-    if (xs.length < 2) {
-        return { connected: false, grade: 'D', maxGap: Infinity, plants: xs.length };
+export function computeCorridorConnectivity(plants, { fromX = 0, toX = Infinity } = {}) {
+    const nodes = (plants || []).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y)
+        && Number.isFinite(p.coverRadius) && p.coverRadius > 0);
+    const parents = new Map();
+    const queue = [];
+    for (const p of nodes) {
+        if (p.x - p.coverRadius <= fromX && p.x + p.coverRadius >= fromX) {
+            parents.set(p, null);
+            queue.push(p);
+        }
     }
-
-    let worstGap = 0;
-    for (let i = 1; i < xs.length; i++) {
-        worstGap = Math.max(worstGap, xs[i] - xs[i - 1]);
+    for (let i = 0; i < queue.length; i++) {
+        const current = queue[i];
+        if (current.x + current.coverRadius >= toX) {
+            const path = [];
+            for (let p = current; p; p = parents.get(p)) path.unshift(p);
+            return { connected: true, grade: 'A', plants: nodes.length, path };
+        }
+        for (const next of nodes) {
+            if (!parents.has(next) && Math.hypot(next.x - current.x, next.y - current.y)
+                <= next.coverRadius + current.coverRadius) {
+                parents.set(next, current);
+                queue.push(next);
+            }
+        }
     }
-    const leadGap = xs[0] - fromX;
-    const tailGap = toX - xs[xs.length - 1];
-    const connected = worstGap <= maxGap && leadGap <= maxGap && tailGap <= maxGap;
-
-    let grade;
-    if (connected) {
-        grade = Math.max(worstGap, leadGap, tailGap) <= maxGap * 0.7 ? 'A+' : 'A';
-    } else if (worstGap <= maxGap * 1.4) {
-        grade = 'B';
-    } else if (worstGap <= maxGap * 2) {
-        grade = 'C';
-    } else {
-        grade = 'D';
-    }
-
-    return { connected, grade, maxGap: worstGap, plants: xs.length };
+    return { connected: false, grade: nodes.length ? 'C' : 'D', plants: nodes.length, path: [] };
 }
 
 export class ScoreManager {
@@ -81,13 +68,16 @@ export class ScoreManager {
         // Calculate score
         let points = this.baseRailScore * this.comboMultiplier;
         const bonusLines = [];
-        const strategicBonus = getStrategicCoverBonus(this.plantsPlaced, rail.hasUsedCover);
-        const corridorPayout = (this.corridorConnected && rail.hasUsedCover)
+        const strategicBonus = getStrategicCoverBonus(rail.coveredDistance || 0, rail.hasUsedCover);
+        const corridorPayout = (rail.hasUsedCorridor && rail.hasUsedCover)
             ? this.corridorBonus
             : 0;
 
-        // Reward enough useful habitat to protect rails, while making dense
-        // marsh carpeting less valuable than a small set of well-placed patches.
+        // Bonuses are earned by this rail's journey, including restored habitat.
+        if (rail.hasUsedReplacement) {
+            points += 25;
+            bonusLines.push('HABITAT RENEWED!');
+        }
         if (strategicBonus > 0) {
             points += strategicBonus;
             this.strategicSaves++;

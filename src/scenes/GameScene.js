@@ -27,6 +27,9 @@ export class GameScene extends Phaser.Scene {
 
         // Game state
         this.isPaused = false;
+        this.touchPlantPointer = null;
+        this.waveStarting = false;
+        this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         this.isGameOver = false;
         this.safeZoneX = width - 100;
 
@@ -46,7 +49,7 @@ export class GameScene extends Phaser.Scene {
         // Active-play state
         this.lastSeedTapTime = 0;
         this.rustleCooldownUntil = 0;
-        this.corridorCheckTimer = 0;
+
 
         // Initialize systems
         this.particleManager = new ParticleManager(this);
@@ -63,6 +66,7 @@ export class GameScene extends Phaser.Scene {
 
         this.waterSystem = new WaterSystem(this, 50, this.marshY, height);
 
+        this.corridorGraphics = this.add.graphics().setDepth(1);
         this.setupInput();
 
         // Setup collisions
@@ -347,50 +351,60 @@ export class GameScene extends Phaser.Scene {
     }
 
     setupInput() {
-        // Mouse/touch for planting
-        this.input.on('pointermove', (pointer) => {
-            if (this.isPaused || this.isGameOver) return;
-
-            const plantType = getPlantTypeForX(pointer.x, this.scale.width);
-            this.plantPreview.setPlantType(plantType);
-            const canPlace = this.canPlantAt(pointer.x, pointer.y);
-            this.plantPreview.show(pointer.x, pointer.y, canPlace);
+        const aim = pointer => ({
+            x: pointer.x,
+            y: pointer.wasTouch ? pointer.y - 52 : pointer.y,
         });
-
-        this.input.on('pointerdown', (pointer) => {
+        const preview = pointer => {
+            const { x, y } = aim(pointer);
+            this.plantPreview.setPlantType(getPlantTypeForX(x, this.scale.width));
+            const reason = this.getPlacementFailure(x, y);
+            this.plantPreview.show(x, y, !reason, reason);
+        };
+        this.input.on('pointermove', pointer => {
             if (this.isPaused || this.isGameOver) return;
-            // A floating-seed tap in the same frame already handled the input.
+            if (pointer.wasTouch && this.touchPlantPointer !== pointer.id) return;
+            preview(pointer);
+        });
+        this.input.on('pointerdown', pointer => {
+            if (this.isPaused || this.isGameOver) return;
             if (Date.now() - (this.lastSeedTapTime || 0) < 80) return;
+            const target = aim(pointer);
+            if (!this.isInMarsh(target.x, target.y)) return;
+            if (pointer.wasTouch) {
+                if (this.touchPlantPointer !== null) return;
+                this.touchPlantPointer = pointer.id;
+                preview(pointer);
+                return;
+            }
             const planted = this.tryPlantAt(pointer.x, pointer.y);
-            if (!planted && !this.tutorialActive) {
+            if (!planted && !this.tutorialActive && this.seedBank.canPlant()) {
                 this.rustleAt(pointer.x, pointer.y);
             }
         });
-
-        this.input.on('pointerout', () => {
+        this.input.on('pointerup', pointer => {
+            if (this.touchPlantPointer !== pointer.id) return;
+            this.touchPlantPointer = null;
+            const { x, y } = aim(pointer);
+            if (pointer.event?.type !== 'touchcancel' && !this.isPaused && !this.isGameOver && this.isInMarsh(x, y)) {
+                this.tryPlantAt(x, y);
+            }
             this.plantPreview.hide();
         });
-
-        // Pause key
-        this.input.keyboard.on('keydown-ESC', () => {
-            this.togglePause();
+        const cancel = () => {
+            this.touchPlantPointer = null;
+            this.plantPreview.hide();
+        };
+        this.input.on('pointerupoutside', cancel);
+        this.input.on('gameout', cancel);
+        this.input.on('pointerout', () => {
+            if (this.touchPlantPointer === null) this.plantPreview.hide();
         });
+        this.input.keyboard.on('keydown-ESC', () => this.togglePause());
     }
 
     setupCollisions() {
-        // Rails entering plants
-        this.physics.add.overlap(
-            this.rails,
-            this.plants,
-            (rail, plant) => {
-                if (!rail.isSafe) {
-                    plant.onRailEnter(rail);
-                }
-            },
-            null,
-            this
-        );
-
+        // Shelter uses the same circular areas as the corridor overlay and scoring.
         // Listen for rails caught. Remove any handler left over from a previous
         // game first, since the scene EventEmitter survives scene restarts.
         this.events.off('railCaught', this.onRailCaught, this);
@@ -401,36 +415,27 @@ export class GameScene extends Phaser.Scene {
         this.scoreManager.railLost(rail, 'predator');
     }
 
-    canPlantAt(x, y) {
+    getPlacementFailure(x, y) {
         if (this.tutorialActive) {
-            return Boolean(this.tutorialFlow?.findAvailableTarget(x, y))
-                && this.seedBank.canPlant();
+            if (!this.tutorialFlow?.findAvailableTarget(x, y)) return 'Aim at a glowing marker';
+            return this.seedBank.canPlant() ? '' : 'Need seeds';
         }
+        if (y < this.marshTop || y > this.marshBottom || x > this.scale.width - 150) return 'Plant inside the marsh';
+        if (x < this.waterSystem.getWaterX(y) + 30) return 'Too close to the tide';
+        if (this.plants.children.entries.some(p => Math.hypot(x - p.x, y - p.y) < 50)) return 'Too close to another plant';
+        return this.seedBank.canPlant() ? '' : 'Need seeds';
+    }
 
-        const { width } = this.scale;
-        const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
-
-        // Must be in the marsh strip (below the intro-style waterline)
-        if (x < waterX + 30) return false;
-        if (x > width - 150) return false;
-        if (y < this.marshTop || y > this.marshBottom) return false;
-
-        // Check if too close to another plant
-        const tooClose = this.plants.children.entries.some(plant => {
-            const distance = Phaser.Math.Distance.Between(x, y, plant.x, plant.y);
-            return distance < 50;
-        });
-
-        if (tooClose) return false;
-
-        // Check seed bank
-        return this.seedBank.canPlant();
+    canPlantAt(x, y) {
+        return !this.getPlacementFailure(x, y);
     }
 
     tryPlantAt(x, y) {
-        if (!this.canPlantAt(x, y)) {
-            // Feedback for failed plant
-            this.cameras.main.shake(50, 0.002);
+        const reason = this.getPlacementFailure(x, y);
+        if (reason) {
+            this.plantPreview.setPlantType(getPlantTypeForX(x, this.scale.width));
+            this.plantPreview.show(x, y, false, reason);
+            this.events.emit('placementFeedback', reason);
             return false;
         }
 
@@ -449,6 +454,8 @@ export class GameScene extends Phaser.Scene {
 
         const plantType = getPlantTypeForX(x, this.scale.width);
         const plant = new Plant(this, x, y, plantType);
+        plant.isReplacement = this.plants.children.entries.some(p => p.submerged && !p.isCover()
+            && p.x < x && x - p.x <= 200 && Math.abs(p.y - y) <= p.coverRadius + plant.coverRadius);
         this.plants.add(plant);
         this.scoreManager.recordPlantPlaced(plantType);
 
@@ -472,7 +479,7 @@ export class GameScene extends Phaser.Scene {
      */
     rustleAt(x, y) {
         if (!this.isInMarsh(x, y)) return false;
-        const now = this.time.now;
+        const now = this.waterSystem.elapsed;
         if (now < this.rustleCooldownUntil) return false;
         this.rustleCooldownUntil = now + 2000;
 
@@ -543,10 +550,12 @@ export class GameScene extends Phaser.Scene {
 
         if (this.waterSystem) {
             this.waterSystem.reset();
-            this.waterSystem.setSpeed(config.waterSpeed);
+            // Keep the preparation window comparable on narrow and wide screens.
+            this.waterSystem.baseSpeed = Math.min(config.waterSpeed, (this.safeZoneX - 100) / 200);
+            this.waterSystem.setSpeed(this.waterSystem.baseSpeed);
         }
 
-        this.spawnPredators(config);
+        this.waveStarting = true;
 
         this.kingTideTriggered = false;
         if (config.isKingTide) {
@@ -554,7 +563,8 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.showLevelStart(config, () => {
-            this.levelManager.startNextWave();
+            this.waveStarting = false;
+            this.beginNextWave();
             scheduleSaltMarshMouseRuns(this);
         });
     }
@@ -1085,8 +1095,24 @@ export class GameScene extends Phaser.Scene {
         this.launchFullGame(this.levelManager.getCurrentConfig());
     }
 
+    beginNextWave() {
+        this.levelManager.startNextWave();
+        const profile = this.levelManager.getWaveProfile();
+        this.seedBank.setRegenRate(profile.regen);
+        this.groundPredators.clear(true, true);
+        this.harriers.clear(true, true);
+        this.spawnPredators({ catCount: profile.cats, foxCount: profile.foxes, harrierCount: profile.harriers });
+        this.spawnTimer = -2000;
+        this.spawnInterval = profile.interval[0];
+        if (this.levelManager.waveNumber === 8) this.triggerKingTideEvent();
+    }
+
     spawnRail() {
-        const y = Phaser.Math.Between(this.marshTop, this.marshBottom);
+        const profile = this.levelManager.getWaveProfile();
+        const lane = profile.lane === 'alternating'
+            ? (this.levelManager.railsSpawned % 2 ? 0.75 : 0.25) : 0.5;
+        const y = Phaser.Math.Clamp(this.marshTop + (this.marshBottom - this.marshTop) * lane
+            + Phaser.Math.Between(-14, 14), this.marshTop, this.marshBottom);
         const waterX = this.waterSystem ? this.waterSystem.getWaterX(y) : 50;
         const speedMul = this.levelManager.getCurrentConfig().railSpeedMultiplier || 1;
         const spawnX = Math.max(35, waterX + 35);
@@ -1104,6 +1130,7 @@ export class GameScene extends Phaser.Scene {
     update(time, delta) {
         if (this.isPaused || this.isGameOver) return;
 
+        if (this.waveStarting) return;
         this.waterSystem.update(delta);
         this.seedBank.update(delta);
 
@@ -1121,17 +1148,15 @@ export class GameScene extends Phaser.Scene {
 
         this.checkSafeZone();
 
+        this.updateCorridorStatus();
         this.updateRailPlantOverlaps();
-
         this.updateSpawning(delta);
-
-        this.updateCorridorStatus(delta);
 
         this.checkGameState();
     }
 
     updatePlantWaterState() {
-        const time = this.time.now;
+        const time = this.waterSystem.elapsed;
         this.plants.children.entries.forEach(plant => {
             const waterX = this.waterSystem.getWaterX(plant.y);
             plant.updateWater(waterX, time);
@@ -1139,29 +1164,36 @@ export class GameScene extends Phaser.Scene {
     }
 
     /** Keep the Green Corridor bonus live as the habitat grows. */
-    updateCorridorStatus(delta) {
-        if (this.tutorialActive) return;
-        this.corridorCheckTimer += delta;
-        if (this.corridorCheckTimer < 500) return;
-        this.corridorCheckTimer = 0;
-        this.scoreManager.setCorridorStatus(this.getCorridorStatus());
+    updateCorridorStatus() {
+        const status = this.getCorridorStatus();
+        this.corridorStatus = status;
+        this.scoreManager.setCorridorStatus(status);
+        const g = this.corridorGraphics;
+        g.clear();
+        g.lineStyle(1, 0xb7e9cc, 0.25);
+        for (const p of this.plants.children.entries.filter(p => p.isCover())) g.strokeCircle(p.x, p.y, p.coverRadius);
+        if (status.connected) {
+            g.lineStyle(3, 0x80efab, 0.65);
+            g.beginPath();
+            g.moveTo(this.waterSystem.getWaterX() + 30, status.path[0].y);
+            for (const p of status.path) g.lineTo(p.x, p.y);
+            g.lineTo(this.safeZoneX, status.path.at(-1).y);
+            g.strokePath();
+        }
     }
 
     getCorridorStatus() {
         const waterX = this.waterSystem ? this.waterSystem.getWaterX() : 50;
         const plants = this.plants.children.entries
-            .filter(plant => plant.isCover && plant.isCover())
-            .map(plant => ({ x: plant.x, y: plant.y }));
+            .filter(plant => plant.isCover && plant.isCover());
         return computeCorridorConnectivity(plants, {
             fromX: waterX + 30,
             toX: this.safeZoneX,
-            minX: waterX + 10,
-            maxGap: 120,
         });
     }
 
     checkWaterCollisions() {
-        const time = this.time.now;
+        const time = this.waterSystem.elapsed;
         this.rails.children.entries.forEach(rail => {
             if (!rail.isAlive) return;
             const waterXAtY = this.waterSystem.getWaterX(rail.y);
@@ -1206,32 +1238,29 @@ export class GameScene extends Phaser.Scene {
     }
 
     updateRailPlantOverlaps() {
-        // Rails must travel a little past the canopy edge before cover drops,
-        // so a rail pacing on the boundary doesn't flicker safe/unsafe and
-        // make chasing predators look like they're rapidly changing their mind.
-        const EXIT_MARGIN = 14;
+        // Use precisely the shelter circles shown in the marsh.
+        const corridor = this.corridorStatus || this.getCorridorStatus();
         this.rails.children.entries.forEach(rail => {
             if (!rail.isAlive) return;
 
             let isOverlappingPlant = false;
-            let isWithinExitMargin = false;
 
             this.plants.children.entries.forEach(plant => {
                 const distance = Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y);
                 const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
                 // Young sprouts are too small to hide a rail; Gumplant hides over a wider area.
-                if (distance < radius && plant.isCover && plant.isCover()) {
+                if (distance <= radius && plant.isCover && plant.isCover()) {
                     isOverlappingPlant = true;
+                    if (corridor.path.includes(plant)) rail.hasUsedCorridor = true;
+                    if (plant.isReplacement) rail.hasUsedReplacement = true;
                     if (!rail.isSafe) {
                         rail.enterPlant();
                     }
-                } else if (rail.isSafe && plant.isCover && plant.isCover() && distance < radius + EXIT_MARGIN) {
-                    isWithinExitMargin = true;
+
                 }
             });
 
             // King-tide wrack mats act as temporary floating stepping stones.
-            let isWithinWrackMargin = false;
             this.wrack.children.entries.forEach(mat => {
                 if (isOverlappingPlant) return;
                 const distance = Phaser.Math.Distance.Between(rail.x, rail.y, mat.x, mat.y);
@@ -1241,15 +1270,18 @@ export class GameScene extends Phaser.Scene {
                     if (!rail.isSafe) {
                         rail.enterPlant();
                     }
-                } else if (rail.isSafe && distance < radius + EXIT_MARGIN) {
-                    isWithinWrackMargin = true;
+
                 }
             });
 
-            if (!isOverlappingPlant && rail.isSafe && !isWithinExitMargin && !isWithinWrackMargin) {
+            if (!isOverlappingPlant && rail.isSafe) {
                 rail.exitPlant();
             }
 
+            if (isOverlappingPlant && rail.lastCoverPosition) {
+                rail.coveredDistance += Math.max(0, rail.x - rail.lastCoverPosition.x);
+            }
+            rail.lastCoverPosition = isOverlappingPlant ? { x: rail.x, y: rail.y } : null;
             if (this.tutorialActive && rail === this.tutorialRail && rail.isSafe) {
                 this.showTutorialRefugeFeedback(rail);
             }
@@ -1268,16 +1300,7 @@ export class GameScene extends Phaser.Scene {
                 if (this.levelManager.isLevelComplete()) {
                     this.completeLevel();
                 } else {
-                    // Start next wave
-                    this.levelManager.startNextWave();
-                    this.spawnTimer = 0;
-
-                    // The final wave is the king tide: the water surges and
-                    // floating wrack drifts in as emergency stepping stones.
-                    const config = this.levelManager.getCurrentConfig();
-                    if (this.levelManager.waveNumber >= config.waves && !this.kingTideTriggered) {
-                        this.triggerKingTideEvent();
-                    }
+                    this.beginNextWave();
                 }
             }
             return;
@@ -1290,7 +1313,10 @@ export class GameScene extends Phaser.Scene {
             this.levelManager.recordRailSpawned();
 
             // Vary spawn interval slightly
-            this.spawnInterval = Phaser.Math.Between(1500, 2500);
+            const profile = this.levelManager.getWaveProfile();
+            this.spawnInterval = profile.paired
+                ? profile.interval[this.levelManager.railsSpawned % 2 ? 0 : 1]
+                : Phaser.Math.Between(...profile.interval);
         }
     }
 
@@ -1303,7 +1329,7 @@ export class GameScene extends Phaser.Scene {
 
         // Game over if too many rails are lost
         if (stats.railsLost > 5) {
-            this.gameOver('Too many rails were lost to predators.');
+            this.gameOver('Too many rails were lost to predators or flooding.');
             return;
         }
 
@@ -1357,7 +1383,7 @@ export class GameScene extends Phaser.Scene {
 
     buildHabitatSummary() {
         const stats = this.scoreManager.getStats();
-        const corridor = this.getCorridorStatus();
+        const corridor = this.corridorStatus || this.getCorridorStatus();
         return {
             speciesCount: stats.speciesCount,
             speciesTotal: PLANT_TYPES.length,
@@ -1484,14 +1510,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     togglePause() {
+        if (this.isGameOver) return;
+        this.touchPlantPointer = null;
+        this.plantPreview.hide();
         this.isPaused = !this.isPaused;
 
+        this.time.paused = this.isPaused;
         if (this.isPaused) {
+            this.tweens.pauseAll();
             this.physics.pause();
             if (this.railCallBgm && this.railCallBgm.isPlaying) {
                 this.railCallBgm.pause();
             }
         } else {
+            this.tweens.resumeAll();
             this.physics.resume();
             if (this.railCallBgm && this.railCallBgm.isPaused) {
                 this.railCallBgm.resume();

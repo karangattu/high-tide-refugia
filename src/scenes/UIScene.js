@@ -12,14 +12,33 @@ export class UIScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
         const gameScene = this.scene.get('GameScene');
-        const compact = height <= 520 || width < 650;
+        const compact = height <= 520 || width < 1000;
 
         const PAD = compact ? 6 : 12;
 
         this.createSeedPanel(PAD, PAD, compact);
         this.createHeaderStatus(width / 2, PAD, compact);
-        this.createScorePanel(width - PAD, PAD, compact);
+        this.createTidePanel(width - PAD, PAD, compact);
         this.createFooter(width, height, compact);
+        this.waveHint = this.add.text(width / 2, compact ? 61 : 88, '', {
+            fontFamily: 'Mona Sans', fontSize: compact ? '11px' : '14px',
+            color: '#ffffff', backgroundColor: '#10291ee8', padding: { x: 8, y: 3 },
+            resolution: TEXT_RES, align: 'center', wordWrap: { width: width - 40 },
+        }).setOrigin(0.5, 0);
+        this.feedbackText = this.add.text(width / 2, height - (compact ? 74 : 90), '', {
+            fontFamily: 'Mona Sans', fontSize: compact ? '13px' : '16px',
+            color: '#ffcf9b', backgroundColor: '#17231bef', padding: { x: 10, y: 5 },
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(50).setVisible(false);
+        this.placementFeedback = reason => {
+            this.feedbackText.setText(reason).setVisible(true);
+            this.feedbackTimer?.remove();
+            this.feedbackTimer = this.time.delayedCall(1600, () => this.feedbackText.setVisible(false));
+        };
+        gameScene.events.on('placementFeedback', this.placementFeedback);
+        this.updateSeedBank(gameScene.seedBank.currentSeeds, gameScene.seedBank.maxSeeds);
+        this.updateStats(gameScene.scoreManager.getStats());
+        this.updateScore(gameScene.scoreManager.score, gameScene.scoreManager.comboMultiplier);
 
         gameScene.events.on('seedsUpdate', this.updateSeedBank, this);
         gameScene.events.on('scoreUpdate', this.updateScore, this);
@@ -27,6 +46,7 @@ export class UIScene extends Phaser.Scene {
         gameScene.events.on('pauseToggle', this.togglePauseOverlay, this);
 
         this.events.on('shutdown', () => {
+            gameScene.events.off('placementFeedback', this.placementFeedback);
             gameScene.events.off('seedsUpdate', this.updateSeedBank, this);
             gameScene.events.off('scoreUpdate', this.updateScore, this);
             gameScene.events.off('statsUpdate', this.updateStats, this);
@@ -35,7 +55,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     createSeedPanel(x, y, compact) {
-        const panelW = compact ? 165 : 320;
+        const panelW = this.scale.width * 0.25 - x - 8;
         const panelH = compact ? 42 : 68;
         const cx = x + panelW / 2;
         const cy = y + panelH / 2;
@@ -46,7 +66,7 @@ export class UIScene extends Phaser.Scene {
 
         this.add.image(x + (compact ? 14 : 26), cy, 'seed').setScale(compact ? 0.062 : 0.09);
 
-        this.seedLabel = this.add.text(x + (compact ? 28 : 46), y + (compact ? 5 : 10), 'SEEDS · 0 PLANTS', {
+        this.seedLabel = this.add.text(x + (compact ? 28 : 46), y + (compact ? 5 : 10), 'SEEDS', {
             fontFamily: 'Mona Sans',
             fontSize: compact ? '11px' : '15px',
             fontStyle: 'bold',
@@ -62,8 +82,8 @@ export class UIScene extends Phaser.Scene {
             resolution: TEXT_RES,
         });
 
-        const barX = x + (compact ? 82 : 140);
-        const barW = compact ? 74 : 160;
+        const barX = x + (compact ? 90 : 150);
+        const barW = Math.max(10, panelW - (barX - x) - 12);
         const barH = compact ? 8 : 11;
         this.seedBarBg = this.add.rectangle(barX + barW / 2, cy, barW, barH, 0x141414)
             .setOrigin(0.5);
@@ -77,7 +97,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     createHeaderStatus(cx, y, compact) {
-        const panelW = compact ? 175 : 300;
+        const panelW = this.scale.width * 0.5 - 16;
         const panelH = compact ? 48 : 64;
         const cy = y + panelH / 2;
 
@@ -106,14 +126,14 @@ export class UIScene extends Phaser.Scene {
         const counterY = y + (compact ? 38 : 52);
 
         const savedGroup = this.createHudCounter(
-            cx - panelW * 0.25, counterY, 'icon_heart_green', 'SAVED',
+            cx - panelW * 0.25, counterY, 'icon_heart_green', 'AT RISK',
             '#2ecc71', '#79c9a0', '0', compact, heartScale
         );
         this.savedText = savedGroup.value;
 
         const lostGroup = this.createHudCounter(
-            cx + panelW * 0.25, counterY, 'icon_heart_broken', 'LOST',
-            '#e74c3c', '#e0918b', '0/5', compact, heartScale
+            cx + panelW * 0.25, counterY, 'icon_heart_broken', 'LEFT',
+            '#e74c3c', '#e0918b', '6', compact, heartScale
         );
         this.lostText = lostGroup.value;
 
@@ -166,7 +186,25 @@ export class UIScene extends Phaser.Scene {
             : 0;
 
         if (this.waveText) {
-            this.waveText.setText(`WAVE ${Math.min(Math.max(wave, 1), total)} / ${total}`);
+            const profile = gameScene.levelManager.getWaveProfile();
+            this.waveText.setText(gameScene.tutorialActive ? 'PRACTICE' : `WAVE ${Math.min(Math.max(wave, 1), total)} / ${total} · ${profile.name.toUpperCase()}`);
+            this.waveText.setScale(Math.min(1, (this.scale.width * 0.5 - 30) / this.waveText.width));
+            this.waveHint?.setText(gameScene.tutorialActive
+                ? 'Touch: drag to aim above your finger, release to plant'
+                : profile.hint);
+        }
+        if (this.savedText) {
+            const active = gameScene.rails.children.entries.filter(r => r.isAlive && !r.hasReachedSafety).length;
+            this.savedText.setText(String(active));
+        }
+        if (this.tideText) {
+            const remaining = Math.max(0, gameScene.safeZoneX - 50 - gameScene.waterSystem.getWaterX());
+            const speed = gameScene.waterSystem.currentSpeed;
+            const seconds = speed > 0 ? Math.ceil(remaining / speed) : null;
+            const held = gameScene.tutorialActive || gameScene.waveStarting || !speed;
+            this.tideText.setText(held ? 'HELD' : `~${seconds}s`);
+            this.tideText.setColor(!held && seconds < 20 ? '#ff9d8c' : '#ffffff');
+            this.tideLabel.setText(held ? 'TIDE' : seconds < 20 ? 'REFUGE IN DANGER' : 'UNTIL REFUGE FLOODS');
         }
 
         const { x, y, w, h } = this._waveBar;
@@ -199,43 +237,17 @@ export class UIScene extends Phaser.Scene {
         g.strokeRoundedRect(x, y - h / 2, w, h, radius);
     }
 
-    createScorePanel(right, y, compact) {
-        const pw = compact ? 150 : 270;
+    createTidePanel(right, y, compact) {
+        const pw = this.scale.width * 0.25 - (this.scale.width - right) - 8;
         const ph = compact ? 42 : 68;
         const cx = right - pw / 2;
-        const cy = y + ph / 2;
-
-        this.add.image(cx, cy, 'hud_panel')
-            .setOrigin(0.5)
-            .setScale(pw / 220, ph / 52);
-
-        this.add.image(cx - (compact ? 54 : 104), cy, 'icon_trophy').setScale(compact ? 0.8 : 1.3);
-
-        this.add.text(cx - (compact ? 38 : 78), y + (compact ? 5 : 10), 'POINTS', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '10px' : '14px',
-            fontStyle: 'bold',
-            color: '#f1c40f',
-            resolution: TEXT_RES,
-        });
-
-        this.scoreText = this.add.text(cx - (compact ? 38 : 78), y + (compact ? 16 : 27), '0', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '15px' : '26px',
-            fontStyle: 'bold',
-            color: '#ffffff',
-            resolution: TEXT_RES,
-        }).setOrigin(0, 0);
-
-        this.comboText = this.add.text(cx + (compact ? 42 : 72), cy, 'x1.0', {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '11px' : '17px',
-            fontStyle: 'bold',
-            color: '#f1c40f',
-            backgroundColor: '#1a1a1a90',
-            padding: { x: compact ? 4 : 6, y: compact ? 2 : 4 },
-            resolution: TEXT_RES,
-        }).setOrigin(0.5).setAlpha(0.4);
+        this.add.image(cx, y + ph / 2, 'hud_panel').setScale(pw / 220, ph / 52);
+        this.tideLabel = this.add.text(cx, y + (compact ? 7 : 12), 'UNTIL REFUGE FLOODS', {
+            fontFamily: 'Mona Sans', fontSize: compact ? '9px' : '12px', color: '#9fd8e8', resolution: TEXT_RES,
+        }).setOrigin(0.5, 0);
+        this.tideText = this.add.text(cx, y + (compact ? 18 : 29), 'HELD', {
+            fontFamily: 'Mona Sans', fontSize: compact ? '18px' : '26px', fontStyle: 'bold', color: '#ffffff', resolution: TEXT_RES,
+        }).setOrigin(0.5, 0);
     }
 
     createFooter(width, height, compact) {
@@ -251,49 +263,36 @@ export class UIScene extends Phaser.Scene {
             .setScale(compact ? 0.6 : 0.75)
             .setOrigin(0, 0.5);
 
-        const brand = compact
-            ? 'SF BAY REFUGE'
-            : "RIDGWAY'S RAIL REFUGE";
-
-        const brandText = this.add.text(leafX + (compact ? 22 : 28), cy, brand, {
-            fontFamily: 'Mona Sans',
-            fontSize: compact ? '13px' : '15px',
-            fontStyle: 'bold',
-            color: '#2ecc71',
-            resolution: TEXT_RES,
+        const brandText = this.add.text(leafX + (compact ? 22 : 28), cy, '0 PTS', {
+            fontFamily: 'Mona Sans', fontSize: compact ? '11px' : '13px',
+            color: '#b0c4b1', resolution: TEXT_RES,
         }).setOrigin(0, 0.5);
+        this.scoreText = brandText;
+        const gameScene = this.scene.get('GameScene');
+        const button = (x, width, label, callback) => {
+            const control = this.add.text(x, height - 22, label, {
+                fontFamily: 'Mona Sans', fontSize: compact ? '11px' : '13px',
+                color: '#e2f3e8', backgroundColor: '#173629',
+                fixedWidth: width, fixedHeight: 44, align: 'center', padding: { top: 14 }, resolution: TEXT_RES,
+            }).setOrigin(0.5).setDepth(205).setInteractive({ useHandCursor: true });
+            control.on('pointerdown', (_p, _x, _y, event) => event.stopPropagation());
+            control.on('pointerup', (_p, _x, _y, event) => {
+                event.stopPropagation();
+                gameScene.touchPlantPointer = null;
+                gameScene.plantPreview.hide();
+                callback();
+            });
+            return control;
+        };
+        this.pauseButton = button(width - 37, 68, 'PAUSE', () => gameScene.togglePause());
+        this.motionButton = button(width - 135, 120, gameScene.reducedMotion ? 'MOTION: LOW' : 'MOTION: FULL', () => {
+            gameScene.reducedMotion = !gameScene.reducedMotion;
+            this.motionButton.setText(gameScene.reducedMotion ? 'MOTION: LOW' : 'MOTION: FULL');
+        });
+        button(width - 233, 68, 'EXPAND', () => toggleFullscreen());
+        const tickerEndX = width - 277;
 
-        let tickerEndX = width - 40;
-        if (compact) {
-            const fsBtn = this.add.image(width - 18, cy, 'icon_maximize')
-                .setScale(0.65)
-                .setInteractive({ useHandCursor: true });
-            fsBtn.on('pointerup', () => toggleFullscreen());
-            tickerEndX = width - 36;
-        } else {
-            const fsContainer = this.add.container(width - 145, cy);
-            const fsIcon = this.add.image(-48, 0, 'icon_maximize').setScale(0.6);
-            const fsText = this.add.text(-34, 0, 'FULLSCREEN', {
-                fontFamily: 'Mona Sans',
-                fontSize: '13px',
-                color: '#9fd8e8',
-                resolution: TEXT_RES,
-            }).setOrigin(0, 0.5);
-            fsContainer.add([fsIcon, fsText]);
-            fsContainer.setSize(110, 24).setInteractive({ useHandCursor: true });
-            fsContainer.on('pointerup', () => toggleFullscreen());
-
-            this.add.text(width - 26, cy, '[ESC] PAUSE', {
-                fontFamily: 'Mona Sans',
-                fontSize: '14px',
-                color: '#65806e',
-                resolution: TEXT_RES,
-            }).setOrigin(1, 0.5);
-
-            tickerEndX = width - 215;
-        }
-
-        const tickerStartX = brandText.x + (brandText.width || (compact ? 95 : 180)) + (compact ? 12 : 20);
+        const tickerStartX = compact ? 190 : 240;
         const trackW = tickerEndX - tickerStartX;
 
         if (trackW > 70) {
@@ -346,7 +345,7 @@ export class UIScene extends Phaser.Scene {
             this.seedBarFill.setFillStyle(0xe67e22);
         } else {
             this.seedBarFill.setFillStyle(0xe74c3c);
-            if (!this._lowPulsing) {
+            if (!this._lowPulsing && !this.scene.get('GameScene').reducedMotion) {
                 this._lowPulsing = true;
                 this.tweens.add({
                     targets: this.seedsText,
@@ -361,37 +360,18 @@ export class UIScene extends Phaser.Scene {
     }
 
     updateScore(score, comboMultiplier) {
-        const prev = parseInt(this.scoreText.text) || 0;
-        this.scoreText.setText(Math.round(score).toString());
-
-        if (score > prev) {
-            this.tweens.add({
-                targets: this.scoreText,
-                scaleX: 1.15,
-                scaleY: 1.15,
-                duration: 80,
-                yoyo: true,
-            });
-        }
-
-        if (comboMultiplier > 1) {
-            this.comboText.setText(`x${comboMultiplier.toFixed(1)}`);
-            this.comboText.setAlpha(1);
-        } else {
-            this.comboText.setText('x1.0');
-            this.comboText.setAlpha(0.4);
-        }
+        this.scoreText.setText(`${Math.round(score)} PTS${comboMultiplier > 1 ? ` · ×${comboMultiplier.toFixed(1)}` : ''}`);
     }
 
     updateStats(stats) {
-        if (this.savedText) this.savedText.setText(`${stats.railsSaved}`);
-        if (this.lostText) this.lostText.setText(`${stats.railsLost}/5`);
-        if (this.seedLabel) this.seedLabel.setText(`SEEDS · ${stats.plantsPlaced || 0} PLANTS`);
+        if (this.lostText) this.lostText.setText(`${Math.max(0, 6 - stats.railsLost)}`);
+        if (this.seedLabel) this.seedLabel.setText('SEEDS');
 
         this.refreshWaveProgress();
     }
 
     togglePauseOverlay(isPaused) {
+        this.pauseButton.setText(isPaused ? 'RESUME' : 'PAUSE');
         if (isPaused) {
             this.pauseOverlay = this.add.rectangle(
                 this.scale.width / 2,
@@ -399,15 +379,18 @@ export class UIScene extends Phaser.Scene {
                 this.scale.width,
                 this.scale.height,
                 0x000000, 0.7
-            ).setDepth(200);
+            ).setDepth(200).setInteractive();
+            for (const eventName of ['pointerdown', 'pointerup']) {
+                this.pauseOverlay.on(eventName, (_p, _x, _y, event) => event.stopPropagation());
+            }
 
             this.pauseText = this.add.text(
                 this.scale.width / 2,
                 this.scale.height / 2,
-                'PAUSED\n\nPress ESC to resume',
+                'PAUSED\n\nTap RESUME or press ESC',
                 {
                     fontFamily: 'Mona Sans',
-                    fontSize: '52px',
+                    fontSize: this.scale.height <= 520 ? '26px' : '40px',
                     fontStyle: 'bold',
                     color: '#ffffff',
                     align: 'center',
@@ -423,6 +406,8 @@ export class UIScene extends Phaser.Scene {
     update(time, delta) {
         this.refreshWaveProgress();
 
+        const gameScene = this.scene.get('GameScene');
+        if (gameScene.isPaused || gameScene.reducedMotion) return;
         if (this.tickerItems && this.tickerItems.length > 0) {
             const dt = delta / 1000;
             const shift = this.tickerSpeed * dt;

@@ -1,56 +1,80 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ScoreManager, getStrategicCoverBonus } from '../src/systems/ScoreManager.js';
+import { ScoreManager, getStrategicCoverBonus, computeCorridorConnectivity } from '../src/systems/ScoreManager.js';
 
-function createManager() {
-    const popups = [];
-    const scene = {
-        particleManager: {
-            emitScorePopup: (...args) => popups.push(args),
-        },
-    };
-
-    return { manager: new ScoreManager(scene), popups };
+const plant = (x, y = 0, coverRadius = 40) => ({ x, y, coverRadius });
+const route = { fromX: 0, toX: 240 };
+function score(rail, count = 0) {
+    const manager = new ScoreManager({});
+    for (let i = 0; i < count; i++) manager.recordPlantPlaced();
+    manager.railSaved(rail);
+    return manager;
 }
 
-test('strategic cover bonus rewards a sufficient, compact habitat plan', () => {
-    assert.equal(getStrategicCoverBonus(4, true), 0, 'too little habitat earns no bonus');
-    assert.equal(getStrategicCoverBonus(5, true), 150, 'five plants unlock the best bonus');
-    assert.equal(getStrategicCoverBonus(8, true), 150, 'eight plants keep the best bonus');
-    assert.equal(getStrategicCoverBonus(9, true), 100, 'extra vegetation reduces the efficiency bonus');
-    assert.equal(getStrategicCoverBonus(13, true), 50, 'dense vegetation earns only a small bonus');
-    assert.equal(getStrategicCoverBonus(17, true), 0, 'carpeting the marsh earns no efficiency bonus');
-    assert.equal(getStrategicCoverBonus(6, false), 0, 'the rail must actually use planted cover');
+test('cover bonus rewards protected travel and caps the payout', () => {
+    assert.equal(getStrategicCoverBonus(0, true), 0);
+    assert.equal(getStrategicCoverBonus(80, true), 50);
+    assert.equal(getStrategicCoverBonus(240, true), 150);
+    assert.equal(getStrategicCoverBonus(10000, true), 150);
+    assert.equal(getStrategicCoverBonus(240, false), 0);
 });
 
-test('saving a rail through five well-placed plants earns and reports Smart Cover', () => {
-    const { manager, popups } = createManager();
-    for (let i = 0; i < 5; i++) manager.recordPlantPlaced();
-
-    manager.railSaved({ x: 20, y: 30, hasUsedCover: true });
-
-    assert.equal(manager.score, 250);
-    assert.equal(manager.getStats().strategicSaves, 1);
-    assert.equal(manager.getStats().plantsPlaced, 5);
-    assert.match(popups[0][2], /SMART COVER!/);
+test('useful cover keeps its bonus after planting more than sixteen patches', () => {
+    const rail = { hasUsedCover: true, coveredDistance: 240 };
+    assert.equal(score(rail, 5).score, 250);
+    assert.equal(score(rail, 30).score, 250);
+    assert.equal(score({ hasUsedCover: true, coveredDistance: 0 }, 30).score, 100);
 });
 
-test('carpeting the marsh still saves a rail but does not earn the strategy bonus', () => {
-    const { manager, popups } = createManager();
-    for (let i = 0; i < 17; i++) manager.recordPlantPlaced();
-
-    manager.railSaved({ x: 20, y: 30, hasUsedCover: true });
-
-    assert.equal(manager.score, 100);
-    assert.equal(manager.getStats().strategicSaves, 0);
-    assert.doesNotMatch(popups[0][2], /SMART COVER!/);
+test('only a rail that uses restored habitat or a connected route earns their bonuses', () => {
+    assert.equal(score({ hasUsedCover: true, hasUsedReplacement: true }).score, 125);
+    const manager = new ScoreManager({});
+    manager.setCorridorStatus({ connected: true, grade: 'A' });
+    manager.railSaved({ hasUsedCover: true });
+    assert.equal(manager.score, 100, 'a corridor elsewhere does not reward this rail');
+    const travelled = score({ hasUsedCover: true, hasUsedCorridor: true });
+    assert.equal(travelled.score, 175);
+    assert.equal(travelled.greenCorridorSaves, 1);
 });
 
-test('reset clears plant-efficiency stats for a new run', () => {
-    const { manager } = createManager();
-    manager.recordPlantPlaced();
+test('corridor requires touching cover circles across both horizontal and vertical gaps', () => {
+    const straight = [plant(40), plant(120), plant(200)];
+    assert.equal(computeCorridorConnectivity(straight, route).connected, true);
+    assert.equal(computeCorridorConnectivity([plant(40), plant(120, 200), plant(200)], route).connected, false);
+    assert.equal(computeCorridorConnectivity([plant(40), plant(121), plant(201)], route).connected, false);
+});
+
+test('corridor can follow a diagonal branch without disconnected plants breaking the route', () => {
+    const path = [plant(30, 0, 50), plant(100, 50, 50), plant(170, 0, 50), plant(220, 0, 50)];
+    const result = computeCorridorConnectivity([path[2], plant(105, 400), path[0], path[3], path[1]], route);
+    assert.equal(result.connected, true);
+    assert.ok(result.path.every(p => path.includes(p)));
+    for (let i = 1; i < result.path.length; i++) {
+        const a = result.path[i - 1], b = result.path[i];
+        assert.ok(Math.hypot(a.x - b.x, a.y - b.y) <= a.coverRadius + b.coverRadius);
+    }
+});
+
+test('both ends must reach the water-side entry and refuge', () => {
+    assert.equal(computeCorridorConnectivity([plant(70), plant(140), plant(210)], route).connected, false);
+    assert.equal(computeCorridorConnectivity([plant(40), plant(110), plant(180)], route).connected, false);
+    assert.equal(computeCorridorConnectivity([], route).connected, false);
+    assert.equal(computeCorridorConnectivity([plant(NaN), plant(40)], route).connected, false);
+});
+
+test('a drowned gap breaks the corridor; a replacement can reconnect it', () => {
+    const patches = [plant(40), plant(120), plant(200)];
+    assert.equal(computeCorridorConnectivity(patches, route).connected, true);
+    patches.splice(1, 1);
+    assert.equal(computeCorridorConnectivity(patches, route).connected, false);
+    patches.push(plant(120));
+    assert.equal(computeCorridorConnectivity(patches, route).connected, true);
+});
+
+test('reset clears habitat stats and score for a new run', () => {
+    const manager = score({ hasUsedCover: true, coveredDistance: 240 }, 30);
     manager.reset();
-
-    assert.equal(manager.getStats().plantsPlaced, 0);
-    assert.equal(manager.getStats().strategicSaves, 0);
+    assert.equal(manager.score, 0);
+    assert.equal(manager.plantsPlaced, 0);
+    assert.equal(manager.strategicSaves, 0);
 });

@@ -74,16 +74,8 @@ test('Fullscreen requests fire on user-activation events so Android actually ent
     assert.match(menuRaw, /icon_maximize/, 'Menu must expose a visible fullscreen toggle button');
     assert.match(menuRaw, /toggleFullscreen\(\)/, 'Menu fullscreen button must toggle fullscreen');
 
-    assert.match(
-        uiRaw,
-        /fsBtn\.on\('pointerup',\s*\(\)\s*=>\s*toggleFullscreen\(\)\)/,
-        'In-game fullscreen button must use pointerup'
-    );
-    assert.match(
-        uiRaw,
-        /fsContainer\.on\('pointerup',\s*\(\)\s*=>\s*toggleFullscreen\(\)\)/,
-        'In-game fullscreen label must use pointerup'
-    );
+    assert.match(uiRaw, /control\.on\('pointerup',[\s\S]*?callback\(\)/, 'HUD buttons act on pointerup');
+    assert.match(uiRaw, /'EXPAND', \(\) => toggleFullscreen\(\)/, 'Expand button calls fullscreen');
     assert.doesNotMatch(
         uiRaw,
         /on\('pointerdown',\s*\(\)\s*=>\s*toggleFullscreen\(\)\)/,

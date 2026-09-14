@@ -33,6 +33,10 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         this.isBeingCaught = false;
         this.hasReachedSafety = false;
         this.touchedDirt = false;   // For continuous cover tracking
+        this.coveredDistance = 0;
+        this.hasUsedCorridor = false;
+        this.hasUsedReplacement = false;
+        this.lastCoverPosition = null;
         this.hasUsedCover = false;  // Qualifies saves for strategic habitat scoring
 
         // Base movement (scaled by level multiplier)
@@ -408,7 +412,7 @@ export class Rail extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (this.scene && this.scene.cameras && this.scene.cameras.main) {
-            this.scene.cameras.main.shake(100, 0.005);
+            if (!this.scene.reducedMotion) this.scene.cameras.main.shake(100, 0.005);
         }
     }
 

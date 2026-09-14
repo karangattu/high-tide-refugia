@@ -45,7 +45,7 @@ test('GameScene tutorial uses concise, readable refuge guidance', () => {
 
 test('UIScene footer brand layout prevents overlap with center tips', () => {
     const content = fs.readFileSync('src/scenes/UIScene.js', 'utf-8');
-    assert.match(content, /RIDGWAY'S RAIL REFUGE/, 'UIScene.js must use concise brand string');
+    assert.match(content, /this.scoreText = brandText/, 'Footer must demote score below survival information');
     assert.doesNotMatch(content, /SAN FRANCISCO BAY ESTUARY · RIDGWAY'S RAIL REFUGE/, 'UIScene.js should not use overlapping lengthy brand string');
 });
 

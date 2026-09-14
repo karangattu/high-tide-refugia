@@ -158,7 +158,7 @@ test('GameScene wires up zone-based plant species mapping on hover and touch pla
 
     assert.match(
         gameSceneContent,
-        /getPlantTypeForX\(pointer\.x,\s*this\.scale\.width\)/,
+        /getPlantTypeForX\(x,\s*this\.scale\.width\)/,
         'GameScene pointermove/down must use getPlantTypeForX'
     );
 

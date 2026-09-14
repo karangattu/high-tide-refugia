@@ -118,7 +118,7 @@ export class Plant extends Phaser.Physics.Arcade.Sprite {
 
         if (this.growthStage >= GROWTH_STAGES) {
             // Mature: brief settle pop + dust
-            this.scene.tweens.add({
+            if (!this.scene.reducedMotion) this.scene.tweens.add({
                 targets: this,
                 scaleX: this.baseScale * 1.08,
                 scaleY: this.baseScale * 1.08,
@@ -288,7 +288,10 @@ export class PlantPreview extends Phaser.GameObjects.Sprite {
         }
     }
 
-    show(x, y, canPlace = true) {
+    show(x, y, canPlace = true, reason = '') {
+        const entry = PLANT_TYPES.find(p => p.key === this.currentType);
+        this.traitText.setText(reason || entry?.trait || '');
+        this.traitText.setColor(reason ? '#ffb4a8' : '#f1c40f');
         this.setPosition(x, y);
         this.setVisible(true);
         this.setTint(canPlace ? 0x00ff00 : 0xff0000);
@@ -307,13 +310,16 @@ export class PlantPreview extends Phaser.GameObjects.Sprite {
             const textW = hasTrait
                 ? Math.max(baseW, this.traitText.width + 16)
                 : baseW;
+            const labelX = Phaser.Math.Clamp(x, textW / 2 + 4, this.scene.scale.width - textW / 2 - 4);
+            this.labelText.x = labelX;
+            this.traitText.x = labelX;
             const textH = hasTrait ? this.labelText.height + this.traitText.height + 10 : this.labelText.height + 6;
             const bgTop = hasTrait ? y - 56 : ly - textH / 2;
             this.labelBg.clear();
             this.labelBg.fillStyle(0x07150c, canPlace ? 0.88 : 0.70);
             this.labelBg.lineStyle(1, canPlace ? 0x2ecc71 : 0xe74c3c, 0.75);
-            this.labelBg.fillRoundedRect(x - textW / 2, bgTop, textW, textH, 6);
-            this.labelBg.strokeRoundedRect(x - textW / 2, bgTop, textW, textH, 6);
+            this.labelBg.fillRoundedRect(labelX - textW / 2, bgTop, textW, textH, 6);
+            this.labelBg.strokeRoundedRect(labelX - textW / 2, bgTop, textW, textH, 6);
             this.labelBg.setVisible(true);
         }
     }
