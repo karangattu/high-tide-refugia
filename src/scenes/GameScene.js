@@ -1328,7 +1328,7 @@ export class GameScene extends Phaser.Scene {
         const stats = this.scoreManager.getStats();
 
         // Game over if too many rails are lost
-        if (stats.railsLost > 5) {
+        if (stats.railsLost > 6) {
             this.gameOver('Too many rails were lost to predators or flooding.');
             return;
         }

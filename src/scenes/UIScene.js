@@ -364,7 +364,7 @@ export class UIScene extends Phaser.Scene {
     }
 
     updateStats(stats) {
-        if (this.lostText) this.lostText.setText(`${Math.max(0, 6 - stats.railsLost)}`);
+        if (this.lostText) this.lostText.setText(`${Math.max(0, 7 - stats.railsLost)}`);
         if (this.seedLabel) this.seedLabel.setText('SEEDS');
 
         this.refreshWaveProgress();
