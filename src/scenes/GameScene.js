@@ -603,6 +603,8 @@ export class GameScene extends Phaser.Scene {
                 patrolStart,
                 patrolEnd
             );
+            if (config.catVisionRange) cat.visionRange = config.catVisionRange;
+            if (config.catChaseSpeed) cat.chaseSpeed = config.catChaseSpeed;
             this.groundPredators.add(cat);
         }
 

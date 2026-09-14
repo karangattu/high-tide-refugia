@@ -1,6 +1,6 @@
 export const WAVE_PROFILES = [
     { name: 'First crossing', hint: 'Build shelter along the middle lane', lane: 'middle', interval: [2000, 2400], cats: 0, foxes: 0, harriers: 0, regen: 0.6 },
-    { name: 'Scattered arrivals', hint: 'Cover the upper and lower marsh', lane: 'alternating', interval: [1900, 2300], cats: 0, foxes: 0, harriers: 0, regen: 0.6 },
+    { name: 'Scattered arrivals', hint: 'Cover the upper and lower marsh', lane: 'alternating', interval: [1900, 2300], cats: 1, catVisionRange: 110, catChaseSpeed: 220, foxes: 0, harriers: 0, regen: 0.6 },
     { name: 'Fox patrol', hint: 'Dense cover protects against ground hunters', lane: 'middle', interval: [1900, 2300], cats: 1, foxes: 1, harriers: 0, regen: 0.6 },
     { name: 'Flock rush', hint: 'Rails arrive in pairs — prepare connected shelter', lane: 'middle', interval: [1200, 2600], cats: 1, foxes: 1, harriers: 0, regen: 0.6, paired: true },
     { name: 'Lean season', hint: 'Seeds regrow slowly — collect floating pods', lane: 'middle', interval: [2100, 2500], cats: 1, foxes: 1, harriers: 0, regen: 0.45 },
