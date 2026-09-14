@@ -15,6 +15,8 @@ test('eight waves introduce distinct challenges with seed recovery after the sho
     assert.equal(manager.isLevelComplete(), true);
     assert.equal(new Set(WAVE_PROFILES.map(w => w.name)).size, 8);
     assert.equal(WAVE_PROFILES[0].harriers, 0);
+    assert.equal(WAVE_PROFILES[0].cats, 0);
+    assert.equal(WAVE_PROFILES[1].cats, 0);
     assert.equal(WAVE_PROFILES[1].lane, 'alternating');
     assert.equal(WAVE_PROFILES[3].paired, true);
     assert.ok(WAVE_PROFILES[4].regen < WAVE_PROFILES[3].regen);

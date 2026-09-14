@@ -576,7 +576,8 @@ export class GameScene extends Phaser.Scene {
         const patrolMax = Math.max(patrolMin + 120, Math.min(width - 90, width * 0.78));
         const cat = new Cat(this, (patrolMin + patrolMax) / 2, laneY, patrolMin, patrolMax);
         cat.catchDistance = -1;
-        cat.visionRange = 190;
+        cat.visionRange = 120;
+        cat.chaseSpeed = 170;
         this.groundPredators.add(cat);
         this.tutorialPredator = cat;
     }
