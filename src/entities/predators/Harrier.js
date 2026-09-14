@@ -121,10 +121,13 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.bird.y = -this.cruiseAltitude + Math.sin(this.glideTime * 3) * 8;
         this.groundShadow.alpha = 0.28 + Math.sin(this.glideTime * 3) * 0.05;
 
+        const waterX = this.scene?.waterSystem ? this.scene.waterSystem.getWaterX(this.y) : 0;
+        const effectiveMinX = Math.max(this.minX, waterX + 45);
+
         if (this.x >= this.maxX) {
             this.glideDirection = -1;
             this.bird.setFlipX(true);
-        } else if (this.x <= this.minX) {
+        } else if (this.x <= effectiveMinX) {
             this.glideDirection = 1;
             this.bird.setFlipX(false);
         }
@@ -132,27 +135,46 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.bird.setScale(this.cruiseScale);
     }
 
+    isRailInCover(rail, plants) {
+        if (!rail) return false;
+        if (plants && plants.children) {
+            for (const plant of plants.children.entries) {
+                if (!plant || plant.isCover === undefined) continue;
+                if (plant.isCover && !plant.isCover()) continue;
+                const coverRadius = plant.getCoverRadius ? plant.getCoverRadius() : 40;
+                if (Phaser.Math.Distance.Between(plant.x, plant.y, rail.x, rail.y) < coverRadius) {
+                    return true;
+                }
+            }
+        }
+        const wrack = this.scene?.wrack;
+        if (wrack && wrack.children) {
+            for (const mat of wrack.children.entries) {
+                if (!mat || mat.isCover === undefined) continue;
+                if (mat.isCover && !mat.isCover()) continue;
+                const coverRadius = mat.getCoverRadius ? mat.getCoverRadius() : 48;
+                if (Phaser.Math.Distance.Between(mat.x, mat.y, rail.x, rail.y) < coverRadius) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     searchForPrey(rails, plants) {
         if (this.harmless) return;
         if (!rails || !rails.children) return;
 
+        const safeZoneX = this.scene?.safeZoneX ?? ((this.scene?.scale?.width || 1000) - 100);
+
         const exposedRail = rails.children.entries.find(rail => {
-            if (!rail.isAlive || !rail.isDetectable) return false;
+            if (!rail.isAlive || !rail.isDetectable || rail.isBeingCaught || rail.hasReachedSafety) return false;
+            if (rail.x >= safeZoneX) return false;
 
             const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
             if (distance > this.searchRadius) return false;
 
-            if (plants && plants.children) {
-                const isUnderPlant = plants.children.entries.some(plant => {
-                    // Only mature, unflooded plants hide a rail — and each
-                    // species hides over its own cover radius.
-                    if (plant.isCover && !plant.isCover()) return false;
-                    const coverRadius = plant.getCoverRadius ? plant.getCoverRadius() : 40;
-                    const plantDist = Phaser.Math.Distance.Between(plant.x, plant.y, rail.x, rail.y);
-                    return plantDist < coverRadius;
-                });
-                if (isUnderPlant) return false;
-            }
+            if (this.isRailInCover(rail, plants)) return false;
 
             return true;
         });
@@ -162,10 +184,6 @@ export class Harrier extends Phaser.GameObjects.Container {
         }
     }
 
-    /**
-     * Warn before striking: the ground reticle pulses for a beat so the player
-     * can pull the rail into cover, then the bird commits to the dive.
-     */
     startDive(rail) {
         if (this.state === 'telegraph' || this.state === 'dive') return;
         this.state = 'telegraph';
@@ -196,7 +214,9 @@ export class Harrier extends Phaser.GameObjects.Container {
         if (this.telegraphTimer > 0) return;
 
         const rail = this.target;
-        const canStrike = rail && rail.isAlive && rail.isDetectable;
+        const safeZoneX = this.scene?.safeZoneX ?? ((this.scene?.scale?.width || 1000) - 100);
+        const canStrike = rail && rail.isAlive && rail.isDetectable && !rail.hasReachedSafety && !rail.isBeingCaught
+            && rail.x < safeZoneX && !this.isRailInCover(rail, this.scene?.plants);
         this.clearTelegraph();
         if (!canStrike) {
             this.missPrey();
@@ -261,7 +281,11 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.bird.setScale(currentScale);
 
         if (progress >= 1) {
-            if (this.target && this.target.isAlive && this.target.isDetectable) {
+            const safeZoneX = this.scene?.safeZoneX ?? ((this.scene?.scale?.width || 1000) - 100);
+            const canCatch = this.target && this.target.isAlive && this.target.isDetectable
+                && !this.target.hasReachedSafety && !this.target.isBeingCaught
+                && this.target.x < safeZoneX && !this.isRailInCover(this.target, this.scene?.plants);
+            if (canCatch) {
                 this.catchPrey();
             } else {
                 this.missPrey();
@@ -273,6 +297,7 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.clearTelegraph();
         this.state = 'catch';
         if (this.target && this.target.isAlive) {
+            this.target.isBeingCaught = true;
             this.target.die('predator');
             if (this.scene && this.scene.events) {
                 this.scene.events.emit('railCaught', this.target);
@@ -328,6 +353,14 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.carryTimer -= delta;
         this.x += 120 * this.glideDirection * (delta / 1000);
 
+        if (this.x >= this.maxX) {
+            this.glideDirection = -1;
+            this.bird.setFlipX(true);
+        } else if (this.x <= this.minX) {
+            this.glideDirection = 1;
+            this.bird.setFlipX(false);
+        }
+
         if (this.carryTimer <= 0) {
             this.startRecovery();
         }
@@ -369,10 +402,13 @@ export class Harrier extends Phaser.GameObjects.Container {
         this.cooldownTimer -= delta;
         this.x += 60 * this.glideDirection * (delta / 1000);
 
+        const waterX = this.scene?.waterSystem ? this.scene.waterSystem.getWaterX(this.y) : 0;
+        const effectiveMinX = Math.max(this.minX, waterX + 45);
+
         if (this.x >= this.maxX) {
             this.glideDirection = -1;
             this.bird.setFlipX(true);
-        } else if (this.x <= this.minX) {
+        } else if (this.x <= effectiveMinX) {
             this.glideDirection = 1;
             this.bird.setFlipX(false);
         }

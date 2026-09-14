@@ -110,6 +110,16 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             this.body.setVelocityX(Math.max(this.patrolSpeed, this.body.velocity.x));
         }
 
+        const maxMarshX = this.scene?.safeZoneX ?? ((this.scene.scale?.width || 1000) - 100);
+        if (this.x > maxMarshX) {
+            this.x = maxMarshX;
+            if (this.state === 'chase' || this.state === 'attack' || this.state === 'cooldown') {
+                this.endChase();
+            }
+            this.setFlipX(true);
+            this.body.setVelocityX(-this.patrolSpeed);
+        }
+
         if (this.shadow && this.body) {
             const worldW = this.body.width * Math.abs(this.scaleX);
             const worldH = this.body.height * Math.abs(this.scaleY);
@@ -242,14 +252,12 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
 
         const waterX = this.getWaterXAtCat();
         const safeWaterX = waterX + 45;
+        const safeZoneX = this.scene?.safeZoneX ?? ((this.scene.scale?.width || 1000) - 100);
 
         const detectedRail = rails.children.entries.find(rail => {
-            if (!rail.isAlive || !rail.isDetectable) return false;
-            // Never lock onto a rail parked inside the water exclusion band,
-            // where this predator is not allowed to follow.
+            if (!rail.isAlive || !rail.isDetectable || rail.isBeingCaught || rail.hasReachedSafety) return false;
+            if (rail.x >= safeZoneX) return false;
             if (rail.x < safeWaterX) return false;
-            // Skip rails already sheltered under a mature plant — the
-            // isDetectable flag can lag a frame behind the overlap check.
             if (this.isRailInCover(rail)) return false;
             return this.canSeeRail(rail);
         });
@@ -274,21 +282,28 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
-    /**
-     * Live cover check against mature plants, independent of the rail's
-     * cached isDetectable flag (which updates a frame later via the scene's
-     * overlap pass). Keeps predators from locking onto — or trailing —
-     * rails that are already visually inside vegetation.
-     */
     isRailInCover(rail) {
+        if (!rail) return false;
         const plants = this.scene?.plants;
-        if (!plants || !plants.children || !rail) return false;
-        for (const plant of plants.children.entries) {
-            if (!plant || plant.isCover === undefined) continue;
-            if (plant.isCover && !plant.isCover()) continue;
-            const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
-            if (Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y) < radius) {
-                return true;
+        if (plants && plants.children) {
+            for (const plant of plants.children.entries) {
+                if (!plant || plant.isCover === undefined) continue;
+                if (plant.isCover && !plant.isCover()) continue;
+                const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
+                if (Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y) < radius) {
+                    return true;
+                }
+            }
+        }
+        const wrack = this.scene?.wrack;
+        if (wrack && wrack.children) {
+            for (const mat of wrack.children.entries) {
+                if (!mat || mat.isCover === undefined) continue;
+                if (mat.isCover && !mat.isCover()) continue;
+                const radius = mat.getCoverRadius ? mat.getCoverRadius() : 48;
+                if (Phaser.Math.Distance.Between(rail.x, rail.y, mat.x, mat.y) < radius) {
+                    return true;
+                }
             }
         }
         return false;
@@ -301,13 +316,10 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.lastChaseDistance = Infinity;
         this.chaseTimer = 0;
 
-        // Paw prints telegraph the charge before the predator closes in.
         this.scene.particleManager?.emitPawPrints?.(this.x, this.y, 4);
 
-        // Switch to pouncing/running pose for chase
         this.setFrame(5);
 
-        // Trigger panic on the Rail - shows surprised sprite with exclamation
         if (rail.panic) {
             rail.panic();
         }
@@ -325,7 +337,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
     }
 
     chase(delta) {
-        if (!this.target || !this.target.isAlive) {
+        if (!this.target || !this.target.isAlive || this.target.isBeingCaught || this.target.hasReachedSafety) {
             this.endChase();
             return;
         }
@@ -335,15 +347,11 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // The rail ducked into vegetation (flag or live overlap) — break off
-        // instead of trailing it through the cover.
         if (this.target.isSafe || this.isRailInCover(this.target)) {
             this.endChase();
             return;
         }
 
-        // Hard cap on pursuit time so a chase that never closes in ends
-        // instead of looking like the cat "went crazy".
         this.chaseTimer += delta;
         if (this.chaseTimer > this.chaseTimeout) {
             this.endChase();
@@ -352,13 +360,14 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
 
         const waterX = this.getWaterXAtCat();
         const safeWaterX = waterX + 45;
+        const safeZoneX = this.scene?.safeZoneX ?? ((this.scene.scale?.width || 1000) - 100);
 
         const marshTop = this.scene.marshTop !== undefined ? this.scene.marshTop : 100;
         const marshBottom = this.scene.marshBottom !== undefined ? this.scene.marshBottom : (this.scene.scale?.height || 600) - 100;
         const minY = marshTop + 15;
         const maxY = marshBottom - 20;
 
-        if (this.target.x < safeWaterX || (this.x < safeWaterX && this.target.x <= this.x)) {
+        if (this.target.x < safeWaterX || (this.x < safeWaterX && this.target.x <= this.x) || this.target.x >= safeZoneX || this.x >= safeZoneX) {
             this.endChase();
             return;
         }
@@ -385,8 +394,6 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // Give up if clamped against a boundary and no longer closing in,
-        // so the cat never freezes beside an unreachable rail.
         const isClamped = (this.x <= safeWaterX + 4) || (this.y <= minY + 4) || (this.y >= maxY - 4);
         if (isClamped && distance >= this.lastChaseDistance - 0.5) {
             this.chaseStuckTimer += delta;
@@ -407,6 +414,7 @@ class GroundPredator extends Phaser.Physics.Arcade.Sprite {
         this.setFrame(7);
 
         if (this.target && this.target.isAlive) {
+            this.target.isBeingCaught = true;
             this.target.die('predator');
             this.scene.events.emit('railCaught', this.target);
         }
@@ -533,6 +541,7 @@ export class Cat extends GroundPredator {
         this.setFrame(12);
 
         if (this.target && this.target.isAlive) {
+            this.target.isBeingCaught = true;
             this.target.die('predator');
             this.scene.events.emit('railCaught', this.target);
         }

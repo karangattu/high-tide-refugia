@@ -1,4 +1,4 @@
-const CACHE_NAME = 'refugia-v5';
+const CACHE_NAME = 'refugia-v6';
 const scopeUrl = (path = '') => new URL(path, self.registration.scope).href;
 const PRECACHE_URLS = [
   scopeUrl(),

@@ -621,6 +621,8 @@ export class GameScene extends Phaser.Scene {
             const harrier = new Harrier(this, 200 + i * 300, (top + bottom) / 2);
             harrier.minY = top;
             harrier.maxY = bottom;
+            harrier.minX = zoneStart;
+            harrier.maxX = this.safeZoneX || (width - 100);
             this.harriers.add(harrier);
         }
     }
@@ -1104,7 +1106,13 @@ export class GameScene extends Phaser.Scene {
         this.seedBank.setRegenRate(profile.regen);
         this.groundPredators.clear(true, true);
         this.harriers.clear(true, true);
-        this.spawnPredators({ catCount: profile.cats, foxCount: profile.foxes, harrierCount: profile.harriers });
+        this.spawnPredators({
+            catCount: profile.cats,
+            foxCount: profile.foxes,
+            harrierCount: profile.harriers,
+            catVisionRange: profile.catVisionRange,
+            catChaseSpeed: profile.catChaseSpeed,
+        });
         this.spawnTimer = -2000;
         this.spawnInterval = profile.interval[0];
         if (this.levelManager.waveNumber === 8) this.triggerKingTideEvent();
@@ -1137,6 +1145,8 @@ export class GameScene extends Phaser.Scene {
         this.waterSystem.update(delta);
         this.seedBank.update(delta);
 
+        this.checkSafeZone();
+
         this.groundPredators.children.entries.forEach(predator => {
             predator.update(time, delta, this.rails);
         });
@@ -1148,8 +1158,6 @@ export class GameScene extends Phaser.Scene {
         this.updatePlantWaterState();
 
         this.checkWaterCollisions();
-
-        this.checkSafeZone();
 
         this.updateCorridorStatus();
         this.updateRailPlantOverlaps();

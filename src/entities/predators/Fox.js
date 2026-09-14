@@ -181,7 +181,23 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             } else if (this.state === 'patrol') {
                 this.applyDiagonalVelocity();
             }
+        } else if (this.x < safeWaterX) {
+            this.x = safeWaterX;
+            this.patrolDirX = 1;
+            if (this.state === 'chase' || this.state === 'cooldown') {
+                this.endChase();
+            } else if (this.state === 'patrol') {
+                this.applyDiagonalVelocity();
+            }
         } else if (this.x >= maxMarshX && this.patrolDirX > 0) {
+            this.x = maxMarshX;
+            this.patrolDirX = -1;
+            if (this.state === 'chase' || this.state === 'cooldown') {
+                this.endChase();
+            } else if (this.state === 'patrol') {
+                this.applyDiagonalVelocity();
+            }
+        } else if (this.x > maxMarshX) {
             this.x = maxMarshX;
             this.patrolDirX = -1;
             if (this.state === 'chase' || this.state === 'cooldown') {
@@ -263,14 +279,12 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
 
         const waterX = this.getWaterXAtFox();
         const safeWaterX = waterX + 45;
+        const maxMarshX = (this.scene.scale?.width || 1000) - 100;
 
         const detectedRail = rails.children.entries.find(rail => {
             if (!rail.isAlive || !rail.isDetectable) return false;
-            // Never lock onto a rail parked inside the water exclusion band,
-            // where this predator is not allowed to follow.
+            if (rail.isBeingCaught || rail.hasReachedSafety || rail.x >= maxMarshX) return false;
             if (rail.x < safeWaterX) return false;
-            // Skip rails already sheltered under a mature plant — the
-            // isDetectable flag can lag a frame behind the overlap check.
             if (this.isRailInCover(rail)) return false;
             return this.canSeeRail(rail);
         });
@@ -284,10 +298,8 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
         if (distance > this.visionRange) return false;
 
-        // Close-range scent/hearing: notice prey in any direction.
         if (distance <= this.senseRadius) return true;
 
-        // Beyond that, the rail must be in the fox's forward line of sight.
         const facingRight = !this.flipX;
         const railIsRight = rail.x > this.x;
 
@@ -297,21 +309,28 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         return true;
     }
 
-    /**
-     * Live cover check against mature plants, independent of the rail's
-     * cached isDetectable flag (which updates a frame later via the scene's
-     * overlap pass). Keeps predators from locking onto — or trailing —
-     * rails that are already visually inside vegetation.
-     */
     isRailInCover(rail) {
+        if (!rail) return false;
         const plants = this.scene?.plants;
-        if (!plants || !plants.children || !rail) return false;
-        for (const plant of plants.children.entries) {
-            if (!plant || plant.isCover === undefined) continue;
-            if (plant.isCover && !plant.isCover()) continue;
-            const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
-            if (Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y) < radius) {
-                return true;
+        if (plants && plants.children) {
+            for (const plant of plants.children.entries) {
+                if (!plant || plant.isCover === undefined) continue;
+                if (plant.isCover && !plant.isCover()) continue;
+                const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
+                if (Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y) < radius) {
+                    return true;
+                }
+            }
+        }
+        const wrack = this.scene?.wrack;
+        if (wrack && wrack.children) {
+            for (const mat of wrack.children.entries) {
+                if (!mat || mat.isCover === undefined) continue;
+                if (mat.isCover && !mat.isCover()) continue;
+                const radius = mat.getCoverRadius ? mat.getCoverRadius() : 48;
+                if (Phaser.Math.Distance.Between(rail.x, rail.y, mat.x, mat.y) < radius) {
+                    return true;
+                }
             }
         }
         return false;
@@ -325,7 +344,6 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         this.lastChaseDistance = Infinity;
         this.chaseTimer = 0;
 
-        // Paw prints telegraph the sprint before the fox closes in.
         this.scene.particleManager?.emitPawPrints?.(this.x, this.y, 4);
 
         if (rail.panic) {
@@ -354,14 +372,16 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // The rail ducked into vegetation (flag or live overlap) — break off
-        // instead of trailing it through the cover.
+        if (this.target.isBeingCaught || this.target.hasReachedSafety) {
+            this.endChase();
+            return;
+        }
+
         if (this.target.isSafe || this.isRailInCover(this.target)) {
             this.endChase();
             return;
         }
 
-        // Hard cap on pursuit time so a chase that never closes in ends.
         this.chaseTimer += delta;
         if (this.chaseTimer > this.chaseTimeout) {
             this.endChase();
@@ -376,7 +396,7 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         const maxY = marshBottom - 15;
         const maxMarshX = (this.scene.scale?.width || 1000) - 100;
 
-        if (this.target.x < safeWaterX || (this.x < safeWaterX && this.target.x <= this.x) || (this.x > maxMarshX && this.target.x >= this.x)) {
+        if (this.target.x < safeWaterX || (this.x < safeWaterX && this.target.x <= this.x) || (this.x > maxMarshX && this.target.x >= this.x) || this.target.x >= maxMarshX) {
             this.endChase();
             return;
         }
