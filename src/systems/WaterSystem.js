@@ -70,7 +70,8 @@ export class WaterSystem {
         const movement = this.currentSpeed * (delta / 1000);
         this.currentX += movement;
 
-        const step = 12;
+        const isMobile = this.scene?.scale?.height <= 520 || (this.scene?.scale?.width < 768 && this.scene?.scale?.height < 600);
+        const step = isMobile ? 16 : 12;
         const points = [];
         for (let y = this.topY; y <= this.bottomY + step; y += step) {
             const clampedY = Math.min(y, this.bottomY);

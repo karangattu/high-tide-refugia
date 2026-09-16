@@ -1,3 +1,5 @@
+import { audioFx } from '../utils/audioFx.js';
+
 /** Reward distance actually travelled under cover, independent of planting count. */
 export function getStrategicCoverBonus(coveredDistance, hasUsedCover) {
     return hasUsedCover ? Math.min(150, Math.floor(coveredDistance / 40) * 25) : 0;
@@ -25,8 +27,13 @@ export function computeCorridorConnectivity(plants, { fromX = 0, toX = Infinity 
             return { connected: true, grade: 'A', plants: nodes.length, path };
         }
         for (const next of nodes) {
-            if (!parents.has(next) && Math.hypot(next.x - current.x, next.y - current.y)
-                <= next.coverRadius + current.coverRadius) {
+            if (parents.has(next)) continue;
+            const maxDist = next.coverRadius + current.coverRadius;
+            const dx = next.x - current.x;
+            if (Math.abs(dx) > maxDist) continue;
+            const dy = next.y - current.y;
+            if (Math.abs(dy) > maxDist) continue;
+            if ((dx * dx + dy * dy) <= maxDist * maxDist) {
                 parents.set(next, current);
                 queue.push(next);
             }
@@ -41,6 +48,7 @@ export class ScoreManager {
         this.score = 0;
         this.railsSaved = 0;
         this.railsLost = 0;
+        this.waveRailsLost = 0;
         this.waterDeaths = 0;
         this.predatorDeaths = 0;
         this.strategicSaves = 0;
@@ -64,6 +72,7 @@ export class ScoreManager {
 
     railSaved(rail) {
         this.railsSaved++;
+        audioFx.playRefuge();
 
         // Calculate score
         let points = this.baseRailScore * this.comboMultiplier;
@@ -142,6 +151,7 @@ export class ScoreManager {
 
     railLost(rail, cause = 'predator') {
         this.railsLost++;
+        this.waveRailsLost++;
         if (cause === 'water') this.waterDeaths++;
         else this.predatorDeaths++;
 
@@ -160,6 +170,45 @@ export class ScoreManager {
         }
 
         this.notifyUpdate();
+    }
+
+    startWave() {
+        this.waveRailsLost = 0;
+    }
+
+    recordNarrowEscape(rail) {
+        if (!rail) return false;
+        this.addBonus(75, rail.x, rail.y, '+75\nNARROW ESCAPE!', '#f39c12');
+        audioFx.playDodge();
+        return true;
+    }
+
+    recordPredatorDiverted(x, y) {
+        this.addBonus(50, x, y, '+50\nDIVERTED!', '#3498db');
+        audioFx.playDivert();
+        return true;
+    }
+
+    recordTideDodger(rail) {
+        if (!rail) return false;
+        this.addBonus(50, rail.x, rail.y, '+50\nTIDE DODGER!', '#00cec9');
+        audioFx.playDodge();
+        return true;
+    }
+
+    recordWaveClear(waveNumber) {
+        const isPerfect = this.waveRailsLost === 0;
+        let points = 100;
+        let bonusSeeds = 1;
+        if (isPerfect) {
+            points += 200;
+            bonusSeeds += 2;
+        }
+        this.score += points;
+        audioFx.playWaveClear();
+        this.notifyUpdate();
+        this.waveRailsLost = 0;
+        return { points, isPerfect, bonusSeeds, waveNumber };
     }
 
     getStats() {
@@ -197,6 +246,7 @@ export class ScoreManager {
         this.score = 0;
         this.railsSaved = 0;
         this.railsLost = 0;
+        this.waveRailsLost = 0;
         this.waterDeaths = 0;
         this.predatorDeaths = 0;
         this.strategicSaves = 0;

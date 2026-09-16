@@ -3,6 +3,7 @@ import * as Phaser from 'phaser';
 export class ParticleManager {
     constructor(scene) {
         this.scene = scene;
+        this.popupPool = [];
     }
 
     emitDirt(x, y) {
@@ -161,15 +162,25 @@ export class ParticleManager {
     }
 
     emitScorePopup(x, y, text, color = '#27ae60') {
-        const popup = this.scene.add.text(x, y, text, {
-            fontFamily: 'Mona Sans',
-            fontSize: '24px',
-            fontStyle: 'bold',
-            color: color,
-            stroke: '#000000',
-            strokeThickness: 4,
-            resolution: window.devicePixelRatio || 2,
-        }).setOrigin(0.5);
+        let popup = this.popupPool.pop();
+        if (!popup || !popup.scene) {
+            popup = this.scene.add.text(x, y, text, {
+                fontFamily: 'Mona Sans',
+                fontSize: '24px',
+                fontStyle: 'bold',
+                color: color,
+                stroke: '#000000',
+                strokeThickness: 4,
+                resolution: window.devicePixelRatio || 2,
+            }).setOrigin(0.5);
+        } else {
+            popup.setPosition(x, y);
+            popup.setText(text);
+            popup.setColor(color);
+            popup.setAlpha(1);
+            popup.setScale(1);
+            popup.setVisible(true);
+        }
 
         this.scene.tweens.add({
             targets: popup,
@@ -178,7 +189,14 @@ export class ParticleManager {
             scale: this.scene.reducedMotion ? 1 : 1.5,
             duration: 1000,
             ease: 'Power2',
-            onComplete: () => popup.destroy(),
+            onComplete: () => {
+                popup.setVisible(false);
+                if (this.popupPool.length < 30) {
+                    this.popupPool.push(popup);
+                } else {
+                    popup.destroy();
+                }
+            },
         });
     }
 }

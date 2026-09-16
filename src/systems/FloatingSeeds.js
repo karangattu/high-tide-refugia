@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { audioFx } from '../utils/audioFx.js';
 
 const MIN_DELAY = 4000;
 const MAX_DELAY = 8000;
@@ -106,6 +107,7 @@ export class FloatingSeeds {
     collect(pod) {
         if (!this.pods.includes(pod) || !pod.active) return false;
         this.clearLifeTimer(pod);
+        audioFx.playSeedCollect();
         this.scene.seedBank?.collectFloatingSeed?.(pod.x, pod.y);
         // Guard the next scene-level tap so it doesn't also try to plant.
         this.scene.lastSeedTapTime = Date.now();

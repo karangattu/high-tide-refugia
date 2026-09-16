@@ -16,6 +16,7 @@ import { LevelManager } from '../systems/LevelManager.js';
 import { TutorialFlow, createTutorialPlantTargets } from '../systems/TutorialFlow.js';
 import { FloatingSeeds } from '../systems/FloatingSeeds.js';
 import { getRandomMarshFact } from '../data/marshFacts.js';
+import { audioFx } from '../utils/audioFx.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -31,7 +32,10 @@ export class GameScene extends Phaser.Scene {
         this.waveStarting = false;
         this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         this.isGameOver = false;
+        this.waveTransitionActive = false;
         this.safeZoneX = width - 100;
+        this.corridorDirty = true;
+        this.corridorStatus = { connected: false, grade: 'D', plants: 0, path: [] };
 
         // The interactive tutorial runs at the start of every game so shared
         // devices always onboard each new player. Players can skip it.
@@ -457,11 +461,12 @@ export class GameScene extends Phaser.Scene {
         plant.isReplacement = this.plants.children.entries.some(p => p.submerged && !p.isCover()
             && p.x < x && x - p.x <= 200 && Math.abs(p.y - y) <= p.coverRadius + plant.coverRadius);
         this.plants.add(plant);
+        this.corridorDirty = true;
         this.scoreManager.recordPlantPlaced(plantType);
 
         if (tutorialTarget) this.onTutorialPlantPlaced(tutorialTarget);
 
-        // Sound effect would go here
+        audioFx.playPlant();
         return true;
     }
 
@@ -528,6 +533,7 @@ export class GameScene extends Phaser.Scene {
         // Clear entities
         this.rails.clear(true, true);
         this.plants.clear(true, true);
+        this.corridorDirty = true;
         this.groundPredators.clear(true, true);
         this.harriers.clear(true, true);
 
@@ -543,6 +549,7 @@ export class GameScene extends Phaser.Scene {
     launchFullGame(config) {
         this.rails.clear(true, true);
         this.plants.clear(true, true);
+        this.corridorDirty = true;
         this.groundPredators.clear(true, true);
         this.harriers.clear(true, true);
         this.scoreManager.reset();
@@ -1102,6 +1109,7 @@ export class GameScene extends Phaser.Scene {
 
     beginNextWave() {
         this.levelManager.startNextWave();
+        this.scoreManager?.startWave?.();
         const profile = this.levelManager.getWaveProfile();
         this.seedBank.setRegenRate(profile.regen);
         this.groundPredators.clear(true, true);
@@ -1168,14 +1176,22 @@ export class GameScene extends Phaser.Scene {
 
     updatePlantWaterState() {
         const time = this.waterSystem.elapsed;
+        let changed = false;
         this.plants.children.entries.forEach(plant => {
             const waterX = this.waterSystem.getWaterX(plant.y);
-            plant.updateWater(waterX, time);
+            if (plant.updateWater(waterX, time)) {
+                changed = true;
+            }
         });
+        if (changed) {
+            this.corridorDirty = true;
+        }
     }
 
     /** Keep the Green Corridor bonus live as the habitat grows. */
     updateCorridorStatus() {
+        if (!this.corridorDirty && this.corridorStatus) return;
+        this.corridorDirty = false;
         const status = this.getCorridorStatus();
         this.corridorStatus = status;
         this.scoreManager.setCorridorStatus(status);
@@ -1229,6 +1245,10 @@ export class GameScene extends Phaser.Scene {
     checkSafeZone() {
         this.rails.children.entries.forEach(rail => {
             if (rail.isAlive && !rail.hasReachedSafety && rail.x >= this.safeZoneX) {
+                const waterX = this.waterSystem ? this.waterSystem.getWaterX(rail.y) : 0;
+                if (rail.x - waterX < 60) {
+                    this.scoreManager?.recordTideDodger?.(rail);
+                }
                 rail.reachSafety();
                 if (this.tutorialActive && rail === this.tutorialRail) {
                     if (rail.hasUsedCover) {
@@ -1257,31 +1277,35 @@ export class GameScene extends Phaser.Scene {
             let isOverlappingPlant = false;
 
             this.plants.children.entries.forEach(plant => {
-                const distance = Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y);
+                if (!plant.isCover || !plant.isCover()) return;
                 const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
-                // Young sprouts are too small to hide a rail; Gumplant hides over a wider area.
-                if (distance <= radius && plant.isCover && plant.isCover()) {
+                const dx = rail.x - plant.x;
+                if (Math.abs(dx) > radius) return;
+                const dy = rail.y - plant.y;
+                if (Math.abs(dy) > radius) return;
+                if (dx * dx + dy * dy <= radius * radius) {
                     isOverlappingPlant = true;
                     if (corridor.path.includes(plant)) rail.hasUsedCorridor = true;
                     if (plant.isReplacement) rail.hasUsedReplacement = true;
                     if (!rail.isSafe) {
                         rail.enterPlant();
                     }
-
                 }
             });
 
             // King-tide wrack mats act as temporary floating stepping stones.
             this.wrack.children.entries.forEach(mat => {
                 if (isOverlappingPlant) return;
-                const distance = Phaser.Math.Distance.Between(rail.x, rail.y, mat.x, mat.y);
                 const radius = mat.coverRadius || 48;
-                if (distance < radius) {
+                const dx = rail.x - mat.x;
+                if (Math.abs(dx) > radius) return;
+                const dy = rail.y - mat.y;
+                if (Math.abs(dy) > radius) return;
+                if (dx * dx + dy * dy < radius * radius) {
                     isOverlappingPlant = true;
                     if (!rail.isSafe) {
                         rail.enterPlant();
                     }
-
                 }
             });
 
@@ -1300,19 +1324,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     updateSpawning(delta) {
-        // Don't spawn additional rails during tutorial
         if (this.tutorialActive) return;
 
         if (this.levelManager.isWaveComplete()) {
-            // Check if all rails from wave are done
             const activeRails = this.rails.children.entries.filter(r => r.isAlive && !r.hasReachedSafety);
 
-            if (activeRails.length === 0) {
-                if (this.levelManager.isLevelComplete()) {
-                    this.completeLevel();
-                } else {
-                    this.beginNextWave();
-                }
+            if (activeRails.length === 0 && !this.waveTransitionActive) {
+                this.waveTransitionActive = true;
+                this.celebrateWaveClear(() => {
+                    this.waveTransitionActive = false;
+                    if (this.levelManager.isLevelComplete()) {
+                        this.completeLevel();
+                    } else {
+                        this.beginNextWave();
+                    }
+                });
             }
             return;
         }
@@ -1348,6 +1374,69 @@ export class GameScene extends Phaser.Scene {
         if (waterX >= this.safeZoneX - 50) {
             this.gameOver('The king tide submerged the safe refuge.');
         }
+    }
+
+    celebrateWaveClear(onComplete) {
+        const waveNum = this.levelManager.waveNumber;
+        const waveResult = this.scoreManager?.recordWaveClear?.(waveNum) || { points: 100, isPerfect: true, bonusSeeds: 3 };
+        if (waveResult.bonusSeeds > 0 && this.seedBank) {
+            this.seedBank.addSeeds(waveResult.bonusSeeds);
+        }
+
+        const { width, height } = this.scale;
+        const panelW = Math.min(440, width - 40);
+        const panelH = 76;
+        const panelX = width / 2 - panelW / 2;
+        const panelY = Math.max(70, height * 0.28);
+
+        const bg = this.add.graphics().setDepth(50);
+        bg.fillStyle(0x132616, 0.92);
+        bg.fillRoundedRect(panelX, panelY, panelW, panelH, 14);
+        bg.lineStyle(2, waveResult.isPerfect ? 0xf1c40f : 0x2ecc71, 0.9);
+        bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 14);
+
+        const titleText = this.add.text(width / 2, panelY + 24, `WAVE ${waveNum} CLEAR!`, {
+            fontFamily: 'Mona Sans',
+            fontSize: '22px',
+            fontStyle: 'bold',
+            color: '#ffffff',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(51);
+
+        const subMsg = waveResult.isPerfect
+            ? `★ FLAWLESS WAVE! +${waveResult.points} PTS & +${waveResult.bonusSeeds} SEEDS ★`
+            : `+${waveResult.points} PTS & +${waveResult.bonusSeeds} SEED`;
+        const subText = this.add.text(width / 2, panelY + 52, subMsg, {
+            fontFamily: 'Mona Sans',
+            fontSize: '14px',
+            fontStyle: 'bold',
+            color: waveResult.isPerfect ? '#f1c40f' : '#2ecc71',
+            resolution: TEXT_RES,
+        }).setOrigin(0.5).setDepth(51);
+
+        const elements = [bg, titleText, subText];
+        elements.forEach(el => el.setAlpha(0));
+
+        this.tweens.add({
+            targets: elements,
+            alpha: 1,
+            duration: 320,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+                this.time.delayedCall(1350, () => {
+                    this.tweens.add({
+                        targets: elements,
+                        alpha: 0,
+                        duration: 300,
+                        ease: 'Sine.easeIn',
+                        onComplete: () => {
+                            elements.forEach(el => el.destroy());
+                            if (typeof onComplete === 'function') onComplete();
+                        }
+                    });
+                });
+            }
+        });
     }
 
     completeLevel() {

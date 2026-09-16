@@ -142,7 +142,11 @@ export class Harrier extends Phaser.GameObjects.Container {
                 if (!plant || plant.isCover === undefined) continue;
                 if (plant.isCover && !plant.isCover()) continue;
                 const coverRadius = plant.getCoverRadius ? plant.getCoverRadius() : 40;
-                if (Phaser.Math.Distance.Between(plant.x, plant.y, rail.x, rail.y) < coverRadius) {
+                const dx = rail.x - plant.x;
+                if (Math.abs(dx) >= coverRadius) continue;
+                const dy = rail.y - plant.y;
+                if (Math.abs(dy) >= coverRadius) continue;
+                if (dx * dx + dy * dy < coverRadius * coverRadius) {
                     return true;
                 }
             }
@@ -153,7 +157,11 @@ export class Harrier extends Phaser.GameObjects.Container {
                 if (!mat || mat.isCover === undefined) continue;
                 if (mat.isCover && !mat.isCover()) continue;
                 const coverRadius = mat.getCoverRadius ? mat.getCoverRadius() : 48;
-                if (Phaser.Math.Distance.Between(mat.x, mat.y, rail.x, rail.y) < coverRadius) {
+                const dx = rail.x - mat.x;
+                if (Math.abs(dx) >= coverRadius) continue;
+                const dy = rail.y - mat.y;
+                if (Math.abs(dy) >= coverRadius) continue;
+                if (dx * dx + dy * dy < coverRadius * coverRadius) {
                     return true;
                 }
             }
@@ -171,8 +179,11 @@ export class Harrier extends Phaser.GameObjects.Container {
             if (!rail.isAlive || !rail.isDetectable || rail.isBeingCaught || rail.hasReachedSafety) return false;
             if (rail.x >= safeZoneX) return false;
 
-            const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
-            if (distance > this.searchRadius) return false;
+            const dx = rail.x - this.x;
+            if (Math.abs(dx) > this.searchRadius) return false;
+            const dy = rail.y - this.y;
+            if (Math.abs(dy) > this.searchRadius) return false;
+            if (dx * dx + dy * dy > this.searchRadius * this.searchRadius) return false;
 
             if (this.isRailInCover(rail, plants)) return false;
 
@@ -219,6 +230,9 @@ export class Harrier extends Phaser.GameObjects.Container {
             && rail.x < safeZoneX && !this.isRailInCover(rail, this.scene?.plants);
         this.clearTelegraph();
         if (!canStrike) {
+            if (rail && rail.isAlive && (this.isRailInCover(rail, this.scene?.plants) || !rail.isDetectable || rail.hasReachedSafety)) {
+                this.scene?.scoreManager?.recordNarrowEscape?.(rail, this);
+            }
             this.missPrey();
             return;
         }
@@ -288,6 +302,9 @@ export class Harrier extends Phaser.GameObjects.Container {
             if (canCatch) {
                 this.catchPrey();
             } else {
+                if (this.target && this.target.isAlive && (this.isRailInCover(this.target, this.scene?.plants) || !this.target.isDetectable || this.target.hasReachedSafety)) {
+                    this.scene?.scoreManager?.recordNarrowEscape?.(this.target, this);
+                }
                 this.missPrey();
             }
         }

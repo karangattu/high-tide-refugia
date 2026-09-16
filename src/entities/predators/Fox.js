@@ -118,8 +118,11 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
             if (plant.plantType !== 'pickleweed') continue;
             if (plant.isCover && !plant.isCover()) continue;
             const radius = (plant.getCoverRadius ? plant.getCoverRadius() : 36) + 14;
-            const dist = Phaser.Math.Distance.Between(this.x, this.y, plant.x, plant.y);
-            if (dist < radius) {
+            const dx = this.x - plant.x;
+            if (Math.abs(dx) >= radius) continue;
+            const dy = this.y - plant.y;
+            if (Math.abs(dy) >= radius) continue;
+            if (dx * dx + dy * dy < radius * radius) {
                 const slow = plant.getGroundSlowFactor ? plant.getGroundSlowFactor() : 0.75;
                 factor = Math.min(factor, slow);
             }
@@ -140,12 +143,13 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
         if (Math.abs(this.lureX - this.x) > 4) this.setFlipX(this.lureX < this.x);
     }
 
-    /** Lure this predator toward (x, y) for `duration` ms. */
     distractAt(x, y, duration = 1500) {
+        if (this.state === 'chase') {
+            this.scene?.scoreManager?.recordPredatorDiverted?.(this.x, this.y);
+        }
         this.lureX = x;
         this.lureY = y;
         this.lureUntil = (this.scene?.time?.now ?? 0) + duration;
-        // A committed pounce must finish; otherwise the rail would freeze.
         if (this.state === 'chase' || this.state === 'cooldown') {
             this.endChase();
         }
@@ -295,10 +299,14 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
     }
 
     canSeeRail(rail) {
-        const distance = Phaser.Math.Distance.Between(this.x, this.y, rail.x, rail.y);
-        if (distance > this.visionRange) return false;
+        const dx = rail.x - this.x;
+        if (Math.abs(dx) > this.visionRange) return false;
+        const dy = rail.y - this.y;
+        if (Math.abs(dy) > this.visionRange) return false;
+        const distSq = dx * dx + dy * dy;
+        if (distSq > this.visionRange * this.visionRange) return false;
 
-        if (distance <= this.senseRadius) return true;
+        if (distSq <= this.senseRadius * this.senseRadius) return true;
 
         const facingRight = !this.flipX;
         const railIsRight = rail.x > this.x;
@@ -317,7 +325,11 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
                 if (!plant || plant.isCover === undefined) continue;
                 if (plant.isCover && !plant.isCover()) continue;
                 const radius = plant.getCoverRadius ? plant.getCoverRadius() : 35;
-                if (Phaser.Math.Distance.Between(rail.x, rail.y, plant.x, plant.y) < radius) {
+                const dx = rail.x - plant.x;
+                if (Math.abs(dx) >= radius) continue;
+                const dy = rail.y - plant.y;
+                if (Math.abs(dy) >= radius) continue;
+                if (dx * dx + dy * dy < radius * radius) {
                     return true;
                 }
             }
@@ -328,7 +340,11 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
                 if (!mat || mat.isCover === undefined) continue;
                 if (mat.isCover && !mat.isCover()) continue;
                 const radius = mat.getCoverRadius ? mat.getCoverRadius() : 48;
-                if (Phaser.Math.Distance.Between(rail.x, rail.y, mat.x, mat.y) < radius) {
+                const dx = rail.x - mat.x;
+                if (Math.abs(dx) >= radius) continue;
+                const dy = rail.y - mat.y;
+                if (Math.abs(dy) >= radius) continue;
+                if (dx * dx + dy * dy < radius * radius) {
                     return true;
                 }
             }
@@ -367,6 +383,13 @@ export class Fox extends Phaser.Physics.Arcade.Sprite {
     }
 
     chase(delta) {
+        if (this.target && this.target.isAlive && (!this.target.isDetectable || this.target.isSafe || this.isRailInCover(this.target))) {
+            const dist = Phaser.Math.Distance.Between(this.x, this.y, this.target.x, this.target.y);
+            if (dist <= 85) {
+                this.scene?.scoreManager?.recordNarrowEscape?.(this.target, this);
+            }
+        }
+
         if (!this.target || !this.target.isAlive || !this.target.isDetectable) {
             this.endChase();
             return;

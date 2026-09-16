@@ -115,6 +115,9 @@ export class Plant extends Phaser.Physics.Arcade.Sprite {
         this.growthStage++;
         this.setTexture(`${this.plantType}_${this.growthStage}`);
         this.updateBody();
+        if (this.scene && this.growthStage === COVER_STAGE) {
+            this.scene.corridorDirty = true;
+        }
 
         if (this.growthStage >= GROWTH_STAGES) {
             // Mature: brief settle pop + dust
@@ -160,7 +163,9 @@ export class Plant extends Phaser.Physics.Arcade.Sprite {
      * keeps its cover for a few extra seconds.
      */
     updateWater(waterX, time) {
-        if (!this.active) return;
+        if (!this.active) return false;
+        const prevCoverOK = this.coverOK;
+        const prevSubmerged = this.submerged;
         const under = waterX > this.x;
         if (under && !this.submerged) {
             this.submerged = true;
@@ -176,6 +181,7 @@ export class Plant extends Phaser.Physics.Arcade.Sprite {
         } else {
             this.coverOK = false;
         }
+        return this.coverOK !== prevCoverOK || this.submerged !== prevSubmerged;
     }
 
     /** Ground predators bog down when crossing a dense pickleweed mat. */
