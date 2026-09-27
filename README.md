@@ -13,6 +13,31 @@ npm install
 npm run dev
 ```
 
+## Android APK (sideload to tablets)
+
+The game ships as a true native APK via [Capacitor](https://capacitorjs.com/),
+wrapping the same `dist/` build the PWA serves. The launcher icons are
+generated from the PWA icons (`public/icons/icon-512.png` and
+`public/icons/icon-maskable-512.png`), and the activity is locked to
+landscape to match the PWA orientation.
+
+Prerequisites: JDK 21 and the Android SDK (`ANDROID_HOME` set).
+
+```bash
+npm run android:build
+```
+
+This rebuilds the web app, regenerates the launcher icons
+(`npm run android:icons`), syncs Capacitor, and runs
+`assembleDebug` in `android/`. The sideloadable APK lands at
+`android/app/build/outputs/apk/debug/app-debug.apk`
+(package `com.railrefuge.hightide`, debug-signed).
+
+Install it on a tablet with `adb install app-debug.apk`, or copy the file
+to the tablet and open it (allow "Install unknown apps" when prompted).
+Every push to `main` also builds the APK in CI — download it from the
+`rail-refuge-debug-apk` artifact on the "Android APK" workflow run.
+
 ## License
 
 MIT
