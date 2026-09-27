@@ -1,3 +1,13 @@
 /node_modules
 /dist
 .vscode/
+# Capacitor / Android: local SDK path and build outputs (source in android/ is committed)
+android/local.properties
+android/.gradle/
+android/app/build/
+android/build/
+android/capacitor-cordova-android-plugins/build/
+# Generated web assets copied by `npx cap sync` (rebuilt from dist/)
+android/app/src/main/assets/
+*.apk
+*.aab
