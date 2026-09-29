@@ -13,41 +13,9 @@ npm install
 npm run dev
 ```
 
-## Android APK (sideload to tablets)
+## Download
 
-[Download the latest APK](https://github.com/karangattu/high-tide-refugia/releases/latest/download/rail-refuge.apk)
-— no GitHub account required. Open it on an Android 7.0+ device and allow
-"Install unknown apps" when prompted.
-
-The game ships as a true native APK via [Capacitor](https://capacitorjs.com/),
-wrapping the same `dist/` build the PWA serves. The launcher icons are
-generated from the PWA icons (`public/icons/icon-512.png` and
-`public/icons/icon-maskable-512.png`), and the activity is locked to
-landscape to match the PWA orientation.
-
-Prerequisites: JDK 21 and the Android SDK (`ANDROID_HOME` set).
-
-```bash
-npm run android:build
-```
-
-This rebuilds the web app, regenerates the launcher icons
-(`npm run android:icons`), syncs Capacitor, and runs
-`assembleDebug` in `android/`. The sideloadable APK lands at
-`android/app/build/outputs/apk/debug/app-debug.apk`
-(package `com.railrefuge.hightide`, debug-signed).
-
-Install it on a tablet with `adb install app-debug.apk`, or copy the file
-to the tablet and open it (allow "Install unknown apps" when prompted).
-Every push to `main` builds the APK and, once the build succeeds, publishes it
-to [GitHub Releases](https://github.com/karangattu/high-tide-refugia/releases)
-as `rail-refuge.apk`. Each release is tagged `android-<run number>-<attempt>`
-and points to the exact commit that was built. The latest-download link above
-updates automatically. These APKs use debug signing for sideloading.
-
-Pull requests build the APK for verification without publishing a release.
-The `rail-refuge-debug-apk` workflow artifact remains available for 30 days.
-You can also run the "Android APK" workflow manually on `main` to publish a build.
+[Download the latest APK](https://github.com/karangattu/high-tide-refugia/releases/latest/download/rail-refuge.apk) — no GitHub account required.
 
 ## License
 
